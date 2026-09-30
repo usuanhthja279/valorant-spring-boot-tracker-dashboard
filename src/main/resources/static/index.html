@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VALORANT Live Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0e13;color:#eef2f7;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+header{padding:24px 30px;border-bottom:1px solid #222832;background:#10141b;display:flex;justify-content:space-between;align-items:center}
+.header-search{display:flex;align-items:center;gap:8px;margin:0 20px;flex:1;max-width:520px}
+.header-search input{width:100%;min-width:0}
+h1{margin:0;font-size:25px}.sub{color:#8e99a8;font-size:13px;margin-top:5px}
+.status{display:flex;gap:8px;align-items:center;color:#8e99a8;font-size:13px}
+.dot{width:9px;height:9px;border-radius:50%;background:#37d67a;display:inline-block}
+main{padding:25px 30px;max-width:1500px;margin:auto}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
+.card{background:#11161e;border:1px solid #232a35;border-radius:12px;padding:20px}
+.label{font-size:12px;color:#8e99a8;text-transform:uppercase;letter-spacing:.08em}
+.value{font-size:30px;font-weight:750;margin-top:8px}
+.yt{color:#ff6464}.tw{color:#b998ff}.kick{color:#52df9c}.total{color:#fff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+.panel{background:#11161e;border:1px solid #232a35;border-radius:12px;padding:18px}
+.panel h2{font-size:16px;margin:0 0 15px}
+.chart{height:300px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:#8e99a8;font-weight:600;padding:9px;border-bottom:1px solid #29303b}
+td{padding:10px 9px;border-bottom:1px solid #1e252f}
+.rank{width:35px;color:#7f8997}.viewers{text-align:right;font-weight:700}
+.channel{font-weight:650}.platform{color:#8e99a8;font-size:11px}
+.platform-link{color:#8e99a8}.platform-link:hover{text-decoration:underline;color:#eef2f7}
+a{color:#e7edf5;text-decoration:none}.title{color:#8e99a8;max-width:500px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toolbar{display:flex;gap:10px;align-items:center;margin:18px 0}
+.pagination{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:16px}
+button,select,input{background:#151b24;color:#eef2f7;border:1px solid #2b3441;border-radius:8px;padding:9px 12px}
+input{min-width:220px}
+button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:900px){header{flex-wrap:wrap;gap:12px}.header-search{order:3;flex-basis:100%;margin:0;max-width:none}.cards{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+@media(max-width:550px){.cards{grid-template-columns:1fr}main{padding:15px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<div><h1>VALORANT Live Tracker</h1><div class="sub">YouTube · Twitch · Kick · minute-by-minute viewership</div></div>
+<form class="header-search" onsubmit="openChannelStats(event)">
+  <input id="channelLookup" type="search" list="channelOptions" placeholder="Search channel stats" aria-label="Search channel stats" autocomplete="off">
+  <datalist id="channelOptions"></datalist>
+  <button type="submit">View stats</button>
+</form>
+<div class="status"><span class="dot"></span><span id="status">Connecting…</span></div>
+</header>
+
+<main>
+<div class="cards">
+<div class="card"><div class="label">YouTube</div><div class="value yt" id="yt">—</div></div>
+<div class="card"><div class="label">Twitch</div><div class="value tw" id="tw">—</div></div>
+<div class="card"><div class="label">Kick</div><div class="value kick" id="kick">—</div></div>
+<div class="card"><div class="label">Combined</div><div class="value total" id="total">—</div></div>
+</div>
+
+<div class="grid">
+<div class="panel">
+<h2>Combined viewer trend</h2>
+<div class="chart"><canvas id="combinedChart"></canvas></div>
+</div>
+<div class="panel">
+<h2>Platform trend</h2>
+<div class="chart"><canvas id="platformChart"></canvas></div>
+</div>
+</div>
+
+<div class="toolbar">
+<select id="scope" onchange="loadStreams()">
+<option>Overall</option><option>YouTube</option><option>Twitch</option><option>Kick</option>
+</select>
+<button onclick="collect()">Collect now</button>
+<button id="viewerSort" onclick="toggleViewerSort()" aria-label="Sort viewers high to low">Viewers: High-Low</button>
+<span class="sub" id="last">—</span>
+</div>
+
+<div class="panel">
+<h2 id="streamsTitle">All live streams</h2>
+<table>
+<thead><tr><th>#</th><th>Platform</th><th>Channel</th><th>Title</th><th style="text-align:right">Viewers</th></tr></thead>
+<tbody id="streams"><tr><td colspan="5">Loading…</td></tr></tbody>
+</table>
+<div class="pagination">
+<span class="sub" id="pageInfo">Page 1</span>
+<button id="previousPage" onclick="changePage(-1)" disabled>Previous</button>
+<button id="nextPage" onclick="changePage(1)" disabled>Next</button>
+</div>
+</div>
+</main>
+
+<script>
+let combinedChart, platformChart;
+let allStreams=[];
+let allChannelNames=[];
+let currentPage=0;
+let viewersDescending=true;
+const pageSize=10;
+
+const fmt=n=>Number(n||0).toLocaleString('en-IN');
+
+async function getJson(url){
+  const r=await fetch(url,{cache:'no-store'});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function refresh(){
+  try{
+    const data=await getJson('/api/snapshots');
+    if(!data.length){
+      document.getElementById('status').textContent='Waiting for first collection';
+      return;
+    }
+
+    data.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+    const latest=data[data.length-1];
+
+    document.getElementById('yt').textContent=fmt(latest.youtubeViewers);
+    document.getElementById('tw').textContent=fmt(latest.twitchViewers);
+    document.getElementById('kick').textContent=fmt(latest.kickViewers);
+    document.getElementById('total').textContent=fmt(latest.combinedViewers);
+    document.getElementById('last').textContent='Latest: '+new Date(latest.timestamp).toLocaleString();
+    document.getElementById('status').textContent='Live · updates every minute';
+
+    const labels=data.slice(-120).map(x=>new Date(x.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
+    const combined=data.slice(-120).map(x=>x.combinedViewers);
+    const yt=data.slice(-120).map(x=>x.youtubeViewers);
+    const tw=data.slice(-120).map(x=>x.twitchViewers);
+    const kick=data.slice(-120).map(x=>x.kickViewers);
+
+    const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#aeb7c4'}}},
+      scales:{x:{ticks:{color:'#77818f'},grid:{color:'#202731'}},
+              y:{ticks:{color:'#77818f'},grid:{color:'#202731'}}}};
+
+    if(combinedChart) combinedChart.destroy();
+    combinedChart=new Chart(document.getElementById('combinedChart'),{
+      type:'line',data:{labels,datasets:[{label:'Combined',data:combined,borderColor:'#eef2f7',backgroundColor:'transparent',tension:.25,pointRadius:1}]},options:opts
+    });
+
+    if(platformChart) platformChart.destroy();
+    platformChart=new Chart(document.getElementById('platformChart'),{
+      type:'line',data:{labels,datasets:[
+        {label:'YouTube',data:yt,borderColor:'#ff6464',backgroundColor:'transparent',tension:.25,pointRadius:1},
+        {label:'Twitch',data:tw,borderColor:'#b998ff',backgroundColor:'transparent',tension:.25,pointRadius:1},
+        {label:'Kick',data:kick,borderColor:'#52df9c',backgroundColor:'transparent',tension:.25,pointRadius:1}
+      ]},options:opts
+    });
+  }catch(e){
+    document.getElementById('status').textContent='Tracker/API unavailable';
+    console.error(e);
+  }
+}
+
+async function loadStreams(){
+  const scope=document.getElementById('scope').value;
+  const body=document.getElementById('streams');
+  document.getElementById('streamsTitle').textContent=
+    scope==='Overall'?'All live streams':`All ${scope} live streams`;
+  try{
+    allStreams=await getJson('/api/streams?platform='+encodeURIComponent(scope));
+    if(scope==='Overall') updateChannelOptions(allStreams);
+    currentPage=0;
+    renderStreams();
+  }catch(e){
+    body.innerHTML='<tr><td colspan="5">Unable to load streams</td></tr>';
+    document.getElementById('pageInfo').textContent='Unavailable';
+  }
+}
+
+function renderStreams(){
+  const body=document.getElementById('streams');
+  const visibleStreams=allStreams.slice().sort((a,b)=>
+    viewersDescending?Number(b.viewers)-Number(a.viewers):Number(a.viewers)-Number(b.viewers));
+  if(!visibleStreams.length){
+    body.innerHTML='<tr><td colspan="5">No streams found</td></tr>';
+  }else{
+    const start=currentPage*pageSize;
+    body.innerHTML=visibleStreams.slice(start,start+pageSize).map((r,i)=>`
+      <tr>
+        <td class="rank">${start+i+1}</td>
+        <td><a class="platform-link" href="${escapeHtml(r.url||'#')}" target="_blank" rel="noopener noreferrer" title="Open ${escapeHtml(r.platform||'')} stream"><span class="platform">${escapeHtml(r.platform||'')}</span></a></td>
+        <td class="channel"><a href="/channel.html?name=${encodeURIComponent(r.channel||'')}" title="View channel data and trends">${escapeHtml(r.channel||'Unknown')}</a></td>
+        <td class="title" title="${escapeHtml(r.title||'')}">${escapeHtml(r.title||'')}</td>
+        <td class="viewers">${fmt(r.viewers)}</td>
+      </tr>`).join('');
+  }
+  const pages=Math.max(1,Math.ceil(visibleStreams.length/pageSize));
+  document.getElementById('pageInfo').textContent=
+    `Page ${currentPage+1} of ${pages} · ${fmt(visibleStreams.length)} streams`;
+  document.getElementById('previousPage').disabled=currentPage===0;
+  document.getElementById('nextPage').disabled=currentPage>=pages-1;
+}
+
+function toggleViewerSort(){
+  viewersDescending=!viewersDescending;
+  const button=document.getElementById('viewerSort');
+  button.textContent=viewersDescending?'Viewers: High-Low':'Viewers: Low-High';
+  button.setAttribute('aria-label',`Sort viewers ${viewersDescending?'high to low':'low to high'}`);
+  currentPage=0;
+  renderStreams();
+}
+
+function changePage(delta){
+  currentPage=Math.max(0,Math.min(currentPage+delta,Math.ceil(allStreams.length/pageSize)-1));
+  renderStreams();
+}
+
+function updateChannelOptions(streams){
+  allChannelNames=[...new Set(streams.map(stream=>String(stream.channel||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
+  document.getElementById('channelOptions').innerHTML=
+    allChannelNames.map(name=>`<option value="${escapeHtml(name)}"></option>`).join('');
+}
+
+async function openChannelStats(event){
+  event.preventDefault();
+  const query=document.getElementById('channelLookup').value.trim();
+  if(!query)return;
+  if(!allChannelNames.length){
+    document.getElementById('status').textContent='Channel list is still loading';
+    return;
+  }
+  const normalized=query.toLocaleLowerCase();
+  const exact=allChannelNames.find(name=>name.toLocaleLowerCase()===normalized);
+  const matches=exact?[exact]:allChannelNames.filter(name=>name.toLocaleLowerCase().includes(normalized));
+  if(matches.length!==1){
+    document.getElementById('status').textContent=
+      matches.length?'Choose a channel from the suggestions':'Channel not found in current streams';
+    return;
+  }
+  location.href='/channel.html?name='+encodeURIComponent(matches[0]);
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+async function collect(){
+  document.getElementById('status').textContent='Collecting…';
+  try{
+    const response=await fetch('/api/collect',{method:'POST'});
+    if(!response.ok) throw new Error(await response.text());
+    await refresh();
+    await loadStreams();
+  }catch(e){
+    document.getElementById('status').textContent='Collection failed';
+    console.error(e);
+  }
+}
+
+refresh(); loadStreams();
+getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error);
+setInterval(refresh,30000);
+setInterval(loadStreams,60000);
+setInterval(()=>getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error),60000);
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+.gradle/
+build/
+.idea/
+data/
+tracker.log
+tracker-startup.log
+tracker-startup-error.log
+stream-api-analysis.json
+
+# Local configuration contains provider credentials.
+src/main/resources/application.yml

@@ -1,0 +1,1565 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <title>Channel Analytics · VALORANT Live Tracker</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    *{
+      box-sizing:border-box;
+    }
+
+    body{
+      margin:0;
+      background:#0b0e13;
+      color:#eef2f7;
+      font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;
+    }
+
+    header{
+      padding:22px 30px;
+      border-bottom:1px solid #222832;
+      background:#10141b;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:20px;
+    }
+
+    h1{
+      margin:0;
+      font-size:25px;
+    }
+
+    .sub{
+      color:#8e99a8;
+      font-size:13px;
+      margin-top:5px;
+    }
+
+    header a{
+      color:#e7edf5;
+      text-decoration:none;
+    }
+
+    header a:hover{
+      text-decoration:underline;
+    }
+
+    .header-actions{
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+
+    .channel-link{
+      display:none;
+      padding:9px 12px;
+      border:1px solid #2b3441;
+      border-radius:8px;
+      background:#151b24;
+      white-space:nowrap;
+    }
+
+    main{
+      padding:25px 30px;
+      max-width:1600px;
+      margin:auto;
+    }
+
+    /* =========================
+       CURRENT CARDS
+       ========================= */
+
+    .cards{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:15px;
+    }
+
+    .card{
+      background:#11161e;
+      border:1px solid #232a35;
+      border-radius:12px;
+      padding:20px;
+    }
+
+    .label{
+      font-size:11px;
+      color:#8e99a8;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .value{
+      font-size:30px;
+      font-weight:750;
+      margin-top:8px;
+    }
+
+    .meta{
+      margin-top:7px;
+      font-size:12px;
+      color:#77818f;
+    }
+
+    .youtube{
+      color:#ff6464;
+    }
+
+    .twitch{
+      color:#b998ff;
+    }
+
+    .kick{
+      color:#52df9c;
+    }
+
+    .combined{
+      color:#ffffff;
+    }
+
+    /* =========================
+       RANGE BAR
+       ========================= */
+
+    .range-panel{
+      margin-top:18px;
+      background:#11161e;
+      border:1px solid #232a35;
+      border-radius:12px;
+      padding:16px 18px;
+    }
+
+    .range-bar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:15px;
+      flex-wrap:wrap;
+    }
+
+    .range-buttons{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    button,
+    select,
+    input{
+      background:#151b24;
+      color:#eef2f7;
+      border:1px solid #2b3441;
+      border-radius:8px;
+      padding:9px 12px;
+      font-size:13px;
+    }
+
+    button{
+      cursor:pointer;
+    }
+
+    button:hover{
+      background:#1b222d;
+    }
+
+    button.active{
+      border-color:#eef2f7;
+      background:#202834;
+    }
+
+    .custom-range{
+      display:none;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .custom-range.visible{
+      display:flex;
+    }
+
+    .status{
+      color:#8e99a8;
+      font-size:12px;
+    }
+
+    /* =========================
+       STATISTICS
+       ========================= */
+
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:15px;
+      margin-top:18px;
+    }
+
+    .stat{
+      background:#11161e;
+      border:1px solid #232a35;
+      border-radius:12px;
+      padding:16px;
+    }
+
+    .stat-value{
+      font-size:21px;
+      font-weight:700;
+      margin-top:6px;
+    }
+
+    .stat-label{
+      color:#8e99a8;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+
+    /* =========================
+       CHARTS
+       ========================= */
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:18px;
+      margin-top:18px;
+    }
+
+    .panel{
+      background:#11161e;
+      border:1px solid #232a35;
+      border-radius:12px;
+      padding:18px;
+    }
+
+    .panel h2{
+      font-size:16px;
+      margin:0 0 15px;
+    }
+
+    .chart{
+      height:360px;
+      position:relative;
+    }
+
+    a{
+      color:#e7edf5;
+      text-decoration:none;
+    }
+
+    a:hover{
+      text-decoration:underline;
+    }
+
+    /* =========================
+       CURRENT INDICATOR
+       ========================= */
+
+    .live-dot{
+      display:inline-block;
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#37d67a;
+      margin-right:6px;
+    }
+
+    .stale-dot{
+      background:#e2a93b;
+    }
+
+    /* =========================
+       RESPONSIVE
+       ========================= */
+
+    @media(max-width:1100px){
+
+      .cards{
+        grid-template-columns:1fr 1fr;
+      }
+
+      .stats{
+        grid-template-columns:repeat(3,1fr);
+      }
+
+      .grid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media(max-width:650px){
+
+      header{
+        padding:18px;
+      }
+
+      main{
+        padding:15px;
+      }
+
+      .cards{
+        grid-template-columns:1fr;
+      }
+
+      .stats{
+        grid-template-columns:1fr 1fr;
+      }
+
+      .chart{
+        height:300px;
+      }
+
+      .title{
+        max-width:180px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+
+  <div>
+    <h1 id="channelName">Channel Analytics</h1>
+    <div class="sub">
+      Cross-platform VALORANT viewer history
+    </div>
+  </div>
+
+  <nav class="header-actions">
+    <a id="channelLink" class="channel-link" target="_blank" rel="noopener noreferrer">
+      Open channel
+    </a>
+    <a href="/">
+      ← Back to tracker
+    </a>
+  </nav>
+
+</header>
+
+
+<main>
+
+  <!-- =========================
+       CURRENT MOMENT
+       ========================= -->
+
+  <section class="cards">
+
+    <div class="card">
+      <div class="label">YouTube · Current</div>
+      <div class="value youtube" id="youtubeCurrent">—</div>
+      <div class="meta" id="youtubeTime">No data</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Twitch · Current</div>
+      <div class="value twitch" id="twitchCurrent">—</div>
+      <div class="meta" id="twitchTime">No data</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Kick · Current</div>
+      <div class="value kick" id="kickCurrent">—</div>
+      <div class="meta" id="kickTime">No data</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Combined · Current</div>
+      <div class="value combined" id="combinedCurrent">—</div>
+      <div class="meta" id="combinedTime">—</div>
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       TIME RANGE
+       ========================= -->
+
+  <section class="range-panel">
+
+    <div class="range-bar">
+
+      <div class="range-buttons">
+
+        <button
+                id="range30m"
+                onclick="setRange('30m')">
+          30 min
+        </button>
+
+        <button
+                id="range1h"
+                onclick="setRange('1h')">
+          1 hour
+        </button>
+
+        <button
+                id="range6h"
+                onclick="setRange('6h')">
+          6 hours
+        </button>
+
+        <button
+                id="range24h"
+                onclick="setRange('24h')">
+          24 hours
+        </button>
+
+        <button
+                id="rangeDay"
+                onclick="setRange('day')">
+          Date
+        </button>
+
+        <button
+                id="rangeCustom"
+                onclick="setRange('custom')">
+          Custom
+        </button>
+
+      </div>
+
+      <div class="status" id="rangeStatus">
+        Last 30 minutes
+      </div>
+      <div class="status" id="rangeDataStatus">Loading channel history…</div>
+
+    </div>
+
+    <div class="custom-range" id="dateRange">
+      <label>
+        Date
+        <input type="date" id="selectedDate">
+      </label>
+      <button onclick="applyDateRange()">
+        Apply date
+      </button>
+    </div>
+
+    <div class="custom-range" id="customRange">
+
+      <label>
+        From
+        <input
+                type="datetime-local"
+                id="customFrom">
+      </label>
+
+      <label>
+        To
+        <input
+                type="datetime-local"
+                id="customTo">
+      </label>
+
+      <button onclick="applyCustomRange()">
+        Apply
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       STATISTICS
+       ========================= -->
+
+  <section class="stats">
+
+    <div class="stat">
+      <div class="stat-label">Current</div>
+      <div class="stat-value" id="statCurrent">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Peak</div>
+      <div class="stat-value" id="statPeak">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Average</div>
+      <div class="stat-value" id="statAverage">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Change</div>
+      <div class="stat-value" id="statChange">—</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Data Points</div>
+      <div class="stat-value" id="statPoints">—</div>
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       COMBINED + PLATFORM CHART
+       ========================= -->
+
+  <section class="grid">
+
+    <div class="panel">
+
+      <h2>
+        Combined viewer trend
+      </h2>
+
+      <div class="chart">
+        <canvas id="combinedChart"></canvas>
+      </div>
+
+    </div>
+
+
+    <div class="panel">
+
+      <h2>
+        Platform viewer trend
+      </h2>
+
+      <div class="chart">
+        <canvas id="platformChart"></canvas>
+      </div>
+
+    </div>
+
+  </section>
+
+
+</main>
+
+
+<script>
+
+  const params = new URLSearchParams(location.search);
+
+  const channelName =
+          params.get('name') || '';
+
+  const fmt = value =>
+          Number(value || 0).toLocaleString('en-IN');
+
+
+  let allRecords = [];
+
+  let currentRange = '30m';
+
+  let customFrom = null;
+  let customTo = null;
+  let selectedDate = null;
+
+  let combinedChart = null;
+  let platformChart = null;
+
+
+  /* =====================================================
+     API
+     ===================================================== */
+
+  async function getHistory(){
+
+    if(!channelName){
+      return;
+    }
+
+    const response = await fetch(
+            '/api/channels/history?name=' +
+            encodeURIComponent(channelName),
+            {
+              cache:'no-store'
+            }
+    );
+
+    if(!response.ok){
+
+      throw new Error(
+              await response.text()
+      );
+    }
+
+    return response.json();
+  }
+
+
+  /* =====================================================
+     RANGE
+     ===================================================== */
+
+  function setRange(range){
+
+    currentRange = range;
+
+    document
+            .querySelectorAll('.range-buttons button')
+            .forEach(button =>
+                    button.classList.remove('active')
+            );
+
+    document
+            .getElementById(
+                    range === '30m'
+                            ? 'range30m'
+                            : range === '1h'
+                                    ? 'range1h'
+                                    : range === '6h'
+                                                            ? 'range6h'
+                                                            : range === '24h'
+                                                                    ? 'range24h'
+                                                                    : range === 'day'
+                                                                            ? 'rangeDay'
+                                                                            : 'rangeCustom'
+            )
+            .classList.add('active');
+
+    document.getElementById('customRange').classList.toggle(
+            'visible',
+            range === 'custom'
+    );
+    document.getElementById('dateRange').classList.toggle(
+            'visible',
+            range === 'day'
+    );
+
+    if(range === 'day'){
+      applyDateRange();
+      return;
+    }
+
+
+    if(range !== 'custom'){
+
+      document.getElementById('rangeStatus')
+              .textContent =
+              'Last ' +
+              (
+                      range === '30m'
+                              ? '30 minutes'
+                              : range === '1h'
+                                      ? '1 hour'
+                                      : range === '6h'
+                                              ? '6 hours'
+                                              : '24 hours'
+              );
+
+      render();
+    }
+  }
+
+  function applyDateRange(){
+    const value = document.getElementById('selectedDate').value;
+    if(!value){
+      document.getElementById('rangeStatus').textContent =
+              'Choose a date to view its stream history';
+      return;
+    }
+
+    selectedDate = new Date(value + 'T00:00:00');
+    if(Number.isNaN(selectedDate.getTime())){
+      document.getElementById('rangeStatus').textContent =
+              'Invalid date selected';
+      return;
+    }
+
+    document.getElementById('rangeStatus').textContent =
+            'Date: ' + selectedDate.toLocaleDateString();
+    render();
+  }
+
+
+  function applyCustomRange(){
+
+    const from =
+            document.getElementById('customFrom').value;
+
+    const to =
+            document.getElementById('customTo').value;
+
+
+    if(!from || !to){
+
+      alert(
+              'Please select both start and end times.'
+      );
+
+      return;
+    }
+
+
+    customFrom = new Date(from);
+
+    customTo = new Date(to);
+
+
+    if(customFrom >= customTo){
+
+      alert(
+              'Start time must be before end time.'
+      );
+
+      return;
+    }
+
+
+    document.getElementById('rangeStatus')
+            .textContent =
+            customFrom.toLocaleString() +
+            ' → ' +
+            customTo.toLocaleString();
+
+
+    render();
+  }
+
+
+  /* =====================================================
+     FILTER RECORDS
+     ===================================================== */
+
+  function getFilteredRecords(){
+
+    if(!allRecords.length){
+      return [];
+    }
+
+
+    const now =
+            new Date(
+                    Math.max(
+                            ...allRecords.map(
+                                    record =>
+                                            new Date(record.timestamp).getTime()
+                            )
+                    )
+            );
+
+
+    let from;
+
+
+    if(currentRange === '30m'){
+
+      from =
+              new Date(
+                      now.getTime() -
+                      30 * 60 * 1000
+              );
+
+    }else if(currentRange === '1h'){
+
+      from =
+              new Date(
+                      now.getTime() -
+                      60 * 60 * 1000
+              );
+
+    }else if(currentRange === '6h'){
+
+      from =
+              new Date(
+                      now.getTime() -
+                      6 * 60 * 60 * 1000
+              );
+
+    }else if(currentRange === '24h'){
+
+      from =
+              new Date(
+                      now.getTime() -
+                      24 * 60 * 60 * 1000
+              );
+
+    }else if(currentRange === 'day'){
+      if(!selectedDate){
+        return [];
+      }
+      from = new Date(selectedDate);
+    }else{
+      from = customFrom;
+    }
+
+    let to;
+    if(currentRange === 'custom'){
+      to = customTo;
+    }else if(currentRange === 'day'){
+      to = new Date(selectedDate);
+      to.setDate(to.getDate() + 1);
+    }else{
+      to = now;
+    }
+
+
+    if(!from || !to){
+      return [];
+    }
+
+
+    return allRecords
+            .filter(record => {
+
+              const time =
+                      new Date(record.timestamp);
+
+              return currentRange === 'day'
+                      ? time >= from && time < to
+                      : time >= from && time <= to;
+
+            })
+            .sort(
+                    (a,b) =>
+                            new Date(a.timestamp) -
+                            new Date(b.timestamp)
+            );
+  }
+
+
+  /* =====================================================
+     CURRENT DATA
+     ===================================================== */
+
+  function calculateCurrent(){
+
+    const latestByPlatform =
+            new Map();
+    let latestChannelLink = null;
+
+
+    for(const record of allRecords){
+
+      if(
+              record.url &&
+              (!latestChannelLink ||
+                      new Date(record.timestamp) >
+                      new Date(latestChannelLink.timestamp))
+      ){
+        latestChannelLink = record;
+      }
+
+      const existing =
+              latestByPlatform.get(
+                      record.platform
+              );
+
+
+      if(
+              !existing ||
+              new Date(record.timestamp) >
+              new Date(existing.timestamp)
+      ){
+
+        latestByPlatform.set(
+                record.platform,
+                record
+        );
+      }
+    }
+
+    const channelLink =
+            document.getElementById('channelLink');
+    if(latestChannelLink){
+      channelLink.href = latestChannelLink.url;
+      channelLink.style.display = 'inline-block';
+    }else{
+      channelLink.removeAttribute('href');
+      channelLink.style.display = 'none';
+    }
+
+
+    const youtube =
+            latestByPlatform.get('YouTube');
+
+    const twitch =
+            latestByPlatform.get('Twitch');
+
+    const kick =
+            latestByPlatform.get('Kick');
+
+
+    document.getElementById(
+            'youtubeCurrent'
+    ).textContent =
+            youtube
+                    ? fmt(youtube.viewers)
+                    : '—';
+
+
+    document.getElementById(
+            'twitchCurrent'
+    ).textContent =
+            twitch
+                    ? fmt(twitch.viewers)
+                    : '—';
+
+
+    document.getElementById(
+            'kickCurrent'
+    ).textContent =
+            kick
+                    ? fmt(kick.viewers)
+                    : '—';
+
+
+    document.getElementById(
+            'youtubeTime'
+    ).textContent =
+            youtube
+                    ? formatAge(youtube.timestamp)
+                    : 'No data';
+
+
+    document.getElementById(
+            'twitchTime'
+    ).textContent =
+            twitch
+                    ? formatAge(twitch.timestamp)
+                    : 'No data';
+
+
+    document.getElementById(
+            'kickTime'
+    ).textContent =
+            kick
+                    ? formatAge(kick.timestamp)
+                    : 'No data';
+
+
+    const combined =
+            (youtube?.viewers || 0) +
+            (twitch?.viewers || 0) +
+            (kick?.viewers || 0);
+
+
+    document.getElementById(
+            'combinedCurrent'
+    ).textContent =
+            fmt(combined);
+
+
+    const latestTimestamp =
+            Math.max(
+                    youtube
+                            ? new Date(youtube.timestamp).getTime()
+                            : 0,
+
+                    twitch
+                            ? new Date(twitch.timestamp).getTime()
+                            : 0,
+
+                    kick
+                            ? new Date(kick.timestamp).getTime()
+                            : 0
+            );
+
+
+    document.getElementById(
+            'combinedTime'
+    ).textContent =
+            latestTimestamp
+                    ? 'Updated ' +
+                    new Date(
+                            latestTimestamp
+                    ).toLocaleString()
+                    : 'No data';
+  }
+
+
+  /* =====================================================
+     AGE
+     ===================================================== */
+
+  function formatAge(timestamp){
+
+    const diff =
+            Date.now() -
+            new Date(timestamp).getTime();
+
+
+    if(diff < 60 * 1000){
+
+      return 'Updated just now';
+    }
+
+
+    const minutes =
+            Math.floor(
+                    diff / 60000
+            );
+
+
+    if(minutes < 60){
+
+      return 'Updated ' +
+              minutes +
+              ' min ago';
+    }
+
+
+    const hours =
+            Math.floor(
+                    minutes / 60
+            );
+
+
+    return 'Updated ' +
+            hours +
+            ' hr ago';
+  }
+
+
+  /* =====================================================
+     RENDER
+     ===================================================== */
+
+  function render(){
+
+    calculateCurrent();
+
+
+    const records =
+            getFilteredRecords();
+
+
+    document.getElementById('rangeDataStatus').textContent =
+            records.length
+                    ? fmt(records.length) + ' records in selected range'
+                    : 'No data available for selected range';
+
+
+    if(!records.length){
+
+      updateStats([]);
+
+
+      if(combinedChart){
+
+        combinedChart.destroy();
+
+        combinedChart = null;
+      }
+
+
+      if(platformChart){
+
+        platformChart.destroy();
+
+        platformChart = null;
+      }
+
+
+      return;
+    }
+
+
+    const timeline =
+            buildTimeline(records);
+
+
+    updateStats(timeline);
+
+    renderCharts(timeline);
+
+  }
+
+
+  /* =====================================================
+     TIMELINE
+     ===================================================== */
+
+  function buildTimeline(records){
+
+    const buckets =
+            new Map();
+
+
+    for(const record of records){
+
+      const time =
+              new Date(record.timestamp)
+                      .getTime();
+
+
+      /*
+       * Round to the minute.
+       *
+       * This prevents tiny timestamp differences
+       * from creating multiple chart points.
+       */
+
+      const bucketTime =
+              Math.floor(
+                      time / 60000
+              ) * 60000;
+
+
+      if(!buckets.has(bucketTime)){
+
+        buckets.set(
+                bucketTime,
+                {
+                  timestamp:bucketTime,
+                  YouTube:0,
+                  Twitch:0,
+                  Kick:0
+                }
+        );
+      }
+
+
+      const bucket =
+              buckets.get(bucketTime);
+
+
+      bucket[record.platform] =
+              (bucket[record.platform] || 0) +
+              Number(record.viewers || 0);
+    }
+
+
+    return [...buckets.values()]
+            .sort(
+                    (a,b) =>
+                            a.timestamp -
+                            b.timestamp
+            );
+  }
+
+
+  /* =====================================================
+     STATISTICS
+     ===================================================== */
+
+  function updateStats(timeline){
+
+    if(!timeline.length){
+
+      document.getElementById(
+              'statCurrent'
+      ).textContent = '—';
+
+      document.getElementById(
+              'statPeak'
+      ).textContent = '—';
+
+      document.getElementById(
+              'statAverage'
+      ).textContent = '—';
+
+      document.getElementById(
+              'statChange'
+      ).textContent = '—';
+
+      document.getElementById(
+              'statPoints'
+      ).textContent = '0';
+
+      return;
+    }
+
+
+    const combined =
+            timeline.map(
+                    point =>
+                            point.YouTube +
+                            point.Twitch +
+                            point.Kick
+            );
+
+
+    const current =
+            combined[combined.length - 1];
+
+
+    const first =
+            combined[0];
+
+
+    const peak =
+            Math.max(...combined);
+
+
+    const average =
+            Math.round(
+                    combined.reduce(
+                            (sum,value) =>
+                                    sum + value,
+                            0
+                    ) / combined.length
+            );
+
+
+    const change =
+            current - first;
+
+
+    const changePercent =
+            first
+                    ? ((change / first) * 100)
+                            .toFixed(1)
+                    : '0.0';
+
+
+    document.getElementById(
+            'statCurrent'
+    ).textContent =
+            fmt(current);
+
+
+    document.getElementById(
+            'statPeak'
+    ).textContent =
+            fmt(peak);
+
+
+    document.getElementById(
+            'statAverage'
+    ).textContent =
+            fmt(average);
+
+
+    document.getElementById(
+            'statChange'
+    ).textContent =
+            (change >= 0 ? '+' : '') +
+            fmt(change) +
+            ' (' +
+            (change >= 0 ? '+' : '') +
+            changePercent +
+            '%)';
+
+
+    document.getElementById(
+            'statPoints'
+    ).textContent =
+            fmt(timeline.length);
+  }
+
+
+  /* =====================================================
+     CHARTS
+     ===================================================== */
+
+  function renderCharts(timeline){
+
+    const labels =
+            timeline.map(
+                    point =>
+                            new Date(
+                                    point.timestamp
+                            ).toLocaleTimeString(
+                                    [],
+                                    {
+                                      hour:'2-digit',
+                                      minute:'2-digit'
+                                    }
+                            )
+            );
+
+
+    const combined =
+            timeline.map(
+                    point =>
+                            point.YouTube +
+                            point.Twitch +
+                            point.Kick
+            );
+
+
+    const youtube =
+            timeline.map(
+                    point => point.YouTube
+            );
+
+
+    const twitch =
+            timeline.map(
+                    point => point.Twitch
+            );
+
+
+    const kick =
+            timeline.map(
+                    point => point.Kick
+            );
+
+
+    const options = {
+
+      responsive:true,
+
+      maintainAspectRatio:false,
+
+      interaction:{
+        mode:'index',
+        intersect:false
+      },
+
+      plugins:{
+        legend:{
+          labels:{
+            color:'#aeb7c4'
+          }
+        },
+
+        tooltip:{
+          callbacks:{
+            label:function(context){
+
+              return (
+                      context.dataset.label +
+                      ': ' +
+                      fmt(context.raw)
+              );
+            }
+          }
+        }
+      },
+
+      scales:{
+
+        x:{
+          ticks:{
+            color:'#77818f',
+            maxTicksLimit:12
+          },
+
+          grid:{
+            color:'#202731'
+          }
+        },
+
+        y:{
+
+          beginAtZero:true,
+
+          ticks:{
+            color:'#77818f',
+            callback:value =>
+                    fmt(value)
+          },
+
+          grid:{
+            color:'#202731'
+          }
+        }
+      }
+    };
+
+
+    if(combinedChart){
+
+      combinedChart.destroy();
+    }
+
+
+    combinedChart =
+            new Chart(
+                    document.getElementById(
+                            'combinedChart'
+                    ),
+                    {
+
+                      type:'line',
+
+                      data:{
+                        labels,
+
+                        datasets:[
+                          {
+                            label:'Combined',
+
+                            data:combined,
+
+                            borderColor:'#eef2f7',
+
+                            backgroundColor:'transparent',
+
+                            tension:.25,
+
+                            pointRadius:1,
+
+                            borderWidth:2
+                          }
+                        ]
+                      },
+
+                      options
+                    }
+            );
+
+
+    if(platformChart){
+
+      platformChart.destroy();
+    }
+
+
+    platformChart =
+            new Chart(
+                    document.getElementById(
+                            'platformChart'
+                    ),
+                    {
+
+                      type:'line',
+
+                      data:{
+                        labels,
+
+                        datasets:[
+
+                          {
+                            label:'YouTube',
+
+                            data:youtube,
+
+                            borderColor:'#ff6464',
+
+                            backgroundColor:'transparent',
+
+                            tension:.25,
+
+                            pointRadius:1
+                          },
+
+                          {
+                            label:'Twitch',
+
+                            data:twitch,
+
+                            borderColor:'#b998ff',
+
+                            backgroundColor:'transparent',
+
+                            tension:.25,
+
+                            pointRadius:1
+                          },
+
+                          {
+                            label:'Kick',
+
+                            data:kick,
+
+                            borderColor:'#52df9c',
+
+                            backgroundColor:'transparent',
+
+                            tension:.25,
+
+                            pointRadius:1
+                          }
+
+                        ]
+                      },
+
+                      options
+                    }
+            );
+  }
+
+
+  /* =====================================================
+     LOAD
+     ===================================================== */
+
+  async function load(){
+
+    document.getElementById(
+            'channelName'
+    ).textContent =
+            channelName ||
+            'Unknown channel';
+
+
+    if(!channelName){
+
+      document.getElementById('rangeDataStatus').textContent =
+              'Channel name is missing.';
+
+      return;
+    }
+
+
+    try{
+
+      const records =
+              await getHistory();
+
+
+      allRecords =
+              Array.isArray(records)
+                      ? records
+                      : [];
+
+
+      /*
+       * Sort once.
+       */
+
+      allRecords.sort(
+              (a,b) =>
+                      new Date(a.timestamp) -
+                      new Date(b.timestamp)
+      );
+
+
+      if(!allRecords.length){
+
+        document.getElementById('rangeDataStatus').textContent =
+                'No recorded history for this channel.';
+
+        return;
+      }
+
+
+      render();
+
+    }catch(error){
+
+      console.error(error);
+
+      document.getElementById('rangeDataStatus').textContent =
+              'Unable to load channel analytics.';
+    }
+  }
+
+
+  /* =====================================================
+     DEFAULT RANGE
+     ===================================================== */
+
+  setRange('30m');
+  const today = new Date();
+  document.getElementById('selectedDate').value =
+          `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  load();
+
+
+  /*
+   * Refresh every 30 seconds.
+   *
+   * The current cards update while the selected
+   * historical range remains selected.
+   */
+
+  setInterval(
+          load,
+          30000
+  );
+
+</script>
+
+</body>
+</html>

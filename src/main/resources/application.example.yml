@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: valorant-live-tracker
+  datasource:
+    url: jdbc:h2:file:./data/valorant-tracker
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+server:
+  port: 8080
+
+tracker:
+  enabled: true
+  interval-ms: 60000
+  youtube:
+    refresh-interval-ms: 300000
+    api-key: ${YOUTUBE_API_KEY:}
+  twitch:
+    client-id: ${TWITCH_CLIENT_ID:}
+    client-secret: ${TWITCH_CLIENT_SECRET:}
+  kick:
+    client-id: ${KICK_CLIENT_ID:}
+    client-secret: ${KICK_CLIENT_SECRET:}
