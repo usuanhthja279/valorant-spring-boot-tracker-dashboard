@@ -12,6 +12,7 @@ import java.time.OffsetDateTime;
 @Entity
 @Table(name = "stream_samples", indexes = {
     @Index(name = "idx_stream_samples_timestamp", columnList = "timestamp"),
+    @Index(name = "idx_stream_samples_timestamp_id", columnList = "timestamp,id"),
     @Index(name = "idx_stream_samples_channel_time", columnList = "channel,timestamp"),
     @Index(name = "idx_stream_samples_platform_time", columnList = "platform,timestamp"),
     @Index(name = "idx_stream_samples_stream_time", columnList = "stream_id,timestamp")

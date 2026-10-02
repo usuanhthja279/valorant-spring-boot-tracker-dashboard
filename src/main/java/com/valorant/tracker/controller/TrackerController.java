@@ -121,22 +121,15 @@ public class TrackerController {
     return history;
   }
 
-  /** Historical analytics for a bounded window [from, to). Rankings are withheld when capped. */
+  /** Historical analytics for [from, to), processed in bounded keyset pages. */
   @GetMapping("/analytics")
   public Map<String, Object> analytics(
       @RequestParam OffsetDateTime from,
-      @RequestParam OffsetDateTime to,
-      @RequestParam(defaultValue = "20000") int limit) {
+      @RequestParam OffsetDateTime to) {
     validateRange(from, to);
-    int safeLimit = clampLimit(limit);
-    List<StreamSample> samples = new ArrayList<>(entityManager.createQuery(
-            "select s from StreamSample s where s.timestamp >= :from and s.timestamp < :to "
-                + "order by s.timestamp desc, s.id desc", StreamSample.class)
-        .setParameter("from", from).setParameter("to", to).setMaxResults(safeLimit + 1).getResultList());
-    boolean truncated = samples.size() > safeLimit;
-    if (truncated) samples = new ArrayList<>(samples.subList(0, safeLimit));
-    java.util.Collections.reverse(samples);
-
+    // Keep each database read bounded, but process every sample in the selected range.
+    // This avoids misleading growth rankings caused by applying one global row cap.
+    final int pageSize = 5000;
     Map<String, Map<String, Object>> channels = new HashMap<>();
     Map<String, Map<String, Object>> platforms = new LinkedHashMap<>();
     for (String name : List.of("YouTube", "Twitch", "Kick")) {
@@ -147,37 +140,57 @@ public class TrackerController {
     }
 
     long overallPeak = 0L, overallViewerTotal = 0L, sampleCount = 0L;
-    for (StreamSample sample : samples) {
-      String platform = sample.getPlatform() == null ? "Unknown" : sample.getPlatform();
-      Map<String, Object> platformMetric = platforms.computeIfAbsent(platform, name -> {
-        Map<String, Object> metric = new LinkedHashMap<>();
-        metric.put("platform", name); metric.put("samples", 0L); metric.put("peakViewers", 0L);
-        metric.put("viewerSamples", 0L); metric.put("viewerTotal", 0L); return metric;
-      });
-      long viewers = Math.max(0L, sample.getViewers());
-      platformMetric.put("samples", (Long) platformMetric.get("samples") + 1L);
-      platformMetric.put("peakViewers", Math.max((Long) platformMetric.get("peakViewers"), viewers));
-      platformMetric.put("viewerSamples", (Long) platformMetric.get("viewerSamples") + 1L);
-      platformMetric.put("viewerTotal", (Long) platformMetric.get("viewerTotal") + viewers);
-      overallPeak = Math.max(overallPeak, viewers); overallViewerTotal += viewers; sampleCount++;
+    OffsetDateTime cursorTimestamp = null;
+    Long cursorId = null;
+    while (true) {
+      String jpql = "select s from StreamSample s where s.timestamp >= :from and s.timestamp < :to ";
+      if (cursorTimestamp != null) {
+        jpql += "and (s.timestamp > :cursorTimestamp or (s.timestamp = :cursorTimestamp and s.id > :cursorId)) ";
+      }
+      jpql += "order by s.timestamp asc, s.id asc";
+      var query = entityManager.createQuery(jpql, StreamSample.class)
+          .setParameter("from", from).setParameter("to", to);
+      if (cursorTimestamp != null) {
+        query.setParameter("cursorTimestamp", cursorTimestamp).setParameter("cursorId", cursorId);
+      }
+      List<StreamSample> page = query.setMaxResults(pageSize).getResultList();
+      if (page.isEmpty()) break;
 
-      String identity = platform.toLowerCase(Locale.ROOT) + ":" +
-          (sample.getChannelId() == null || sample.getChannelId().isBlank()
-              ? String.valueOf(sample.getChannel()).trim().toLowerCase(Locale.ROOT)
-              : sample.getChannelId());
-      Map<String, Object> channel = channels.computeIfAbsent(identity, key -> {
-        Map<String, Object> metric = new LinkedHashMap<>();
-        metric.put("platform", platform); metric.put("channel", sample.getChannel());
-        metric.put("url", sample.getUrl()); metric.put("firstViewers", viewers);
-        metric.put("lastViewers", viewers); metric.put("peakViewers", viewers);
-        metric.put("viewerTotal", 0L); metric.put("samples", 0L);
-        metric.put("firstTimestamp", sample.getTimestamp()); metric.put("lastTimestamp", sample.getTimestamp());
-        return metric;
-      });
-      channel.put("lastViewers", viewers); channel.put("lastTimestamp", sample.getTimestamp());
-      channel.put("peakViewers", Math.max((Long) channel.get("peakViewers"), viewers));
-      channel.put("viewerTotal", (Long) channel.get("viewerTotal") + viewers);
-      channel.put("samples", (Long) channel.get("samples") + 1L);
+      for (StreamSample sample : page) {
+        String platform = sample.getPlatform() == null ? "Unknown" : sample.getPlatform();
+        long viewers = Math.max(0L, sample.getViewers());
+        Map<String, Object> platformMetric = platforms.computeIfAbsent(platform, name -> {
+          Map<String, Object> metric = new LinkedHashMap<>();
+          metric.put("platform", name); metric.put("samples", 0L); metric.put("peakViewers", 0L);
+          metric.put("viewerSamples", 0L); metric.put("viewerTotal", 0L); return metric;
+        });
+        platformMetric.put("samples", (Long) platformMetric.get("samples") + 1L);
+        platformMetric.put("peakViewers", Math.max((Long) platformMetric.get("peakViewers"), viewers));
+        platformMetric.put("viewerSamples", (Long) platformMetric.get("viewerSamples") + 1L);
+        platformMetric.put("viewerTotal", (Long) platformMetric.get("viewerTotal") + viewers);
+        overallPeak = Math.max(overallPeak, viewers); overallViewerTotal += viewers; sampleCount++;
+
+        String identity = platform.toLowerCase(Locale.ROOT) + ":" +
+            (sample.getChannelId() == null || sample.getChannelId().isBlank()
+                ? String.valueOf(sample.getChannel()).trim().toLowerCase(Locale.ROOT)
+                : sample.getChannelId());
+        Map<String, Object> channel = channels.computeIfAbsent(identity, key -> {
+          Map<String, Object> metric = new LinkedHashMap<>();
+          metric.put("platform", platform); metric.put("channel", sample.getChannel());
+          metric.put("url", sample.getUrl()); metric.put("firstViewers", viewers);
+          metric.put("lastViewers", viewers); metric.put("peakViewers", viewers);
+          metric.put("viewerTotal", 0L); metric.put("samples", 0L);
+          metric.put("firstTimestamp", sample.getTimestamp()); metric.put("lastTimestamp", sample.getTimestamp());
+          return metric;
+        });
+        channel.put("lastViewers", viewers); channel.put("lastTimestamp", sample.getTimestamp());
+        channel.put("peakViewers", Math.max((Long) channel.get("peakViewers"), viewers));
+        channel.put("viewerTotal", (Long) channel.get("viewerTotal") + viewers);
+        channel.put("samples", (Long) channel.get("samples") + 1L);
+      }
+      StreamSample last = page.get(page.size() - 1);
+      cursorTimestamp = last.getTimestamp(); cursorId = last.getId();
+      if (page.size() < pageSize) break;
     }
 
     List<Map<String, Object>> fastestGrowing = new ArrayList<>(channels.values());
@@ -185,14 +198,12 @@ public class TrackerController {
       long first = (Long) channel.get("firstViewers"), last = (Long) channel.get("lastViewers");
       channel.put("growthViewers", last - first);
       channel.put("growthPercent", first > 0 ? ((last - first) * 100.0 / first) : null);
-      channel.put("averageViewers", channel.get("samples") == null || (Long) channel.get("samples") == 0
+      channel.put("averageViewers", (Long) channel.get("samples") == 0
           ? 0.0 : ((Long) channel.get("viewerTotal")).doubleValue() / (Long) channel.get("samples"));
       channel.remove("viewerTotal");
     }
     fastestGrowing.sort(Comparator.comparingLong((Map<String, Object> c) -> (Long)c.get("growthViewers")).reversed());
-    // Rankings require the full selected window; never rank a capped subset as if complete.
-    if (truncated) fastestGrowing = new ArrayList<>();
-    else if (fastestGrowing.size() > 10) fastestGrowing = new ArrayList<>(fastestGrowing.subList(0, 10));
+    if (fastestGrowing.size() > 10) fastestGrowing = new ArrayList<>(fastestGrowing.subList(0, 10));
 
     for (Map<String, Object> metric : platforms.values()) {
       long count = (Long) metric.get("viewerSamples"), total = (Long) metric.get("viewerTotal");
@@ -200,9 +211,9 @@ public class TrackerController {
       metric.remove("viewerSamples"); metric.remove("viewerTotal");
     }
     Map<String, Object> result = new LinkedHashMap<>();
-    result.put("from", from); result.put("to", to); result.put("samplesReturned", samples.size());
-    result.put("truncated", truncated); result.put("analyticsComplete", !truncated);
-    result.put("growthRankingsComplete", !truncated);
+    result.put("from", from); result.put("to", to); result.put("samplesReturned", sampleCount);
+    result.put("truncated", false); result.put("analyticsComplete", true);
+    result.put("growthRankingsComplete", true);
     result.put("overallPeakViewers", overallPeak);
     result.put("overallAverageViewers", sampleCount == 0 ? 0.0 : (double) overallViewerTotal / sampleCount);
     result.put("platforms", platforms.values()); result.put("fastestGrowingChannels", fastestGrowing);
