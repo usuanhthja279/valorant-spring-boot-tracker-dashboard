@@ -32,6 +32,12 @@ td{padding:10px 9px;border-bottom:1px solid #1e252f}
 .platform-link{color:#8e99a8}.platform-link:hover{text-decoration:underline;color:#eef2f7}
 a{color:#e7edf5;text-decoration:none}.title{color:#8e99a8;max-width:500px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .toolbar{display:flex;gap:10px;align-items:center;margin:18px 0}
+.range-panel{margin-top:12px;background:#11161e;border:1px solid #232a35;border-radius:12px;padding:12px}
+.range-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.range-buttons{display:flex;gap:8px;flex-wrap:wrap}
+button.active{border-color:#eef2f7;background:#202834}
+.custom-range{display:none;gap:8px;align-items:center;flex-wrap:wrap}
+.custom-range.visible{display:flex}
 .pagination{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:16px}
 button,select,input{background:#151b24;color:#eef2f7;border:1px solid #2b3441;border-radius:8px;padding:9px 12px}
 input{min-width:220px}
@@ -59,6 +65,34 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <div class="card"><div class="label">Combined</div><div class="value total" id="total">—</div></div>
 </div>
 
+<!-- Time range panel (matches channel.html UX) -->
+<section class="range-panel">
+  <div class="range-bar">
+    <div class="range-buttons">
+      <button id="range30m" onclick="setRange('30m')">30 min</button>
+      <button id="range1h" onclick="setRange('1h')">1 hour</button>
+      <button id="range6h" onclick="setRange('6h')">6 hours</button>
+      <button id="range24h" onclick="setRange('24h')">24 hours</button>
+      <button id="rangeDay" onclick="setRange('day')">Date</button>
+      <button id="rangeCustom" onclick="setRange('custom')">Custom</button>
+    </div>
+    <div class="status" id="rangeStatus">Last 1 hour</div>
+    <div class="status" id="rangeDataStatus">Loading history…</div>
+  </div>
+
+  <div class="custom-range" id="dateRange">
+    <label>Date <input type="date" id="selectedDate"></label>
+    <button onclick="applyDateRange()">Apply date</button>
+  </div>
+
+  <div class="custom-range" id="customRange">
+    <label>From <input type="datetime-local" id="customFrom"></label>
+    <label>To <input type="datetime-local" id="customTo"></label>
+    <button onclick="applyCustomRange()">Apply</button>
+  </div>
+
+</section>
+
 <div class="grid">
 <div class="panel">
 <h2>Combined viewer trend</h2>
@@ -71,12 +105,20 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </div>
 
 <div class="toolbar">
-<select id="scope" onchange="loadStreams()">
-<option>Overall</option><option>YouTube</option><option>Twitch</option><option>Kick</option>
-</select>
-<button onclick="collect()">Collect now</button>
-<button id="viewerSort" onclick="toggleViewerSort()" aria-label="Sort viewers high to low">Viewers: High-Low</button>
-<span class="sub" id="last">—</span>
+  <select id="timeRange" onchange="changeTimeRange()" title="Filter charts by time range">
+    <option value="30m">Last 30m</option>
+    <option value="1h" selected>Last 1h</option>
+    <option value="6h">Last 6h</option>
+    <option value="24h">Last 24h</option>
+    <option value="all">Overall</option>
+  </select>
+  <select id="scope" onchange="loadStreams()">
+    <option>Overall</option><option>YouTube</option><option>Twitch</option><option>Kick</option>
+  </select>
+  <button onclick="collect()">Collect now</button>
+  <button id="viewerSort" onclick="toggleViewerSort()" aria-label="Sort viewers high to low">Viewers: High-Low</button>
+  <span class="sub" id="last">—</span>
+  <span class="sub" id="snapshotInfo">—</span>
 </div>
 
 <div class="panel">
@@ -103,6 +145,113 @@ const pageSize=10;
 
 const fmt=n=>Number(n||0).toLocaleString('en-IN');
 
+// Time range for charts. Values: '30m','1h','6h','24h','day','custom','all'
+let currentRange = '1h';
+let selectedDate = null;
+let customFrom = null;
+let customTo = null;
+
+function changeTimeRange(){
+  const sel = document.getElementById('timeRange');
+  currentRange = sel ? sel.value : '1h';
+  // Keep range UI in sync (if user uses select)
+  setRange(currentRange);
+}
+
+function setRange(range){
+  currentRange = range;
+  // clear active from buttons
+  const buttons = document.querySelectorAll('.range-buttons button');
+  buttons.forEach(b=>b.classList.remove('active'));
+  let id = range === '30m' ? 'range30m' : range === '1h' ? 'range1h' : range === '6h' ? 'range6h' : range === '24h' ? 'range24h' : range === 'day' ? 'rangeDay' : 'rangeCustom';
+  const el = document.getElementById(id);
+  if(el) el.classList.add('active');
+
+  document.getElementById('customRange').classList.toggle('visible', range === 'custom');
+  document.getElementById('dateRange').classList.toggle('visible', range === 'day');
+
+  if(range === 'day'){
+    applyDateRange();
+    return;
+  }
+
+  if(range !== 'custom'){
+    document.getElementById('rangeStatus').textContent = 'Last ' + (range === '30m' ? '30 minutes' : range === '1h' ? '1 hour' : range === '6h' ? '6 hours' : '24 hours');
+    // re-render charts
+    refresh();
+  }
+}
+
+function applyDateRange(){
+  const value = document.getElementById('selectedDate').value;
+  if(!value){
+    document.getElementById('rangeStatus').textContent = 'Choose a date to view history';
+    return;
+  }
+  selectedDate = new Date(value + 'T00:00:00');
+  if(Number.isNaN(selectedDate.getTime())){
+    document.getElementById('rangeStatus').textContent = 'Invalid date selected';
+    return;
+  }
+  document.getElementById('rangeStatus').textContent = 'Date: ' + selectedDate.toLocaleDateString();
+  refresh();
+}
+
+function applyCustomRange(){
+  const from = document.getElementById('customFrom').value;
+  const to = document.getElementById('customTo').value;
+  if(!from || !to){ alert('Please select both start and end times.'); return; }
+  customFrom = new Date(from);
+  customTo = new Date(to);
+  if(customFrom >= customTo){ alert('Start time must be before end time.'); return; }
+  document.getElementById('rangeStatus').textContent = customFrom.toLocaleString() + ' → ' + customTo.toLocaleString();
+  refresh();
+}
+
+function filterSnapshotsByRange(snapshots){
+  if(!snapshots || !snapshots.length) return [];
+
+  // For 'all', just return sorted snapshots
+  if(currentRange === 'all') return snapshots.slice().sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+
+  // Find reference 'now' as the latest returned snapshot timestamp
+  const now = new Date(Math.max(...snapshots.map(s=>new Date(s.timestamp).getTime())));
+
+  // Day range
+  if(currentRange === 'day'){
+    if(!selectedDate) return [];
+    const from = new Date(selectedDate);
+    const to = new Date(selectedDate);
+    to.setDate(to.getDate() + 1);
+    return snapshots.filter(s=>{
+      const t = new Date(s.timestamp);
+      return t >= from && t < to;
+    }).sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+  }
+
+  // Custom range
+  if(currentRange === 'custom'){
+    if(!customFrom || !customTo) return [];
+    return snapshots.filter(s=>{
+      const t = new Date(s.timestamp);
+      return t >= customFrom && t <= customTo;
+    }).sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+  }
+
+  // Relative ranges
+  let from;
+  if(currentRange === '30m') from = new Date(now.getTime() - 30*60*1000);
+  else if(currentRange === '1h') from = new Date(now.getTime() - 60*60*1000);
+  else if(currentRange === '6h') from = new Date(now.getTime() - 6*60*60*1000);
+  else if(currentRange === '24h') from = new Date(now.getTime() - 24*60*60*1000);
+  else from = null;
+  if(!from) return snapshots.slice().sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+  return snapshots.filter(s=>{
+    const t=new Date(s.timestamp);
+    return t>=from && t<=now;
+  }).sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+}
+
 async function getJson(url){
   const r=await fetch(url,{cache:'no-store'});
   if(!r.ok) throw new Error(await r.text());
@@ -117,6 +266,7 @@ async function refresh(){
       return;
     }
 
+    // keep summary cards showing the overall latest snapshot
     data.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
     const latest=data[data.length-1];
 
@@ -125,13 +275,43 @@ async function refresh(){
     document.getElementById('kick').textContent=fmt(latest.kickViewers);
     document.getElementById('total').textContent=fmt(latest.combinedViewers);
     document.getElementById('last').textContent='Latest: '+new Date(latest.timestamp).toLocaleString();
+    const snapshotInfoEl = document.getElementById('snapshotInfo');
+    if(snapshotInfoEl) snapshotInfoEl.textContent = 'Snapshots: '+fmt(data.length);
+
+    // Filter snapshots according to the selected time range for charting
+    const filtered = filterSnapshotsByRange(data);
+
+    if(!filtered.length){
+      document.getElementById('status').textContent='No data for selected range';
+      const rangeStatusEl = document.getElementById('rangeDataStatus');
+      if(rangeStatusEl) rangeStatusEl.textContent = 'No data available for selected range — API returned '+fmt(data.length)+' snapshots (latest: '+new Date(latest.timestamp).toLocaleString()+')';
+      // destroy charts if present
+      if(combinedChart){ combinedChart.destroy(); combinedChart=null; }
+      if(platformChart){ platformChart.destroy(); platformChart=null; }
+      return;
+    }
+
     document.getElementById('status').textContent='Live · updates every minute';
 
-    const labels=data.slice(-120).map(x=>new Date(x.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
-    const combined=data.slice(-120).map(x=>x.combinedViewers);
-    const yt=data.slice(-120).map(x=>x.youtubeViewers);
-    const tw=data.slice(-120).map(x=>x.twitchViewers);
-    const kick=data.slice(-120).map(x=>x.kickViewers);
+    // limit points to avoid enormous charts (cap at 1440 points = 24h of minute samples)
+    const maxPoints = 1440;
+    const points = filtered.length > maxPoints ? filtered.slice(-maxPoints) : filtered;
+
+    // show how many points are in the selected range
+    const rangeStatusEl = document.getElementById('rangeDataStatus');
+    if(rangeStatusEl){
+      if(filtered.length > maxPoints){
+        rangeStatusEl.textContent = fmt(points.length) + ' records shown (truncated from ' + fmt(filtered.length) + ')';
+      }else{
+        rangeStatusEl.textContent = points.length ? fmt(points.length) + ' records in selected range' : 'No data available for selected range';
+      }
+    }
+
+    const labels = points.map(x=>new Date(x.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
+    const combined = points.map(x=>x.combinedViewers);
+    const yt = points.map(x=>x.youtubeViewers);
+    const tw = points.map(x=>x.twitchViewers);
+    const kick = points.map(x=>x.kickViewers);
 
     const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#aeb7c4'}}},
       scales:{x:{ticks:{color:'#77818f'},grid:{color:'#202731'}},
@@ -252,6 +432,12 @@ async function collect(){
     console.error(e);
   }
 }
+
+// initialize range UI and default date
+setRange('1h');
+const today = new Date();
+const selDateEl = document.getElementById('selectedDate');
+if(selDateEl){ selDateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; }
 
 refresh(); loadStreams();
 getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error);
