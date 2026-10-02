@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "snapshots")
+@Table(name = "snapshots", indexes = {
+    @Index(name = "idx_snapshots_timestamp", columnList = "timestamp")
+})
 public class Snapshot {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
