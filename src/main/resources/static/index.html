@@ -255,7 +255,7 @@ function filterSnapshotsByRange(snapshots){
     if(!customFrom || !customTo) return [];
     return snapshots.filter(s=>{
       const t = new Date(s.timestamp);
-      return t >= customFrom && t <= customTo;
+      return t >= customFrom && t < customTo;
     }).sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
   }
 
@@ -281,7 +281,7 @@ async function getJson(url){
 
 function selectedSnapshotRange(){
   const now = new Date();
-  if(currentRange === 'all') return null;
+  if(currentRange === 'all') return {from:new Date('1970-01-01T00:00:00Z'),to:new Date()};
   let from, to = now;
   if(currentRange === 'day'){
     if(!selectedDate) return null;
@@ -301,23 +301,24 @@ function selectedSnapshotRange(){
 
 async function fetchSnapshotsForSelectedRange(){
   const range = selectedSnapshotRange();
-  if(!range || currentRange === 'all') return getJson('/api/snapshots');
-  const query = new URLSearchParams({from:range.from.toISOString(), to:range.to.toISOString(), limit:'5000'});
+  if(!range) return getJson('/api/snapshots');
+  const query = new URLSearchParams({from:range.from.toISOString(), to:range.to.toISOString(), limit: currentRange === 'all' ? '5000' : '5000'});
   return getJson('/api/snapshots/range?' + query.toString());
 }
 
 async function refreshAnalytics(){
   const range=selectedSnapshotRange();
   const to=range?.to || new Date();
-  const from=range?.from || new Date(to.getTime()-30*24*60*60*1000);
+  // The all-time chart is bounded to the newest 5,000 snapshots; analytics uses a separate 30-day window.
+  const from=currentRange === 'all' ? new Date(to.getTime()-30*24*60*60*1000) : (range?.from || new Date(to.getTime()-30*24*60*60*1000));
   const query=new URLSearchParams({from:from.toISOString(),to:to.toISOString(),limit:'20000'});
   try{
     const data=await getJson('/api/analytics?'+query.toString());
     document.getElementById('analyticsPeak').textContent=fmt(data.overallPeakViewers);
     document.getElementById('analyticsAverage').textContent=fmt(Math.round(data.overallAverageViewers||0));
-    document.getElementById('analyticsMeta').textContent=`${fmt(data.samplesReturned)} stream samples · ${data.truncated?'Result cap reached; metrics may be partial':'Window: '+from.toLocaleString()+' → '+to.toLocaleString()}`;
+    document.getElementById('analyticsMeta').textContent=`${fmt(data.samplesReturned)} stream samples · ${data.truncated?'Sample cap reached: aggregate metrics cover only the newest returned samples; growth rankings are hidden':'Window: '+from.toLocaleString()+' → '+to.toLocaleString()}`;
     document.getElementById('platformAnalytics').innerHTML=(data.platforms||[]).map(p=>`<tr><td>${escapeHtml(p.platform)}</td><td>${fmt(p.peakViewers)}</td><td>${fmt(Math.round(p.averageViewers||0))}</td><td>${fmt(p.samples)}</td></tr>`).join('')||'<tr><td colspan="4">No data for this range</td></tr>';
-    document.getElementById('growthAnalytics').innerHTML=(data.fastestGrowingChannels||[]).map((c,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(c.platform||'')}</td><td><a href="/channel.html?name=${encodeURIComponent(c.channel||'')}" title="View channel history">${escapeHtml(c.channel||'Unknown')}</a></td><td>${fmt(c.firstViewers)}</td><td>${fmt(c.lastViewers)}</td><td>${Number(c.growthViewers)>=0?'+':''}${fmt(c.growthViewers)}</td><td>${fmt(c.peakViewers)}</td><td>${fmt(Math.round(c.averageViewers||0))}</td></tr>`).join('')||'<tr><td colspan="8">No channel samples for this range</td></tr>';
+    document.getElementById('growthAnalytics').innerHTML=(data.truncated?'<tr><td colspan="8">Growth rankings unavailable: increase the date-range precision or use a shorter period because the sample cap was reached.</td></tr>':(data.fastestGrowingChannels||[]).map((c,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(c.platform||'')}</td><td><a href="/channel.html?name=${encodeURIComponent(c.channel||'')}" title="View channel history">${escapeHtml(c.channel||'Unknown')}</a></td><td>${fmt(c.firstViewers)}</td><td>${fmt(c.lastViewers)}</td><td>${Number(c.growthViewers)>=0?'+':''}${fmt(c.growthViewers)}</td><td>${fmt(c.peakViewers)}</td><td>${fmt(Math.round(c.averageViewers||0))}</td></tr>`).join('')||'<tr><td colspan="8">No channel samples for this range</td></tr>');
   }catch(e){
     document.getElementById('analyticsMeta').textContent='Historical analytics unavailable';
     document.getElementById('platformAnalytics').innerHTML='<tr><td colspan="4">Unable to load analytics</td></tr>';
@@ -348,10 +349,13 @@ async function refresh(){
     document.getElementById('total').textContent=fmt(latest.combinedViewers);
     document.getElementById('last').textContent='Latest: '+new Date(latest.timestamp).toLocaleString();
     const snapshotInfoEl = document.getElementById('snapshotInfo');
-    if(snapshotInfoEl) snapshotInfoEl.textContent = 'Recent snapshots returned: '+fmt(latestData.length)+' (max 500)';
+    if(snapshotInfoEl) snapshotInfoEl.textContent = 'Latest snapshot: '+fmt(latestData.length ? latestData.length : 0);
 
     await refreshAnalytics();
     const filtered = (chartData || []).slice().sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+    const rangeDataStatusEl = document.getElementById('rangeDataStatus');
+    if(rangeDataStatusEl && currentRange === 'all') rangeDataStatusEl.textContent = `All-time view: showing up to ${fmt(filtered.length)} of the newest 5,000 snapshots`;
+    else if(rangeDataStatusEl) rangeDataStatusEl.textContent = `${fmt(filtered.length)} snapshots in selected range`;
     if(!filtered.length){
       document.getElementById('status').textContent='No data for selected range';
       const rangeStatusEl = document.getElementById('rangeDataStatus');

@@ -13,12 +13,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api")
@@ -57,7 +57,7 @@ public class TrackerController {
         .setMaxResults(500).getResultList();
   }
 
-  /** Bounded, indexed history query for chart ranges. Timestamps must be ISO-8601 offsets. */
+  /** Bounded, indexed history query for chart ranges. The upper timestamp is exclusive. */
   @GetMapping("/snapshots/range")
   public List<Snapshot> snapshotsInRange(
       @RequestParam OffsetDateTime from,
@@ -65,10 +65,13 @@ public class TrackerController {
       @RequestParam(defaultValue = "5000") int limit) {
     validateRange(from, to);
     int safeLimit = clampLimit(limit);
-    return entityManager.createQuery(
-            "select s from Snapshot s where s.timestamp >= :from and s.timestamp <= :to "
-                + "order by s.timestamp asc, s.id asc", Snapshot.class)
+    List<Snapshot> results = entityManager.createQuery(
+            "select s from Snapshot s where s.timestamp >= :from and s.timestamp < :to "
+                + "order by s.timestamp desc, s.id desc", Snapshot.class)
         .setParameter("from", from).setParameter("to", to).setMaxResults(safeLimit).getResultList();
+    results = new ArrayList<>(results);
+    java.util.Collections.reverse(results);
+    return results;
   }
 
   @GetMapping("/streams")
@@ -103,23 +106,22 @@ public class TrackerController {
       @RequestParam(defaultValue = "5000") int limit) {
     if (name.isBlank()) return List.of();
     if ((from == null) != (to == null)) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "Both 'from' and 'to' must be supplied together");
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Both 'from' and 'to' must be supplied together");
     }
     if (from != null) validateRange(from, to);
     int safeLimit = clampLimit(limit);
 
     String query = "select s from StreamSample s where lower(trim(s.channel)) = lower(trim(:name)) ";
-    if (from != null) query += "and s.timestamp >= :from and s.timestamp <= :to ";
+    if (from != null) query += "and s.timestamp >= :from and s.timestamp < :to ";
     query += "order by s.timestamp desc, s.id desc";
     var typedQuery = entityManager.createQuery(query, StreamSample.class).setParameter("name", name.trim());
     if (from != null) typedQuery.setParameter("from", from).setParameter("to", to);
-    List<StreamSample> history = typedQuery.setMaxResults(safeLimit).getResultList();
+    List<StreamSample> history = new ArrayList<>(typedQuery.setMaxResults(safeLimit).getResultList());
     java.util.Collections.reverse(history);
     return history;
   }
 
-  /** Historical analytics for a bounded window. Metrics are computed from stored samples. */
+  /** Historical analytics for a bounded window [from, to). Rankings are withheld when capped. */
   @GetMapping("/analytics")
   public Map<String, Object> analytics(
       @RequestParam OffsetDateTime from,
@@ -127,11 +129,12 @@ public class TrackerController {
       @RequestParam(defaultValue = "20000") int limit) {
     validateRange(from, to);
     int safeLimit = clampLimit(limit);
-    List<StreamSample> samples = entityManager.createQuery(
-            "select s from StreamSample s where s.timestamp >= :from and s.timestamp <= :to "
+    List<StreamSample> samples = new ArrayList<>(entityManager.createQuery(
+            "select s from StreamSample s where s.timestamp >= :from and s.timestamp < :to "
                 + "order by s.timestamp desc, s.id desc", StreamSample.class)
-        .setParameter("from", from).setParameter("to", to).setMaxResults(safeLimit).getResultList();
-    samples = new ArrayList<>(samples);
+        .setParameter("from", from).setParameter("to", to).setMaxResults(safeLimit + 1).getResultList());
+    boolean truncated = samples.size() > safeLimit;
+    if (truncated) samples = new ArrayList<>(samples.subList(0, safeLimit));
     java.util.Collections.reverse(samples);
 
     Map<String, Map<String, Object>> channels = new HashMap<>();
@@ -187,7 +190,9 @@ public class TrackerController {
       channel.remove("viewerTotal");
     }
     fastestGrowing.sort(Comparator.comparingLong((Map<String, Object> c) -> (Long)c.get("growthViewers")).reversed());
-    if (fastestGrowing.size() > 10) fastestGrowing = new ArrayList<>(fastestGrowing.subList(0, 10));
+    // Rankings require the full selected window; never rank a capped subset as if complete.
+    if (truncated) fastestGrowing = new ArrayList<>();
+    else if (fastestGrowing.size() > 10) fastestGrowing = new ArrayList<>(fastestGrowing.subList(0, 10));
 
     for (Map<String, Object> metric : platforms.values()) {
       long count = (Long) metric.get("viewerSamples"), total = (Long) metric.get("viewerTotal");
@@ -196,7 +201,9 @@ public class TrackerController {
     }
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("from", from); result.put("to", to); result.put("samplesReturned", samples.size());
-    result.put("truncated", samples.size() == safeLimit); result.put("overallPeakViewers", overallPeak);
+    result.put("truncated", truncated); result.put("analyticsComplete", !truncated);
+    result.put("growthRankingsComplete", !truncated);
+    result.put("overallPeakViewers", overallPeak);
     result.put("overallAverageViewers", sampleCount == 0 ? 0.0 : (double) overallViewerTotal / sampleCount);
     result.put("platforms", platforms.values()); result.put("fastestGrowingChannels", fastestGrowing);
     return result;
@@ -213,8 +220,7 @@ public class TrackerController {
 
   private static void validateRange(OffsetDateTime from, OffsetDateTime to) {
     if (from == null || to == null || !from.isBefore(to)) {
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "'from' must be earlier than 'to'");
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "'from' must be earlier than 'to'");
     }
   }
 }

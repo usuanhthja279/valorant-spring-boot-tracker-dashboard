@@ -1,20 +1,19 @@
-# Phase 4 — Historical analytics
+# Phase 4 — Historical analytics (corrective update)
 
-## Added
-- `GET /api/analytics?from=<ISO-8601>&to=<ISO-8601>&limit=20000` computes analytics from persisted stream samples in a validated time window.
-- Overall peak sampled viewers and average viewers per stream sample.
-- Per-platform sample count, peak viewers, and average viewers.
-- Top 10 channels ordered by signed viewer change between their first and last sample in the selected window; includes first/latest viewers, change, peak, average, and timestamps.
-- Dashboard analytics section uses the selected time range, and shows platform comparisons and channel growth alongside existing historical charts.
-- `Overall` range uses the most recent 30 days for analytics to keep the query bounded; other ranges use selected from/to values.
-- The API clamps the requested sample limit to the existing 20,000 maximum and reports `truncated` when the returned sample count reaches that cap.
+## Analytics endpoint
+- `GET /api/analytics?from=<ISO-8601>&to=<ISO-8601>&limit=20000` computes metrics for the half-open interval `[from, to)`.
+- Analytics fetches the newest samples first up to the configured cap, then processes those samples chronologically. A long window that exceeds the cap therefore does not silently analyze only its oldest records.
+- If the cap is reached, `truncated=true`, `analyticsComplete=false`, and `growthRankingsComplete=false`. Growth rankings are returned empty because first-to-last growth cannot be reliably ranked from a partial window. Peak/average metrics are still based on the returned sample subset and the response/UI labels them partial.
+- `from >= to` is rejected as HTTP 400. Missing required `from` or `to` query parameters are also HTTP 400 through Spring request-parameter validation.
+- Per-platform sample count, peak and average; overall peak and average; top 10 channel viewer-change rankings when the selected window is complete.
 
-## Metric interpretation / limitations
-- Viewer growth is the difference between a channel's first and last stored samples in the selected window, not unique viewers or a causal growth rate.
-- Average viewers is the arithmetic average across collected stream samples, so channels sampled more often contribute more samples.
-- If the 20,000-row cap is reached, the response marks analytics as potentially partial. The query keeps the most recent samples within the requested window; metrics and growth periods can therefore be partial.
-- Channel identity uses provider plus channel ID where available, falling back to normalized channel name.
+## Range behavior
+- `/api/snapshots/range`, `/api/channels/history`, and `/api/analytics` use an exclusive upper bound (`timestamp < to`). Selecting a calendar date ends at the next day's midnight without including that midnight sample.
+- Snapshot range queries select the newest rows within the requested bounds and return them in chronological order.
+- The dashboard's all-time chart request is bounded to the newest 5,000 snapshots. Its range status says it is showing up to the newest 5,000 snapshots rather than implying the chart contains every historical row.
+- In all-time mode, the analytics panel uses the latest 30 days as its analytics window, independent of the chart's bounded all-time view.
 
-## Validation
-- The analytics query is bounded to the configured sample limit and returns most-recent samples when that limit is reached.
-- Run `./gradlew test` (or `gradlew.bat test` on Windows) before deployment.
+## Tests and validation
+- Added controller tests for analytics metrics, reversed analytics ranges, missing analytics range parameters, and reversed snapshot ranges (HTTP 400 expected).
+- Inline dashboard JavaScript syntax check passed with Node.js.
+- Full Gradle test suite passed after copying query results before reversing them.

@@ -90,7 +90,7 @@ class TrackerControllerTest {
         .thenReturn(query);
     when(query.setParameter(eq("from"), any(OffsetDateTime.class))).thenReturn(query);
     when(query.setParameter(eq("to"), any(OffsetDateTime.class))).thenReturn(query);
-    when(query.setMaxResults(20000)).thenReturn(query);
+    when(query.setMaxResults(20001)).thenReturn(query);
     OffsetDateTime first = OffsetDateTime.parse("2026-10-02T09:00:00Z");
     OffsetDateTime last = OffsetDateTime.parse("2026-10-02T10:00:00Z");
     StreamSample earlier =
