@@ -29,9 +29,11 @@ public class TrackerController {
 
   @GetMapping("/status")
   public Map<String, Object> status() {
-    return Map.of("running", true, "lastRun", tracker.getLastRun() == null
-        ? "not-run"
-        : tracker.getLastRun());
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("running", true);
+    result.put("lastRun", tracker.getLastRun() == null ? "not-run" : tracker.getLastRun());
+    result.put("providers", tracker.getProviderHealth());
+    return result;
   }
 
   @PostMapping("/collect")

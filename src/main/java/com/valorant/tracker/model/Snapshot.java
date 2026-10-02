@@ -1,56 +1,56 @@
 package com.valorant.tracker.model;
-import jakarta.persistence.*; import java.time.OffsetDateTime;
 
-@Entity @Table(name="snapshots") public class Snapshot {
-    @Id @GeneratedValue(strategy=GenerationType.IDENTITY)
-    Long id;
+import jakarta.persistence.*;
+import java.time.OffsetDateTime;
 
-    OffsetDateTime timestamp;
+@Entity
+@Table(name = "snapshots")
+public class Snapshot {
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  Long id;
 
-    long youtubeViewers,twitchViewers,kickViewers,combinedViewers;
+  OffsetDateTime timestamp;
+  long youtubeViewers, twitchViewers, kickViewers, combinedViewers;
+  int youtubeStreams, twitchStreams, kickStreams;
+  Boolean youtubeAvailable, twitchAvailable, kickAvailable;
 
-    int youtubeStreams,twitchStreams,kickStreams;
+  protected Snapshot() {}
 
-    protected Snapshot(){}
+  public Snapshot(
+      OffsetDateTime timestamp,
+      long youtubeViewers,
+      long twitchViewers,
+      long kickViewers,
+      int youtubeStreams,
+      int twitchStreams,
+      int kickStreams,
+      boolean youtubeAvailable,
+      boolean twitchAvailable,
+      boolean kickAvailable) {
+    this.timestamp = timestamp;
+    this.youtubeViewers = youtubeViewers;
+    this.twitchViewers = twitchViewers;
+    this.kickViewers = kickViewers;
+    this.combinedViewers = youtubeViewers + twitchViewers + kickViewers;
+    this.youtubeStreams = youtubeStreams;
+    this.twitchStreams = twitchStreams;
+    this.kickStreams = kickStreams;
+    this.youtubeAvailable = youtubeAvailable;
+    this.twitchAvailable = twitchAvailable;
+    this.kickAvailable = kickAvailable;
+  }
 
-    public Snapshot(OffsetDateTime t,long y,long tw,long k,int yc,int tc,int kc)
-    {
-        timestamp=t;youtubeViewers=y;twitchViewers=tw;kickViewers=k;combinedViewers=y+tw+k;youtubeStreams=yc;twitchStreams=tc;kickStreams=kc;
-    }
-
-    public Long getId(){
-        return id;
-    }
-
-    public OffsetDateTime getTimestamp(){
-        return timestamp;
-    }
-
-    public long getYoutubeViewers(){
-        return youtubeViewers;
-    }
-
-    public long getTwitchViewers(){
-        return twitchViewers;
-    }
-
-    public long getKickViewers(){
-        return kickViewers;
-    }
-
-    public long getCombinedViewers(){
-        return combinedViewers;
-    }
-
-    public int getYoutubeStreams(){
-        return youtubeStreams;
-    }
-
-    public int getTwitchStreams(){
-        return twitchStreams;
-    }
-
-    public int getKickStreams(){
-        return kickStreams;
-    }
+  public Long getId() { return id; }
+  public OffsetDateTime getTimestamp() { return timestamp; }
+  public long getYoutubeViewers() { return youtubeViewers; }
+  public long getTwitchViewers() { return twitchViewers; }
+  public long getKickViewers() { return kickViewers; }
+  public long getCombinedViewers() { return combinedViewers; }
+  public int getYoutubeStreams() { return youtubeStreams; }
+  public int getTwitchStreams() { return twitchStreams; }
+  public int getKickStreams() { return kickStreams; }
+  public Boolean getYoutubeAvailable() { return youtubeAvailable; }
+  public Boolean getTwitchAvailable() { return twitchAvailable; }
+  public Boolean getKickAvailable() { return kickAvailable; }
 }

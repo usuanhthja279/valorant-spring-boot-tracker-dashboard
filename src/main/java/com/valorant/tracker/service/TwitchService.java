@@ -234,12 +234,9 @@ public class TwitchService {
           clientSecret == null ||
           clientSecret.isBlank()) {
 
-   logger.warn(
-           "Twitch collection disabled because " +
-                   "Twitch Client ID / Client Secret is not configured."
+   throw new IllegalStateException(
+           "Twitch collection is disabled because Client ID / Client Secret is not configured"
    );
-
-   return List.of();
   }
 
   try {

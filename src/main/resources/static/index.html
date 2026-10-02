@@ -270,9 +270,11 @@ async function refresh(){
     data.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
     const latest=data[data.length-1];
 
-    document.getElementById('yt').textContent=fmt(latest.youtubeViewers);
-    document.getElementById('tw').textContent=fmt(latest.twitchViewers);
-    document.getElementById('kick').textContent=fmt(latest.kickViewers);
+    const displayProviderValue = (available, viewers) =>
+      available === false ? 'Unavailable' : fmt(viewers);
+    document.getElementById('yt').textContent=displayProviderValue(latest.youtubeAvailable, latest.youtubeViewers);
+    document.getElementById('tw').textContent=displayProviderValue(latest.twitchAvailable, latest.twitchViewers);
+    document.getElementById('kick').textContent=displayProviderValue(latest.kickAvailable, latest.kickViewers);
     document.getElementById('total').textContent=fmt(latest.combinedViewers);
     document.getElementById('last').textContent='Latest: '+new Date(latest.timestamp).toLocaleString();
     const snapshotInfoEl = document.getElementById('snapshotInfo');
@@ -291,7 +293,17 @@ async function refresh(){
       return;
     }
 
-    document.getElementById('status').textContent='Live · updates every minute';
+    try {
+      const health = await getJson('/api/status');
+      const providers = health.providers || {};
+      const healthLabel = ['YouTube','Twitch','Kick'].map(name => {
+        const state = providers[name]?.status || 'UNKNOWN';
+        return name + ': ' + state;
+      }).join(' · ');
+      document.getElementById('status').textContent='Live · ' + healthLabel;
+    } catch {
+      document.getElementById('status').textContent='Live · provider status unavailable';
+    }
 
     // limit points to avoid enormous charts (cap at 1440 points = 24h of minute samples)
     const maxPoints = 1440;
@@ -309,9 +321,10 @@ async function refresh(){
 
     const labels = points.map(x=>new Date(x.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
     const combined = points.map(x=>x.combinedViewers);
-    const yt = points.map(x=>x.youtubeViewers);
-    const tw = points.map(x=>x.twitchViewers);
-    const kick = points.map(x=>x.kickViewers);
+    // Plot failed provider samples as gaps, not false zero-viewer drops.
+    const yt = points.map(x=>x.youtubeAvailable === false ? null : x.youtubeViewers);
+    const tw = points.map(x=>x.twitchAvailable === false ? null : x.twitchViewers);
+    const kick = points.map(x=>x.kickAvailable === false ? null : x.kickViewers);
 
     const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#aeb7c4'}}},
       scales:{x:{ticks:{color:'#77818f'},grid:{color:'#202731'}},
