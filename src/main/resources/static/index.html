@@ -104,6 +104,27 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </div>
 </div>
 
+<div class="grid" id="analyticsPanel">
+  <div class="panel">
+    <h2>Historical analytics</h2>
+    <div class="cards" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+      <div><div class="label">Peak sampled viewers</div><div class="value" id="analyticsPeak">—</div></div>
+      <div><div class="label">Average per stream sample</div><div class="value" id="analyticsAverage">—</div></div>
+    </div>
+    <div class="sub" id="analyticsMeta" style="margin-top:12px">Analytics load with the selected time range.</div>
+  </div>
+  <div class="panel">
+    <h2>Platform comparison</h2>
+    <table><thead><tr><th>Platform</th><th>Peak viewers</th><th>Average viewers</th><th>Samples</th></tr></thead>
+    <tbody id="platformAnalytics"><tr><td colspan="4">Loading…</td></tr></tbody></table>
+  </div>
+  <div class="panel" style="grid-column:1/-1">
+    <h2>Fastest-growing channels (viewer change from first to last sample)</h2>
+    <table><thead><tr><th>#</th><th>Platform</th><th>Channel</th><th>First</th><th>Latest</th><th>Change</th><th>Peak</th><th>Average</th></tr></thead>
+    <tbody id="growthAnalytics"><tr><td colspan="8">Loading…</td></tr></tbody></table>
+  </div>
+</div>
+
 <div class="toolbar">
   <select id="timeRange" onchange="changeTimeRange()" title="Filter charts by time range">
     <option value="30m">Last 30m</option>
@@ -285,6 +306,26 @@ async function fetchSnapshotsForSelectedRange(){
   return getJson('/api/snapshots/range?' + query.toString());
 }
 
+async function refreshAnalytics(){
+  const range=selectedSnapshotRange();
+  const to=range?.to || new Date();
+  const from=range?.from || new Date(to.getTime()-30*24*60*60*1000);
+  const query=new URLSearchParams({from:from.toISOString(),to:to.toISOString(),limit:'20000'});
+  try{
+    const data=await getJson('/api/analytics?'+query.toString());
+    document.getElementById('analyticsPeak').textContent=fmt(data.overallPeakViewers);
+    document.getElementById('analyticsAverage').textContent=fmt(Math.round(data.overallAverageViewers||0));
+    document.getElementById('analyticsMeta').textContent=`${fmt(data.samplesReturned)} stream samples · ${data.truncated?'Result cap reached; metrics may be partial':'Window: '+from.toLocaleString()+' → '+to.toLocaleString()}`;
+    document.getElementById('platformAnalytics').innerHTML=(data.platforms||[]).map(p=>`<tr><td>${escapeHtml(p.platform)}</td><td>${fmt(p.peakViewers)}</td><td>${fmt(Math.round(p.averageViewers||0))}</td><td>${fmt(p.samples)}</td></tr>`).join('')||'<tr><td colspan="4">No data for this range</td></tr>';
+    document.getElementById('growthAnalytics').innerHTML=(data.fastestGrowingChannels||[]).map((c,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(c.platform||'')}</td><td><a href="/channel.html?name=${encodeURIComponent(c.channel||'')}" title="View channel history">${escapeHtml(c.channel||'Unknown')}</a></td><td>${fmt(c.firstViewers)}</td><td>${fmt(c.lastViewers)}</td><td>${Number(c.growthViewers)>=0?'+':''}${fmt(c.growthViewers)}</td><td>${fmt(c.peakViewers)}</td><td>${fmt(Math.round(c.averageViewers||0))}</td></tr>`).join('')||'<tr><td colspan="8">No channel samples for this range</td></tr>';
+  }catch(e){
+    document.getElementById('analyticsMeta').textContent='Historical analytics unavailable';
+    document.getElementById('platformAnalytics').innerHTML='<tr><td colspan="4">Unable to load analytics</td></tr>';
+    document.getElementById('growthAnalytics').innerHTML='<tr><td colspan="8">Unable to load analytics</td></tr>';
+    console.error(e);
+  }
+}
+
 async function refresh(){
   try{
     // Summary cards always use the newest snapshot; chart history is fetched separately
@@ -309,6 +350,7 @@ async function refresh(){
     const snapshotInfoEl = document.getElementById('snapshotInfo');
     if(snapshotInfoEl) snapshotInfoEl.textContent = 'Recent snapshots returned: '+fmt(latestData.length)+' (max 500)';
 
+    await refreshAnalytics();
     const filtered = (chartData || []).slice().sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
     if(!filtered.length){
       document.getElementById('status').textContent='No data for selected range';
