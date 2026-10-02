@@ -553,6 +553,7 @@
 
 
   let allRecords = [];
+  let currentRecords = [];
 
   let currentRange = '30m';
 
@@ -568,28 +569,30 @@
      API
      ===================================================== */
 
-  async function getHistory(){
-
-    if(!channelName){
-      return;
+  async function getHistory(from, to){
+    if(!channelName) return [];
+    const params = new URLSearchParams({name:channelName, limit:'20000'});
+    if(from && to){
+      params.set('from', from.toISOString());
+      params.set('to', to.toISOString());
     }
-
-    const response = await fetch(
-            '/api/channels/history?name=' +
-            encodeURIComponent(channelName),
-            {
-              cache:'no-store'
-            }
-    );
-
-    if(!response.ok){
-
-      throw new Error(
-              await response.text()
-      );
-    }
-
+    const response = await fetch('/api/channels/history?' + params.toString(), {cache:'no-store'});
+    if(!response.ok) throw new Error(await response.text());
     return response.json();
+  }
+
+  function selectedHistoryBounds(){
+    const now = new Date();
+    if(currentRange === 'day'){
+      if(!selectedDate) return null;
+      const from = new Date(selectedDate);
+      const to = new Date(selectedDate);
+      to.setDate(to.getDate() + 1);
+      return {from, to};
+    }
+    if(currentRange === 'custom') return customFrom && customTo ? {from:customFrom, to:customTo} : null;
+    const durations = {'30m':30*60*1000, '1h':60*60*1000, '6h':6*60*60*1000, '24h':24*60*60*1000};
+    return {from:new Date(now.getTime() - (durations[currentRange] || durations['30m'])), to:now};
   }
 
 
@@ -653,7 +656,7 @@
                                               : '24 hours'
               );
 
-      render();
+      load();
     }
   }
 
@@ -674,7 +677,7 @@
 
     document.getElementById('rangeStatus').textContent =
             'Date: ' + selectedDate.toLocaleDateString();
-    render();
+    load();
   }
 
 
@@ -719,7 +722,7 @@
             customTo.toLocaleString();
 
 
-    render();
+    load();
   }
 
 
@@ -835,7 +838,7 @@
     let latestChannelLink = null;
 
 
-    for(const record of allRecords){
+    for(const record of currentRecords){
 
       if(
               record.url &&
@@ -1493,36 +1496,20 @@
 
     try{
 
-      const records =
-              await getHistory();
+      const bounds = selectedHistoryBounds();
+      const [latest, ranged] = await Promise.all([
+        getHistory(),
+        bounds ? getHistory(bounds.from, bounds.to) : Promise.resolve([])
+      ]);
+      currentRecords = Array.isArray(latest) ? latest : [];
+      allRecords = Array.isArray(ranged) ? ranged : [];
+      currentRecords.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+      allRecords.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
 
-
-      allRecords =
-              Array.isArray(records)
-                      ? records
-                      : [];
-
-
-      /*
-       * Sort once.
-       */
-
-      allRecords.sort(
-              (a,b) =>
-                      new Date(a.timestamp) -
-                      new Date(b.timestamp)
-      );
-
-
-      if(!allRecords.length){
-
-        document.getElementById('rangeDataStatus').textContent =
-                'No recorded history for this channel.';
-
+      if(!currentRecords.length && !allRecords.length){
+        document.getElementById('rangeDataStatus').textContent = 'No recorded history for this channel.';
         return;
       }
-
-
       render();
 
     }catch(error){
