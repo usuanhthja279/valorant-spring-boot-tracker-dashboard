@@ -258,36 +258,62 @@ async function getJson(url){
   return r.json();
 }
 
+function selectedSnapshotRange(){
+  const now = new Date();
+  if(currentRange === 'all') return null;
+  let from, to = now;
+  if(currentRange === 'day'){
+    if(!selectedDate) return null;
+    from = new Date(selectedDate);
+    to = new Date(selectedDate);
+    to.setDate(to.getDate() + 1);
+  }else if(currentRange === 'custom'){
+    if(!customFrom || !customTo) return null;
+    from = customFrom;
+    to = customTo;
+  }else{
+    const durations = {'30m':30*60*1000, '1h':60*60*1000, '6h':6*60*60*1000, '24h':24*60*60*1000};
+    from = new Date(now.getTime() - (durations[currentRange] || durations['1h']));
+  }
+  return {from, to};
+}
+
+async function fetchSnapshotsForSelectedRange(){
+  const range = selectedSnapshotRange();
+  if(!range || currentRange === 'all') return getJson('/api/snapshots');
+  const query = new URLSearchParams({from:range.from.toISOString(), to:range.to.toISOString(), limit:'5000'});
+  return getJson('/api/snapshots/range?' + query.toString());
+}
+
 async function refresh(){
   try{
-    const data=await getJson('/api/snapshots');
-    if(!data.length){
+    // Summary cards always use the newest snapshot; chart history is fetched separately
+    // from the database for the selected range so older data isn't limited to 500 rows.
+    const [latestData, chartData] = await Promise.all([
+      getJson('/api/snapshots'),
+      fetchSnapshotsForSelectedRange()
+    ]);
+    if(!latestData.length){
       document.getElementById('status').textContent='Waiting for first collection';
       return;
     }
 
-    // keep summary cards showing the overall latest snapshot
-    data.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
-    const latest=data[data.length-1];
-
-    const displayProviderValue = (available, viewers) =>
-      available === false ? 'Unavailable' : fmt(viewers);
+    latestData.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+    const latest=latestData[latestData.length-1];
+    const displayProviderValue = (available, viewers) => available === false ? 'Unavailable' : fmt(viewers);
     document.getElementById('yt').textContent=displayProviderValue(latest.youtubeAvailable, latest.youtubeViewers);
     document.getElementById('tw').textContent=displayProviderValue(latest.twitchAvailable, latest.twitchViewers);
     document.getElementById('kick').textContent=displayProviderValue(latest.kickAvailable, latest.kickViewers);
     document.getElementById('total').textContent=fmt(latest.combinedViewers);
     document.getElementById('last').textContent='Latest: '+new Date(latest.timestamp).toLocaleString();
     const snapshotInfoEl = document.getElementById('snapshotInfo');
-    if(snapshotInfoEl) snapshotInfoEl.textContent = 'Snapshots: '+fmt(data.length);
+    if(snapshotInfoEl) snapshotInfoEl.textContent = 'Recent snapshots returned: '+fmt(latestData.length)+' (max 500)';
 
-    // Filter snapshots according to the selected time range for charting
-    const filtered = filterSnapshotsByRange(data);
-
+    const filtered = (chartData || []).slice().sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
     if(!filtered.length){
       document.getElementById('status').textContent='No data for selected range';
       const rangeStatusEl = document.getElementById('rangeDataStatus');
-      if(rangeStatusEl) rangeStatusEl.textContent = 'No data available for selected range — API returned '+fmt(data.length)+' snapshots (latest: '+new Date(latest.timestamp).toLocaleString()+')';
-      // destroy charts if present
+      if(rangeStatusEl) rangeStatusEl.textContent='No data available for selected range';
       if(combinedChart){ combinedChart.destroy(); combinedChart=null; }
       if(platformChart){ platformChart.destroy(); platformChart=null; }
       return;
@@ -296,45 +322,33 @@ async function refresh(){
     try {
       const health = await getJson('/api/status');
       const providers = health.providers || {};
-      const healthLabel = ['YouTube','Twitch','Kick'].map(name => {
-        const state = providers[name]?.status || 'UNKNOWN';
-        return name + ': ' + state;
-      }).join(' · ');
+      const healthLabel = ['YouTube','Twitch','Kick'].map(name => name + ': ' + (providers[name]?.status || 'UNKNOWN')).join(' · ');
       document.getElementById('status').textContent='Live · ' + healthLabel;
     } catch {
       document.getElementById('status').textContent='Live · provider status unavailable';
     }
 
-    // limit points to avoid enormous charts (cap at 1440 points = 24h of minute samples)
     const maxPoints = 1440;
     const points = filtered.length > maxPoints ? filtered.slice(-maxPoints) : filtered;
-
-    // show how many points are in the selected range
     const rangeStatusEl = document.getElementById('rangeDataStatus');
     if(rangeStatusEl){
-      if(filtered.length > maxPoints){
-        rangeStatusEl.textContent = fmt(points.length) + ' records shown (truncated from ' + fmt(filtered.length) + ')';
-      }else{
-        rangeStatusEl.textContent = points.length ? fmt(points.length) + ' records in selected range' : 'No data available for selected range';
-      }
+      rangeStatusEl.textContent = filtered.length > maxPoints
+        ? fmt(points.length)+' points displayed ('+fmt(filtered.length)+' retrieved)'
+        : fmt(points.length)+' records in selected range';
     }
 
     const labels = points.map(x=>new Date(x.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
     const combined = points.map(x=>x.combinedViewers);
-    // Plot failed provider samples as gaps, not false zero-viewer drops.
     const yt = points.map(x=>x.youtubeAvailable === false ? null : x.youtubeViewers);
     const tw = points.map(x=>x.twitchAvailable === false ? null : x.twitchViewers);
     const kick = points.map(x=>x.kickAvailable === false ? null : x.kickViewers);
-
     const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#aeb7c4'}}},
-      scales:{x:{ticks:{color:'#77818f'},grid:{color:'#202731'}},
-              y:{ticks:{color:'#77818f'},grid:{color:'#202731'}}}};
+      scales:{x:{ticks:{color:'#77818f'},grid:{color:'#202731'}},y:{ticks:{color:'#77818f'},grid:{color:'#202731'}}}};
 
     if(combinedChart) combinedChart.destroy();
     combinedChart=new Chart(document.getElementById('combinedChart'),{
       type:'line',data:{labels,datasets:[{label:'Combined',data:combined,borderColor:'#eef2f7',backgroundColor:'transparent',tension:.25,pointRadius:1}]},options:opts
     });
-
     if(platformChart) platformChart.destroy();
     platformChart=new Chart(document.getElementById('platformChart'),{
       type:'line',data:{labels,datasets:[
@@ -345,10 +359,10 @@ async function refresh(){
     });
   }catch(e){
     document.getElementById('status').textContent='Tracker/API unavailable';
+    document.getElementById('rangeDataStatus').textContent='Unable to load selected history';
     console.error(e);
   }
 }
-
 async function loadStreams(){
   const scope=document.getElementById('scope').value;
   const body=document.getElementById('streams');
