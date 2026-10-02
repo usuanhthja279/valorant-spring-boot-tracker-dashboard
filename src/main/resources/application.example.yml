@@ -2,21 +2,21 @@ spring:
   application:
     name: valorant-live-tracker
   datasource:
-    url: jdbc:h2:file:./data/valorant-tracker
-    username: sa
-    password:
+    url: ${TRACKER_DB_URL:jdbc:h2:file:./data/valorant-tracker}
+    username: ${TRACKER_DB_USERNAME:sa}
+    password: ${TRACKER_DB_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: update
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 tracker:
   enabled: true
-  interval-ms: 60000
+  interval-ms: ${TRACKER_INTERVAL_MS:60000}
   youtube:
-    refresh-interval-ms: 300000
+    refresh-interval-ms: ${YOUTUBE_REFRESH_INTERVAL_MS:300000}
     api-key: ${YOUTUBE_API_KEY:}
   twitch:
     client-id: ${TWITCH_CLIENT_ID:}
