@@ -15,29 +15,30 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class KickScraperService {
 
   private static final Logger logger = LoggerFactory.getLogger(KickScraperService.class);
-  private static final String CATEGORY_URL =
-      "https://kick.com/category/valorant?sort=viewers_high_to_low";
   private static final String STREAMS_MARKER = "\\\"livestreams\\\":[";
   private static final int MAX_PAGE_SIZE_BYTES = 2 * 1024 * 1024;
   private static final int TOP_DISPLAY_COUNT = 20;
 
   private final WebClient client;
   private final ObjectMapper mapper;
+  private final String categoryUrl;
 
-  public KickScraperService(WebClient.Builder webClientBuilder, ObjectMapper mapper) {
+  public KickScraperService(
+      WebClient.Builder webClientBuilder, ObjectMapper mapper, DataSourceCatalog sources) {
     this.client =
         webClientBuilder
             .clone()
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(MAX_PAGE_SIZE_BYTES))
             .build();
     this.mapper = mapper;
+    this.categoryUrl = sources.kickScraperUrl();
   }
 
   public List<LiveStream> fetch() {
     String html =
         client
             .get()
-            .uri(CATEGORY_URL)
+            .uri(categoryUrl)
             .header("User-Agent", "Mozilla/5.0")
             .header("Accept", "text/html,application/xhtml+xml")
             .retrieve()

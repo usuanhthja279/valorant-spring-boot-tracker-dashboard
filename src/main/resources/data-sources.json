@@ -1,0 +1,22 @@
+{
+  "youtube": {
+    "scraperSearchUrls": [
+      "https://www.youtube.com/results?search_query=valorant&sp=CAMSBBABQAE%253D",
+      "https://www.youtube.com/watch?v=gwap8BHITn0",
+      "https://www.youtube.com/watch?v=vNDagsEr-xA"
+    ],
+    "watchPageUrlTemplate": "https://www.youtube.com/watch?v={videoId}",
+    "apiSearchUrl": "https://www.googleapis.com/youtube/v3/search",
+    "apiVideosUrl": "https://www.googleapis.com/youtube/v3/videos"
+  },
+  "twitch": {
+    "authUrl": "https://id.twitch.tv/oauth2/token",
+    "gameUrl": "https://api.twitch.tv/helix/games",
+    "streamsUrl": "https://api.twitch.tv/helix/streams"
+  },
+  "kick": {
+    "scraperUrl": "https://kick.com/category/valorant?sort=viewers_high_to_low",
+    "authUrl": "https://id.kick.com/oauth/token",
+    "streamsUrl": "https://api.kick.com/public/v2/livestreams"
+  }
+}
