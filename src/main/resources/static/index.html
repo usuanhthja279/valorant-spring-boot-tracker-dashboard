@@ -8,22 +8,38 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#0b0e13;color:#eef2f7;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
-header{padding:24px 30px;border-bottom:1px solid #222832;background:#10141b;display:flex;justify-content:space-between;align-items:center}
-.header-search{display:flex;align-items:center;gap:8px;margin:0 20px;flex:1;max-width:520px}
+header{padding:16px 22px;border-bottom:1px solid #222832;background:#0c121a;display:flex;justify-content:space-between;align-items:center;gap:18px;position:relative;z-index:5}
+.header-search{position:relative;display:flex;align-items:center;gap:8px;margin:0 20px;flex:1;max-width:520px}
 .header-search input{width:100%;min-width:0}
+.search-field{position:relative;flex:1;min-width:0}
+.search-field input{padding:12px 14px;background:#151b24;border-color:#2b3441}
+.search-field input:focus{outline:none;border-color:#36b9ff;box-shadow:0 0 0 2px #36b9ff22}
+.search-suggestions{display:none;position:absolute;z-index:1000;left:0;right:0;top:calc(100% + 6px);background:#0e151e;border:1px solid #2b3a49;border-radius:10px;box-shadow:0 18px 40px #0009;overflow:hidden;max-height:360px;overflow-y:auto}
+.search-suggestions.visible{display:block}
+.suggestion-heading{padding:10px 14px 7px;color:#8e99a8;font-size:11px;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #202a35}
+.search-result{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:12px;align-items:center;text-align:left;border:0;border-radius:0;background:transparent;padding:11px 14px;cursor:pointer}
+.search-result:hover,.search-result[aria-selected="true"]{background:#182432}
+.search-result-name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.search-result-name mark{background:transparent;color:#ffd43b;font:inherit}
+.search-result-platform{color:#aab6c5;font-size:12px;white-space:nowrap}
+.search-result-viewers{color:#dbe6f2;font-size:12px;white-space:nowrap}.search-result-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap}.search-result-status.live{color:#37d67a}.search-result-status.offline{color:#a0a9b6}.search-result-status .presence-dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:currentColor}
+.search-empty{padding:14px;color:#9aa7b7;font-size:13px}
+.search-footer{padding:9px 14px;border-top:1px solid #202a35;color:#8e99a8;font-size:11px}
 h1{margin:0;font-size:25px}.sub{color:#8e99a8;font-size:13px;margin-top:5px}
 .status{display:flex;gap:8px;align-items:center;color:#8e99a8;font-size:13px}
 .dot{width:9px;height:9px;border-radius:50%;background:#37d67a;display:inline-block}
-main{padding:25px 30px;max-width:1500px;margin:auto}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
-.card{background:#11161e;border:1px solid #232a35;border-radius:12px;padding:20px}
+main{padding:18px 22px 28px;max-width:1800px;margin:auto}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.card{background:linear-gradient(145deg,#111c27,#0e151e);border:1px solid #202d39;border-radius:11px;padding:15px}
 .label{font-size:12px;color:#8e99a8;text-transform:uppercase;letter-spacing:.08em}
-.value{font-size:30px;font-weight:750;margin-top:8px}
+.live-card-label{display:flex;align-items:center;gap:7px}
+.live-card-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px}
+.value{font-size:28px;font-weight:750;margin-top:7px;font-variant-numeric:tabular-nums}
 .yt{color:#ff6464}.tw{color:#b998ff}.kick{color:#52df9c}.total{color:#fff}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
-.panel{background:#11161e;border:1px solid #232a35;border-radius:12px;padding:18px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.panel{background:#0f1720;border:1px solid #202d39;border-radius:11px;padding:14px;min-width:0}
 .panel h2{font-size:16px;margin:0 0 15px}
-.chart{height:300px}
+.chart{height:205px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;color:#8e99a8;font-weight:600;padding:9px;border-bottom:1px solid #29303b}
 td{padding:10px 9px;border-bottom:1px solid #1e252f}
@@ -32,7 +48,7 @@ td{padding:10px 9px;border-bottom:1px solid #1e252f}
 .platform-link{color:#8e99a8}.platform-link:hover{text-decoration:underline;color:#eef2f7}
 a{color:#e7edf5;text-decoration:none}.title{color:#8e99a8;max-width:500px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .toolbar{display:flex;gap:10px;align-items:center;margin:18px 0}
-.range-panel{margin-top:12px;background:#11161e;border:1px solid #232a35;border-radius:12px;padding:12px}
+.range-panel{margin-top:12px;background:#0f1720;border:1px solid #202d39;border-radius:11px;padding:10px 12px}
 .range-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .range-buttons{display:flex;gap:8px;flex-wrap:wrap}
 button.active{border-color:#eef2f7;background:#202834}
@@ -42,7 +58,16 @@ button.active{border-color:#eef2f7;background:#202834}
 button,select,input{background:#151b24;color:#eef2f7;border:1px solid #2b3441;border-radius:8px;padding:9px 12px}
 input{min-width:220px}
 button:disabled{opacity:.45;cursor:not-allowed}
-@media(max-width:900px){header{flex-wrap:wrap;gap:12px}.header-search{order:3;flex-basis:100%;margin:0;max-width:none}.cards{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+.peak-section{margin-top:10px;border:1px solid #263746;border-radius:12px;padding:10px 12px;background:linear-gradient(100deg,#101923,#0c131c)}
+.peak-heading{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;margin:0 0 9px}
+.peak-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.peak-card{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:10px;background:linear-gradient(145deg,#111e29,#0e151e);border:1px solid #20303d;border-radius:9px;padding:12px}
+.peak-icon{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;flex:0 0 22px}.platform-logo{display:inline-block;width:18px;height:18px;vertical-align:-4px;flex:0 0 auto}.peak-platform{font-size:12px;color:#cbd5e1}.peak-value{font-size:23px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}.peak-time{font-size:11px;color:#91a0b1;margin-top:2px}.peak-spark-wrap{grid-column:1/-1;position:relative;width:100%;height:32px;min-height:32px;max-height:32px;overflow:hidden}.peak-spark{display:block!important;position:absolute!important;inset:0;width:100%!important;height:32px!important;max-height:32px!important}
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.metric{padding:12px;background:#111e29;border:1px solid #20303d;border-radius:9px;min-width:0}.metric .value{font-size:22px}.metric .label{font-size:10px}.table-wrap{overflow-x:auto} table{min-width:560px} th,td{padding:8px 9px}.subtle{color:#8e9dad;font-size:12px}.channel-pick{border:0;background:transparent;padding:0;color:#dbeafe;font-weight:650;cursor:pointer}.channel-pick:hover{color:#36b9ff;text-decoration:underline}
+@media(max-width:1000px){header{flex-wrap:wrap;gap:12px}.header-search{order:3;flex-basis:100%;margin:0;max-width:none}.cards,.peak-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.grid,.analytics-grid{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:550px){.cards,.peak-cards,.metric-grid{grid-template-columns:1fr}main{padding:12px}.grid{grid-template-columns:1fr}.value{font-size:25px}.peak-value{font-size:22px}}
 @media(max-width:550px){.cards{grid-template-columns:1fr}main{padding:15px}.grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -50,8 +75,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <header>
 <div><h1>VALORANT Live Tracker</h1><div class="sub">YouTube · Twitch · Kick · minute-by-minute viewership</div></div>
 <form class="header-search" onsubmit="openChannelStats(event)">
-  <input id="channelLookup" type="search" list="channelOptions" placeholder="Search channel stats" aria-label="Search channel stats" autocomplete="off">
-  <datalist id="channelOptions"></datalist>
+  <div class="search-field">
+    <input id="channelLookup" type="search" placeholder="Search channel stats (name, platform, ID)" aria-label="Search channel stats" autocomplete="off" aria-autocomplete="list" aria-controls="channelSuggestions" aria-expanded="false">
+    <div id="channelSuggestions" class="search-suggestions" role="listbox" aria-label="Matching channels"></div>
+  </div>
   <button type="submit">View stats</button>
 </form>
 <div class="status"><span class="dot"></span><span id="status">Connecting…</span></div>
@@ -59,10 +86,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 <main>
 <div class="cards">
-<div class="card"><div class="label">YouTube</div><div class="value yt" id="yt">—</div></div>
-<div class="card"><div class="label">Twitch</div><div class="value tw" id="tw">—</div></div>
-<div class="card"><div class="label">Kick</div><div class="value kick" id="kick">—</div></div>
-<div class="card"><div class="label">Combined</div><div class="value total" id="total">—</div></div>
+  <div class="card"><div class="label live-card-label"><span class="live-card-icon" id="liveYoutubeIcon"></span>YouTube</div><div class="value yt" id="yt">—</div></div>
+  <div class="card"><div class="label live-card-label"><span class="live-card-icon" id="liveTwitchIcon"></span>Twitch</div><div class="value tw" id="tw">—</div></div>
+  <div class="card"><div class="label live-card-label"><span class="live-card-icon" id="liveKickIcon"></span>Kick</div><div class="value kick" id="kick">—</div></div>
+  <div class="card"><div class="label live-card-label"><span class="live-card-icon" id="liveCombinedIcon"></span>Combined</div><div class="value total" id="total">—</div></div>
 </div>
 
 <!-- Time range panel (matches channel.html UX) -->
@@ -104,25 +131,48 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </div>
 </div>
 
-<div class="grid" id="analyticsPanel">
-  <div class="panel">
-    <h2>Historical analytics</h2>
-    <div class="cards" style="grid-template-columns:repeat(2,minmax(0,1fr))">
-      <div><div class="label">Peak sampled viewers</div><div class="value" id="analyticsPeak">—</div></div>
-      <div><div class="label">Average per stream sample</div><div class="value" id="analyticsAverage">—</div></div>
+<section class="peak-section" aria-label="Peak viewership in selected range">
+  <h2 class="peak-heading"><span style="font-size:19px">🏆</span> Peak viewership in selected range <span class="subtle" id="peakRangeLabel">(Last 1 hour)</span></h2>
+  <div class="peak-cards">
+    <article class="peak-card"><div class="peak-icon" id="peakYoutubeIcon"></div><div><div class="peak-platform">YouTube</div><div class="peak-value yt" id="peakYoutube">—</div><div class="peak-time" id="peakYoutubeTime">peak viewers</div></div><div class="peak-spark-wrap"><canvas class="peak-spark" id="peakYoutubeSpark"></canvas></div></article>
+    <article class="peak-card"><div class="peak-icon" id="peakTwitchIcon"></div><div><div class="peak-platform">Twitch</div><div class="peak-value tw" id="peakTwitch">—</div><div class="peak-time" id="peakTwitchTime">peak viewers</div></div><div class="peak-spark-wrap"><canvas class="peak-spark" id="peakTwitchSpark"></canvas></div></article>
+    <article class="peak-card"><div class="peak-icon" id="peakKickIcon"></div><div><div class="peak-platform">Kick</div><div class="peak-value kick" id="peakKick">—</div><div class="peak-time" id="peakKickTime">peak viewers</div></div><div class="peak-spark-wrap"><canvas class="peak-spark" id="peakKickSpark"></canvas></div></article>
+    <article class="peak-card"><div class="peak-icon" id="peakCombinedIcon"></div><div><div class="peak-platform">Combined (total)</div><div class="peak-value total" id="peakCombined">—</div><div class="peak-time" id="peakCombinedTime">peak viewers</div></div><div class="peak-spark-wrap"><canvas class="peak-spark" id="peakCombinedSpark"></canvas></div></article>
+  </div>
+</section>
+
+<div class="analytics-grid" id="analyticsPanel">
+  <section class="panel">
+    <h2>Historical analytics <span class="subtle" id="analyticsRangeLabel">(selected range)</span></h2>
+    <div class="metric-grid">
+      <div class="metric"><div class="label">Peak total viewers</div><div class="value" id="analyticsPeak">—</div><div class="subtle" id="analyticsPeakTime"></div></div>
+      <div class="metric"><div class="label">Average total viewers</div><div class="value" id="analyticsAverage">—</div></div>
+      <div class="metric"><div class="label">Stream samples</div><div class="value" id="analyticsSamples">—</div></div>
+      <div class="metric"><div class="label">Selected range</div><div class="value" id="analyticsRangeValue">—</div><div class="subtle" id="analyticsRangeTimes"></div></div>
     </div>
-    <div class="sub" id="analyticsMeta" style="margin-top:12px">Analytics load with the selected time range.</div>
-  </div>
-  <div class="panel">
-    <h2>Platform comparison</h2>
-    <table><thead><tr><th>Platform</th><th>Peak viewers</th><th>Average viewers</th><th>Samples</th></tr></thead>
-    <tbody id="platformAnalytics"><tr><td colspan="4">Loading…</td></tr></tbody></table>
-  </div>
-  <div class="panel" style="grid-column:1/-1">
-    <h2>Fastest-growing channels (viewer change from first to last sample)</h2>
-    <table><thead><tr><th>#</th><th>Platform</th><th>Channel</th><th>First</th><th>Latest</th><th>Change</th><th>Peak</th><th>Average</th></tr></thead>
-    <tbody id="growthAnalytics"><tr><td colspan="8">Loading…</td></tr></tbody></table>
-  </div>
+    <div class="sub" id="analyticsMeta" style="margin-top:10px">Analytics load with the selected time range.</div>
+  </section>
+  <section class="panel">
+    <h2>Platform comparison <span class="subtle" id="platformRangeLabel">(selected range)</span></h2>
+    <div class="table-wrap"><table><thead><tr><th>Platform</th><th>Peak viewers</th><th>Average viewers</th><th>Samples</th><th>Trend (viewers)</th></tr></thead>
+    <tbody id="platformAnalytics"><tr><td colspan="5">Loading…</td></tr></tbody></table></div>
+  </section>
+  <section class="panel">
+    <h2>Top channels by peak viewers <span class="subtle" id="topChannelsRangeLabel">(selected range)</span></h2>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>Channel</th><th>Platform</th><th>Peak viewers</th><th>Average viewers</th><th>Samples</th><th>Trend</th></tr></thead>
+    <tbody id="topChannels"><tr><td colspan="7">Loading…</td></tr></tbody></table></div>
+  </section>
+  <section class="panel" id="channelHistoryPanel">
+    <h2>Channel viewer history <span class="subtle" id="channelHistoryTitle">(select a channel)</span></h2>
+    <div class="subtle" id="channelHistoryHint">Select a channel from the ranked table to inspect its history for the selected time range.</div>
+    <div class="chart" style="height:190px;margin-top:10px"><canvas id="channelHistoryChart"></canvas></div>
+    <div class="metric-grid" id="channelHistoryMetrics" style="margin-top:10px;display:none">
+      <div class="metric"><div class="label">Peak viewers</div><div class="value" id="channelPeak">—</div><div class="subtle" id="channelPeakTime"></div></div>
+      <div class="metric"><div class="label">Average viewers</div><div class="value" id="channelAverage">—</div></div>
+      <div class="metric"><div class="label">Samples</div><div class="value" id="channelSamples">—</div></div>
+      <div class="metric"><div class="label">First → Last</div><div class="value" id="channelFirstLast">—</div><div class="subtle" id="channelChange"></div></div>
+    </div>
+  </section>
 </div>
 
 <div class="toolbar">
@@ -157,10 +207,17 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </main>
 
 <script>
-let combinedChart, platformChart;
+let combinedChart, platformChart, channelHistoryChart;
+let selectedHistoryChannel=null;
+let peakSparklines=[];
+let currentSnapshots=[];
 let analyticsRequestId = 0;
 let allStreams=[];
 let allChannelNames=[];
+let channelCatalogLoaded=false;
+let searchMatches=[];
+let activeSuggestionIndex=-1;
+let searchDebounceTimer=null;
 let currentPage=0;
 let viewersDescending=true;
 const pageSize=10;
@@ -310,8 +367,8 @@ async function fetchSnapshotsForSelectedRange(){
 async function refreshAnalytics(){
   const requestId = ++analyticsRequestId;
   const metaEl = document.getElementById('analyticsMeta');
-  document.getElementById('platformAnalytics').innerHTML='<tr><td colspan="4">Loading analytics…</td></tr>';
-  document.getElementById('growthAnalytics').innerHTML='<tr><td colspan="8">Loading growth rankings…</td></tr>';
+  document.getElementById('platformAnalytics').innerHTML='<tr><td colspan="5">Loading analytics…</td></tr>';
+  document.getElementById('topChannels').innerHTML='<tr><td colspan="7">Loading channel rankings…</td></tr>';
   if(metaEl) metaEl.textContent='Loading complete analytics for the selected window…';
   const range=selectedSnapshotRange();
   const to=range?.to || new Date();
@@ -322,16 +379,27 @@ async function refreshAnalytics(){
     const data=await getJson('/api/analytics?'+query.toString());
     if(requestId !== analyticsRequestId) return;
     document.getElementById('analyticsPeak').textContent=fmt(data.overallPeakViewers);
-    document.getElementById('analyticsAverage').textContent=fmt(Math.round(data.overallAverageViewers||0));
-    const windowLabel = currentRange === 'all' ? 'latest 30 days (Overall analytics)' : 'selected window';
-    document.getElementById('analyticsMeta').textContent=`${fmt(data.samplesReturned)} stream samples · Complete ${windowLabel}: ${from.toLocaleString()} → ${to.toLocaleString()}`;
-    document.getElementById('platformAnalytics').innerHTML=(data.platforms||[]).map(p=>`<tr><td>${escapeHtml(p.platform)}</td><td>${fmt(p.peakViewers)}</td><td>${fmt(Math.round(p.averageViewers||0))}</td><td>${fmt(p.samples)}</td></tr>`).join('')||'<tr><td colspan="4">No data for this range</td></tr>';
-    document.getElementById('growthAnalytics').innerHTML=(data.fastestGrowingChannels||[]).map((c,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(c.platform||'')}</td><td><a href="/channel.html?name=${encodeURIComponent(c.channel||'')}" title="View channel history">${escapeHtml(c.channel||'Unknown')}</a></td><td>${fmt(c.firstViewers)}</td><td>${fmt(c.lastViewers)}</td><td>${Number(c.growthViewers)>=0?'+':''}${fmt(c.growthViewers)}</td><td>${fmt(c.peakViewers)}</td><td>${fmt(Math.round(c.averageViewers||0))}</td></tr>`).join('')||'<tr><td colspan="8">No channel samples for this range</td></tr>';
+    const combinedValues=currentSnapshots.map(x=>Number(x.combinedViewers||0));
+    document.getElementById('analyticsAverage').textContent=fmt(combinedValues.length?Math.round(combinedValues.reduce((a,b)=>a+b,0)/combinedValues.length):0);
+    document.getElementById('analyticsSamples').textContent=fmt(data.samplesReturned||0);
+    document.getElementById('analyticsRangeValue').textContent=currentRange==='all'?'30 days':currentRange==='day'?'1 day':currentRange==='custom'?'Custom':({ '30m':'30 min','1h':'1 hour','6h':'6 hours','24h':'24 hours'}[currentRange]||currentRange);
+    document.getElementById('analyticsRangeTimes').textContent=`${from.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} – ${to.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+    document.getElementById('analyticsRangeLabel').textContent=`(${document.getElementById('analyticsRangeValue').textContent})`;
+    document.getElementById('platformRangeLabel').textContent=document.getElementById('analyticsRangeLabel').textContent;
+    document.getElementById('topChannelsRangeLabel').textContent=document.getElementById('analyticsRangeLabel').textContent;
+    document.getElementById('analyticsMeta').textContent=`${fmt(data.samplesReturned)} stream samples · ${from.toLocaleString()} → ${to.toLocaleString()}`;
+    const platformRows=(data.platforms||[]).map(p=>{const vals=currentSnapshots.filter(x=>p.platform==='YouTube'?x.youtubeAvailable!==false&&x.youtubeViewers!=null:p.platform==='Twitch'?x.twitchAvailable!==false&&x.twitchViewers!=null:p.platform==='Kick'?x.kickAvailable!==false&&x.kickViewers!=null:false).map(x=>Number(p.platform==='YouTube'?x.youtubeViewers:p.platform==='Twitch'?x.twitchViewers:x.kickViewers));return {...p, peakViewers:vals.length?Math.max(...vals):0, averageViewers:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0, trend: platformTrend(p.platform)};});
+    const overallPeak = currentSnapshots.length ? currentSnapshots.reduce((best,x)=>Number(x.combinedViewers||0)>Number(best.combinedViewers||0)?x:best,currentSnapshots[0]) : null;
+    if(overallPeak) document.getElementById('analyticsPeakTime').textContent='at '+new Date(overallPeak.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('platformAnalytics').innerHTML=platformRows.map(p=>`<tr><td>${platformIcon(p.platform)} ${escapeHtml(p.platform)}</td><td>${fmt(p.peakViewers)}</td><td>${fmt(Math.round(p.averageViewers||0))}</td><td>${fmt(p.samples)}</td><td>${sparklineSvg(p.trend, platformColor(p.platform))}</td></tr>`).join('')+`<tr><td>♟ Combined</td><td>${fmt(overallPeak?.combinedViewers||0)}</td><td>${fmt(Math.round(data.overallAverageViewers||0))}</td><td>${fmt(currentSnapshots.length)}</td><td>${sparklineSvg(currentSnapshots.map(x=>x.combinedViewers),'#eef2f7')}</td></tr>`;
+    const ranked=(data.topChannelsByPeak||data.fastestGrowingChannels||[]).slice().sort((a,b)=>Number(b.peakViewers||0)-Number(a.peakViewers||0)).slice(0,10);
+    document.getElementById('topChannels').innerHTML=ranked.map((c,i)=>`<tr><td>${i+1}</td><td><button class="channel-pick" type="button" onclick="showChannelHistory('${escapeJs(c.channel||'')}','${escapeJs(c.platform||'')}')">${escapeHtml(c.channel||'Unknown')}</button></td><td>${platformIcon(c.platform)} ${escapeHtml(c.platform||'')}</td><td>${fmt(c.peakViewers)}</td><td>${fmt(Math.round(c.averageViewers||0))}</td><td>${fmt(c.samples)}</td><td>${sparklineSvg([c.firstViewers,c.peakViewers,c.lastViewers],platformColor(c.platform))}</td></tr>`).join('')||'<tr><td colspan="7">No channel samples for this range</td></tr>';
+    if(selectedHistoryChannel) showChannelHistory(selectedHistoryChannel.channel,selectedHistoryChannel.platform);
   }catch(e){
     if(requestId !== analyticsRequestId) return;
     document.getElementById('analyticsMeta').textContent='Historical analytics unavailable. Check the server and try again.';
     document.getElementById('platformAnalytics').innerHTML='<tr><td colspan="4">Unable to load analytics</td></tr>';
-    document.getElementById('growthAnalytics').innerHTML='<tr><td colspan="8">Unable to load analytics</td></tr>';
+    document.getElementById('topChannels').innerHTML='<tr><td colspan="7">Unable to load analytics</td></tr>';
     console.error(e);
   }
 }
@@ -364,6 +432,8 @@ async function refresh(){
     // Analytics has its own loading state and updates independently.
     refreshAnalytics();
     const filtered = (chartData || []).slice().sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+    currentSnapshots=filtered;
+    renderPeakCards(filtered);
     const rangeDataStatusEl = document.getElementById('rangeDataStatus');
     if(rangeDataStatusEl && currentRange === 'all') rangeDataStatusEl.textContent = `All-time view: showing up to ${fmt(filtered.length)} of the newest 5,000 snapshots`;
     else if(rangeDataStatusEl) rangeDataStatusEl.textContent = `${fmt(filtered.length)} snapshots in selected range`;
@@ -394,6 +464,7 @@ async function refresh(){
         : fmt(points.length)+' records in selected range';
     }
 
+    const rangeLabel=document.getElementById('rangeStatus')?.textContent||'selected range';document.querySelector('#combinedChart').closest('.panel').querySelector('h2').textContent='Combined viewer trend · '+rangeLabel;document.querySelector('#platformChart').closest('.panel').querySelector('h2').textContent='Platform trend · '+rangeLabel;
     const labels = points.map(x=>new Date(x.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
     const combined = points.map(x=>x.combinedViewers);
     const yt = points.map(x=>x.youtubeAvailable === false ? null : x.youtubeViewers);
@@ -420,6 +491,36 @@ async function refresh(){
     console.error(e);
   }
 }
+
+function platformColor(name){return name==='YouTube'?'#ff6464':name==='Twitch'?'#b998ff':name==='Kick'?'#52df9c':'#eef2f7';}
+function platformIcon(name){
+  const cls='platform-logo';
+  if(name==='YouTube')return `<svg class="${cls}" viewBox="0 0 24 24" role="img" aria-label="YouTube"><rect x="2" y="5" width="20" height="14" rx="4" fill="#FF0033"/><path d="M10 8.5 16 12l-6 3.5z" fill="#fff"/></svg>`;
+  if(name==='Twitch')return `<svg class="${cls}" viewBox="0 0 24 24" role="img" aria-label="Twitch"><path fill="#9146FF" d="M4 2h18v13l-5 5h-4l-3 3v-3H5V6z"/><path fill="#fff" d="M7 5h12v9l-3 3h-4l-2 2v-2H7z"/><path fill="#9146FF" d="M11 7h2v5h-2zm5 0h2v5h-2z"/></svg>`;
+  if(name==='Kick')return `<svg class="${cls}" viewBox="0 0 24 24" role="img" aria-label="Kick"><path fill="#53FC18" d="M4 2h5v8l6-8h6l-7 9 7 11h-6l-5-8-1 1v7H4z"/></svg>`;
+  return `<svg class="${cls}" viewBox="0 0 24 24" role="img" aria-label="Combined"><circle cx="8" cy="8" r="4" fill="#dbeafe"/><circle cx="17" cy="9" r="3" fill="#dbeafe"/><path d="M1 21v-2c0-4 3-6 7-6s7 2 7 6v2zm14-7c4 0 8 2 8 6v1h-6v-2c0-2-.7-3.7-2-5z" fill="#dbeafe"/></svg>`;
+}
+function escapeJs(value){return String(value).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[\r\n]/g,' ');}
+function platformTrend(name){return currentSnapshots.map(s=>name==='YouTube'?s.youtubeViewers:name==='Twitch'?s.twitchViewers:name==='Kick'?s.kickViewers:s.combinedViewers).filter(v=>v!==null&&v!==undefined).map(Number);}
+function sparklineSvg(values,color){const vals=(values||[]).map(Number).filter(Number.isFinite);if(!vals.length)return '<span class="subtle">—</span>';const w=96,h=20,min=Math.min(...vals),max=Math.max(...vals),span=max-min||1;const pts=vals.map((v,i)=>`${vals.length===1?w/2:i*w/(vals.length-1)},${h-2-(v-min)/span*(h-4)}`).join(' ');return `<svg viewBox="0 0 ${w} ${h}" width="96" height="20" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;}
+function initPlatformIcons(){
+  [['liveYoutubeIcon','YouTube'],['liveTwitchIcon','Twitch'],['liveKickIcon','Kick'],['liveCombinedIcon','Combined'],
+   ['peakYoutubeIcon','YouTube'],['peakTwitchIcon','Twitch'],['peakKickIcon','Kick'],['peakCombinedIcon','Combined']]
+    .forEach(([id,name])=>{const el=document.getElementById(id);if(el)el.innerHTML=platformIcon(name);});
+}
+initPlatformIcons();
+function renderPeakCards(points){
+  const rangeText=document.getElementById('rangeStatus')?.textContent||'Selected range';document.getElementById('peakRangeLabel').textContent='('+rangeText+')';
+  const configs=[['youtubeViewers','youtubeAvailable','YouTube','peakYoutube','peakYoutubeTime','peakYoutubeSpark','#ff6464'],['twitchViewers','twitchAvailable','Twitch','peakTwitch','peakTwitchTime','peakTwitchSpark','#b998ff'],['kickViewers','kickAvailable','Kick','peakKick','peakKickTime','peakKickSpark','#52df9c'],['combinedViewers',null,'Combined','peakCombined','peakCombinedTime','peakCombinedSpark','#eef2f7']];
+  for(const chart of peakSparklines)chart.destroy();peakSparklines=[];
+  for(const [field,availability,label,valueId,timeId,canvasId,color] of configs){const valid=(points||[]).filter(p=>p[field]!=null&&(!availability||p[availability]!==false));const peak=valid.reduce((best,p)=>!best||Number(p[field])>Number(best[field])?p:best,null);document.getElementById(valueId).textContent=peak?fmt(peak[field]):'—';document.getElementById(timeId).textContent=peak?'at '+new Date(peak.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'No data in range';const ctx=document.getElementById(canvasId);if(ctx&&valid.length>1){peakSparklines.push(new Chart(ctx,{type:'line',data:{labels:valid.map(p=>p.timestamp),datasets:[{data:valid.map(p=>p[field]),borderColor:color,backgroundColor:color+'22',fill:true,tension:.28,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{enabled:false}},layout:{padding:0},scales:{x:{display:false},y:{display:false}},elements:{line:{capBezierPoints:true}}}}));}}
+}
+async function showChannelHistory(channel,platform){
+  selectedHistoryChannel={channel,platform};document.getElementById('channelHistoryTitle').textContent=`(${channel} · ${platform} · selected range)`;document.getElementById('channelHistoryHint').textContent='Loading channel history…';
+  const range=selectedSnapshotRange();if(!range)return;const params=new URLSearchParams({name:channel,from:range.from.toISOString(),to:range.to.toISOString(),limit:'20000'});
+  try{const rows=await getJson('/api/channels/history?'+params.toString());const pts=rows||[];document.getElementById('channelHistoryHint').textContent=pts.length?`${fmt(pts.length)} samples in selected range`:'No channel samples found for this range';document.getElementById('channelHistoryMetrics').style.display=pts.length?'grid':'none';if(!pts.length){if(channelHistoryChart){channelHistoryChart.destroy();channelHistoryChart=null;}return;}const viewers=pts.map(p=>Number(p.viewers||0)),peakIndex=viewers.indexOf(Math.max(...viewers));document.getElementById('channelPeak').textContent=fmt(viewers[peakIndex]);document.getElementById('channelPeakTime').textContent='at '+new Date(pts[peakIndex].timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});document.getElementById('channelAverage').textContent=fmt(Math.round(viewers.reduce((a,b)=>a+b,0)/viewers.length));document.getElementById('channelSamples').textContent=fmt(pts.length);document.getElementById('channelFirstLast').textContent=`${fmt(viewers[0])} → ${fmt(viewers[viewers.length-1])}`;const change=viewers[0]===0?null:Math.round((viewers[viewers.length-1]-viewers[0])/viewers[0]*100);document.getElementById('channelChange').textContent=change===null?'Change unavailable':`${change>=0?'+':''}${change}%`;if(channelHistoryChart)channelHistoryChart.destroy();channelHistoryChart=new Chart(document.getElementById('channelHistoryChart'),{type:'line',data:{labels:pts.map(p=>new Date(p.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})),datasets:[{label:'Viewers',data:viewers,borderColor:platformColor(platform),backgroundColor:platformColor(platform)+'18',fill:true,tension:.25,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#91a0b1',maxTicksLimit:10},grid:{color:'#202b36'}},y:{beginAtZero:true,ticks:{color:'#91a0b1'},grid:{color:'#202b36'}}}}});}catch(e){document.getElementById('channelHistoryHint').textContent='Unable to load this channel history';console.error(e);}
+}
+
 async function loadStreams(){
   const scope=document.getElementById('scope').value;
   const body=document.getElementById('streams');
@@ -474,30 +575,149 @@ function changePage(delta){
   renderStreams();
 }
 
-function updateChannelOptions(streams){
-  allChannelNames=[...new Set(streams.map(stream=>String(stream.channel||'').trim()).filter(Boolean))]
-    .sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
-  document.getElementById('channelOptions').innerHTML=
-    allChannelNames.map(name=>`<option value="${escapeHtml(name)}"></option>`).join('');
+async function updateChannelOptions(streams){
+  allStreams=Array.isArray(streams)?streams:[];
+  try{
+    const catalog=await getJson('/api/channels/catalog');
+    const liveMap=new Map(allStreams.map(stream=>{
+      const platform=String(stream.platform||'Unknown');
+      const channel=String(stream.channel||stream.channelTitle||'Unknown');
+      const channelId=String(stream.channelId||stream.channel_id||'').trim();
+      const identity=channelId || `${platform.toLowerCase()}:${channel.toLocaleLowerCase()}`;
+      return [`${platform.toLowerCase()}:${identity}`,stream];
+    }));
+    const byIdentity=new Map();
+    for(const item of (Array.isArray(catalog)?catalog:[])){
+      const platform=String(item.platform||'Unknown');
+      const channel=String(item.channel||'Unknown');
+      const identity=String(item.identity||`${platform.toLowerCase()}:${channel.toLocaleLowerCase()}`);
+      const current=liveMap.get(identity);
+      byIdentity.set(identity,{
+        channel,platform,identity,url:item.url||'',
+        live:Boolean(item.live && current),
+        viewers:item.live && current ? Number(current.viewers||item.viewers||0) : null,
+        lastSeen:item.lastSeen||null
+      });
+    }
+    // Include any live stream missing from the catalog response (e.g. immediately after a collection).
+    for(const stream of allStreams){
+      const platform=String(stream.platform||'Unknown');
+      const channel=String(stream.channel||stream.channelTitle||'Unknown');
+      const channelId=String(stream.channelId||stream.channel_id||'').trim();
+      const identity=channelId?`${platform.toLowerCase()}:${channelId}`:`${platform.toLowerCase()}:${channel.toLocaleLowerCase()}`;
+      const old=byIdentity.get(identity);
+      byIdentity.set(identity,{channel,platform,identity,url:stream.url||old?.url||'',live:true,viewers:Number(stream.viewers||0),lastSeen:old?.lastSeen||null});
+    }
+    allChannelNames=[...byIdentity.values()].sort((a,b)=>a.channel.localeCompare(b.channel,undefined,{sensitivity:'base'}));
+    channelCatalogLoaded=true;
+  }catch(error){
+    console.error('Unable to load channel catalog',error);
+    // Fall back to live streams so search still works if the catalog endpoint is temporarily unavailable.
+    const byIdentity=new Map();
+    for(const stream of allStreams){
+      const channel=String(stream.channel||stream.channelTitle||'Unknown'),platform=String(stream.platform||'Unknown');
+      const id=String(stream.channelId||stream.channel_id||'').trim();
+      const identity=id?`${platform.toLowerCase()}:${id}`:`${platform.toLowerCase()}:${channel.toLocaleLowerCase()}`;
+      byIdentity.set(identity,{channel,platform,viewers:Number(stream.viewers||0),identity,url:stream.url||'',live:true,lastSeen:null});
+    }
+    allChannelNames=[...byIdentity.values()];
+  }
+  const input=document.getElementById('channelLookup');
+  if(input && input.value.trim()) renderChannelSuggestions(input.value.trim());
+}
+
+function renderChannelSuggestions(rawQuery){
+  const box=document.getElementById('channelSuggestions');
+  const input=document.getElementById('channelLookup');
+  const query=String(rawQuery||'').trim();
+  if(!box||!input) return;
+  activeSuggestionIndex=-1;
+  searchMatches=[];
+  if(!query){
+    box.classList.remove('visible');
+    box.innerHTML='';
+    input.setAttribute('aria-expanded','false');
+    return;
+  }
+  const q=query.toLocaleLowerCase();
+  const scored=allChannelNames.map(item=>{
+    const name=item.channel.toLocaleLowerCase();
+    const platform=item.platform.toLocaleLowerCase();
+    const id=String(item.identity||'').toLocaleLowerCase();
+    let score=name===q?0:name.startsWith(q)?1:name.includes(q)?2:platform.includes(q)||id.includes(q)?3:99;
+    return {item,score};
+  }).filter(x=>x.score<99).sort((a,b)=>a.score-b.score || b.item.viewers-a.item.viewers || a.item.channel.localeCompare(b.item.channel));
+  searchMatches=scored.slice(0,8).map(x=>x.item);
+  const escapeRegex=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const regex=new RegExp(escapeRegex(query),'ig');
+  const highlight=name=>escapeHtml(name).replace(regex,m=>`<mark>${m}</mark>`);
+  if(!searchMatches.length){
+    box.innerHTML=`<div class="suggestion-heading">Channels</div><div class="search-empty">No matching channels found for “${escapeHtml(query)}”.</div>`;
+  }else{
+    box.innerHTML=`<div class="suggestion-heading">Channels (${searchMatches.length}${scored.length>8?'+':''} results)</div>`+
+      searchMatches.map((item,i)=>`<button type="button" class="search-result" role="option" aria-selected="false" data-index="${i}" onclick="selectChannelSuggestion(${i})"><span class="search-result-name">${highlight(item.channel)}</span><span class="search-result-platform">${escapeHtml(item.platform)}</span><span class="search-result-status ${item.live?'live':'offline'}"><i class="presence-dot"></i>${item.live?'LIVE':'OFFLINE'}</span><span class="search-result-viewers">${item.live?`${fmt(item.viewers)} viewers`:'Last seen '+(item.lastSeen?new Date(item.lastSeen).toLocaleDateString([], {month:'short',day:'numeric'}):'in history')}</span></button>`).join('')+
+      `<div class="search-footer">Select a channel · Enter searches the best match · Esc closes</div>`;
+  }
+  box.classList.add('visible');
+  input.setAttribute('aria-expanded','true');
+}
+
+function selectChannelSuggestion(index){
+  const item=searchMatches[index];
+  if(!item) return;
+  document.getElementById('channelLookup').value=item.channel;
+  document.getElementById('channelSuggestions').classList.remove('visible');
+  document.getElementById('channelLookup').setAttribute('aria-expanded','false');
+  location.href='/channel.html?name='+encodeURIComponent(item.channel)+'&platform='+encodeURIComponent(item.platform);
+}
+
+function setActiveSuggestion(nextIndex){
+  const box=document.getElementById('channelSuggestions');
+  const options=[...box.querySelectorAll('.search-result')];
+  if(!options.length) return;
+  activeSuggestionIndex=(nextIndex+options.length)%options.length;
+  options.forEach((option,index)=>{
+    const selected=index===activeSuggestionIndex;
+    option.setAttribute('aria-selected',String(selected));
+    if(selected) option.scrollIntoView({block:'nearest'});
+  });
 }
 
 async function openChannelStats(event){
   event.preventDefault();
-  const query=document.getElementById('channelLookup').value.trim();
-  if(!query)return;
+  const input=document.getElementById('channelLookup');
+  const query=input.value.trim();
+  if(!query){input.focus();return;}
   if(!allChannelNames.length){
     document.getElementById('status').textContent='Channel list is still loading';
     return;
   }
   const normalized=query.toLocaleLowerCase();
-  const exact=allChannelNames.find(name=>name.toLocaleLowerCase()===normalized);
-  const matches=exact?[exact]:allChannelNames.filter(name=>name.toLocaleLowerCase().includes(normalized));
-  if(matches.length!==1){
-    document.getElementById('status').textContent=
-      matches.length?'Choose a channel from the suggestions':'Channel not found in current streams';
-    return;
-  }
-  location.href='/channel.html?name='+encodeURIComponent(matches[0]);
+  const exact=allChannelNames.filter(item=>item.channel.toLocaleLowerCase()===normalized);
+  if(exact.length>=1){location.href='/channel.html?name='+encodeURIComponent(exact[0].channel)+'&platform='+encodeURIComponent(exact[0].platform);return;}
+  const matches=allChannelNames.filter(item=>item.channel.toLocaleLowerCase().includes(normalized));
+  if(matches.length===1){location.href='/channel.html?name='+encodeURIComponent(matches[0].channel)+'&platform='+encodeURIComponent(matches[0].platform);return;}
+  renderChannelSuggestions(query);
+  if(matches.length===0) document.getElementById('status').textContent='No matching channel in recorded history';
+}
+
+function initializeChannelSearch(){
+  const input=document.getElementById('channelLookup');
+  const box=document.getElementById('channelSuggestions');
+  if(!input||!box)return;
+  input.addEventListener('input',()=>{
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer=setTimeout(()=>renderChannelSuggestions(input.value),120);
+  });
+  input.addEventListener('keydown',event=>{
+    if(event.key==='ArrowDown' && box.classList.contains('visible')){event.preventDefault();setActiveSuggestion(activeSuggestionIndex+1);}
+    else if(event.key==='ArrowUp' && box.classList.contains('visible')){event.preventDefault();setActiveSuggestion(activeSuggestionIndex-1);}
+    else if(event.key==='Escape'){box.classList.remove('visible');input.setAttribute('aria-expanded','false');}
+    else if(event.key==='Enter' && box.classList.contains('visible') && activeSuggestionIndex>=0){event.preventDefault();selectChannelSuggestion(activeSuggestionIndex);}
+  });
+  document.addEventListener('click',event=>{
+    if(!event.target.closest('.header-search')){box.classList.remove('visible');input.setAttribute('aria-expanded','false');}
+  });
 }
 
 function escapeHtml(s){
@@ -518,6 +738,7 @@ async function collect(){
 }
 
 // initialize range UI and default date
+initializeChannelSearch();
 setRange('1h');
 const today = new Date();
 const selDateEl = document.getElementById('selectedDate');
@@ -525,9 +746,9 @@ if(selDateEl){ selDateEl.value = `${today.getFullYear()}-${String(today.getMonth
 
 refresh(); loadStreams();
 getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error);
+setInterval(()=>getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error),60000);
 setInterval(refresh,30000);
 setInterval(loadStreams,60000);
-setInterval(()=>getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error),60000);
 </script>
 </body>
 </html>
