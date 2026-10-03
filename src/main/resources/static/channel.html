@@ -334,7 +334,7 @@
     <h1 id="channelName">Channel Analytics</h1>
     <div id="channelPresence" class="presence-pill unknown" aria-live="polite">Checking status…</div>
     <div class="sub">
-      Cross-platform VALORANT viewer history
+      Historical viewer counts for this channel and platform
     </div>
   </div>
 
@@ -553,6 +553,8 @@
   const channelName = params.get('name') || '';
   const channelPlatform = params.get('platform') || '';
 
+  let channelPresenceByPlatform = new Map();
+
   async function loadChannelPresence(){
     const badge=document.getElementById('channelPresence');
     if(!badge || !channelName) return;
@@ -560,11 +562,13 @@
       const response=await fetch('/api/channels/catalog',{cache:'no-store'});
       if(!response.ok) throw new Error('status request failed');
       const catalog=await response.json();
-      const matches=catalog.filter(item=>String(item.channel||'').toLocaleLowerCase()===channelName.toLocaleLowerCase() && (!channelPlatform || String(item.platform||'').toLocaleLowerCase()===channelPlatform.toLocaleLowerCase()));
-      const item=matches[0];
-      if(!item){badge.textContent='STATUS UNKNOWN';badge.className='presence-pill unknown';return;}
+      const matches=catalog.filter(item=>String(item.channel||'').trim().toLocaleLowerCase()===channelName.trim().toLocaleLowerCase() && (!channelPlatform || String(item.platform||'').toLocaleLowerCase()===channelPlatform.toLocaleLowerCase()));
+      channelPresenceByPlatform = new Map(matches.map(item=>[String(item.platform||'').toLocaleLowerCase(), item]));
+      const item=matches.find(x=>String(x.platform||'').toLocaleLowerCase()===channelPlatform.toLocaleLowerCase()) || matches[0];
+      if(!item){badge.textContent='STATUS UNKNOWN';badge.className='presence-pill unknown'; calculateCurrent(); return;}
       badge.textContent=item.live?'LIVE NOW':'OFFLINE · LAST SEEN '+new Date(item.lastSeen).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
       badge.className='presence-pill '+(item.live?'live':'offline');
+      calculateCurrent();
     }catch(error){badge.textContent='STATUS UNAVAILABLE';badge.className='presence-pill unknown';console.warn('Could not load channel live status',error);}
   }
 
@@ -593,6 +597,7 @@
     if(!channelName) return [];
     // Current cards only need recent samples; historical charts request the selected window separately.
     const params = new URLSearchParams({name:channelName, limit: from && to ? '20000' : '100'});
+    if(channelPlatform) params.set('platform', channelPlatform);
     if(from && to){
       params.set('from', from.toISOString());
       params.set('to', to.toISOString());
@@ -677,7 +682,7 @@
                                               : '24 hours'
               );
 
-      load();
+      loadChannelPresence().then(()=>load());
     }
   }
 
@@ -698,7 +703,7 @@
 
     document.getElementById('rangeStatus').textContent =
             'Date: ' + selectedDate.toLocaleDateString();
-    load();
+    loadChannelPresence().then(()=>load());
   }
 
 
@@ -743,7 +748,7 @@
             customTo.toLocaleString();
 
 
-    load();
+    loadChannelPresence().then(()=>load());
   }
 
 
@@ -862,7 +867,7 @@
     for(const record of currentRecords){
 
       if(
-              record.url &&
+              record.url && (!channelPlatform || String(record.platform||'').toLowerCase()===channelPlatform.toLowerCase()) &&
               (!latestChannelLink ||
                       new Date(record.timestamp) >
                       new Date(latestChannelLink.timestamp))
@@ -900,20 +905,22 @@
     }
 
 
-    const youtube =
-            latestByPlatform.get('YouTube');
+    // Presence is platform-specific: an old sample must never be shown as current.
+    const isLiveOn = platform => {
+      const status = channelPresenceByPlatform.get(String(platform).toLowerCase());
+      return status ? status.live === true : false;
+    };
+    const youtube = isLiveOn('YouTube') ? latestByPlatform.get('YouTube') : null;
 
-    const twitch =
-            latestByPlatform.get('Twitch');
+    const twitch = isLiveOn('Twitch') ? latestByPlatform.get('Twitch') : null;
 
-    const kick =
-            latestByPlatform.get('Kick');
+    const kick = isLiveOn('Kick') ? latestByPlatform.get('Kick') : null;
 
 
     document.getElementById(
             'youtubeCurrent'
     ).textContent =
-            youtube
+            youtube && isLiveOn('YouTube')
                     ? fmt(youtube.viewers)
                     : '—';
 
@@ -921,7 +928,7 @@
     document.getElementById(
             'twitchCurrent'
     ).textContent =
-            twitch
+            twitch && isLiveOn('Twitch')
                     ? fmt(twitch.viewers)
                     : '—';
 
@@ -929,7 +936,7 @@
     document.getElementById(
             'kickCurrent'
     ).textContent =
-            kick
+            kick && isLiveOn('Kick')
                     ? fmt(kick.viewers)
                     : '—';
 
@@ -937,37 +944,28 @@
     document.getElementById(
             'youtubeTime'
     ).textContent =
-            youtube
-                    ? formatAge(youtube.timestamp)
-                    : 'No data';
+            youtube ? (isLiveOn('YouTube') ? 'Updated ' + formatAge(youtube.timestamp) : 'Last recorded ' + formatAge(youtube.timestamp)) : 'No data';
 
 
     document.getElementById(
             'twitchTime'
     ).textContent =
-            twitch
-                    ? formatAge(twitch.timestamp)
-                    : 'No data';
+            twitch ? (isLiveOn('Twitch') ? 'Updated ' + formatAge(twitch.timestamp) : 'Last recorded ' + formatAge(twitch.timestamp)) : 'No data';
 
 
     document.getElementById(
             'kickTime'
     ).textContent =
-            kick
-                    ? formatAge(kick.timestamp)
-                    : 'No data';
+            kick ? (isLiveOn('Kick') ? 'Updated ' + formatAge(kick.timestamp) : 'Last recorded ' + formatAge(kick.timestamp)) : 'No data';
 
 
     const combined =
-            (youtube?.viewers || 0) +
-            (twitch?.viewers || 0) +
-            (kick?.viewers || 0);
+            (isLiveOn('YouTube') ? (youtube?.viewers || 0) : 0) +
+            (isLiveOn('Twitch') ? (twitch?.viewers || 0) : 0) +
+            (isLiveOn('Kick') ? (kick?.viewers || 0) : 0);
 
 
-    document.getElementById(
-            'combinedCurrent'
-    ).textContent =
-            fmt(combined);
+    document.getElementById('combinedCurrent').textContent = combined > 0 ? fmt(combined) : '—';
 
 
     const latestTimestamp =
@@ -1522,13 +1520,13 @@
         getHistory(),
         bounds ? getHistory(bounds.from, bounds.to) : Promise.resolve([])
       ]);
-      currentRecords = Array.isArray(latest) ? latest : [];
+      currentRecords = Array.isArray(latest) ? latest.filter(r=>!channelPlatform || String(r.platform||'').toLowerCase()===channelPlatform.toLowerCase()) : [];
       allRecords = Array.isArray(ranged) ? ranged : [];
       currentRecords.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
       allRecords.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
 
       if(!currentRecords.length && !allRecords.length){
-        document.getElementById('rangeDataStatus').textContent = 'No recorded history for this channel.';
+        document.getElementById('rangeDataStatus').textContent = 'No samples were recorded for this channel in the selected time window. Try 24 hours or choose a custom range.';
         return;
       }
       render();
@@ -1552,22 +1550,13 @@
   document.getElementById('selectedDate').value =
           `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  load();
-  loadChannelPresence();
+  loadChannelPresence().then(()=>load());
   setInterval(loadChannelPresence,60000);
 
 
-  /*
-   * Refresh every 30 seconds.
-   *
-   * The current cards update while the selected
-   * historical range remains selected.
-   */
-
-  setInterval(
-          load,
-          30000
-  );
+  // Keep the selected historical window stable. Presence status can refresh
+  // independently; do not reload historical chart data on a timer.
+  // The main dashboard's live stream feed continues refreshing independently.
 
 </script>
 
