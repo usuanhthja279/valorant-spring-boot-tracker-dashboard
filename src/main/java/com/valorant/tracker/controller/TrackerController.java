@@ -34,6 +34,24 @@ public class TrackerController {
     this.tracker = tracker;
   }
 
+  @GetMapping("/health")
+  public Map<String, Object> health() {
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("status", "UP");
+    result.put("database", "UP");
+    try {
+      entityManager.createQuery("select count(s) from Snapshot s", Long.class).getSingleResult();
+    } catch (RuntimeException exception) {
+      result.put("status", "DOWN");
+      result.put("database", "DOWN");
+      throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+          "Database health check failed", exception);
+    }
+    result.put("lastRun", tracker.getLastRun() == null ? "not-run" : tracker.getLastRun());
+    result.put("providers", tracker.getProviderHealth());
+    return result;
+  }
+
   @GetMapping("/status")
   public Map<String, Object> status() {
     Map<String, Object> result = new LinkedHashMap<>();
@@ -111,10 +129,10 @@ public class TrackerController {
     if (from != null) validateRange(from, to);
     int safeLimit = clampLimit(limit);
 
-    String query = "select s from StreamSample s where lower(trim(s.channel)) = lower(trim(:name)) ";
+    String query = "select s from StreamSample s where s.channel = :name ";
     if (from != null) query += "and s.timestamp >= :from and s.timestamp < :to ";
     query += "order by s.timestamp desc, s.id desc";
-    var typedQuery = entityManager.createQuery(query, StreamSample.class).setParameter("name", name.trim());
+    var typedQuery = entityManager.createQuery(query, StreamSample.class).setParameter("name", name);
     if (from != null) typedQuery.setParameter("from", from).setParameter("to", to);
     List<StreamSample> history = new ArrayList<>(typedQuery.setMaxResults(safeLimit).getResultList());
     java.util.Collections.reverse(history);

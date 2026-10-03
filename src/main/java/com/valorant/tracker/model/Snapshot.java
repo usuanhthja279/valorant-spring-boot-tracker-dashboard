@@ -5,7 +5,8 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "snapshots", indexes = {
-    @Index(name = "idx_snapshots_timestamp", columnList = "timestamp")
+    @Index(name = "idx_snapshots_timestamp", columnList = "timestamp"),
+    @Index(name = "idx_snapshots_timestamp_id", columnList = "timestamp,id")
 })
 public class Snapshot {
   @Id
