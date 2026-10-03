@@ -360,7 +360,9 @@ async function refresh(){
     const snapshotInfoEl = document.getElementById('snapshotInfo');
     if(snapshotInfoEl) snapshotInfoEl.textContent = 'Latest snapshot: '+fmt(latestData.length ? latestData.length : 0);
 
-    await refreshAnalytics();
+    // Do not block chart rendering on the expensive all-sample analytics endpoint.
+    // Analytics has its own loading state and updates independently.
+    refreshAnalytics();
     const filtered = (chartData || []).slice().sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
     const rangeDataStatusEl = document.getElementById('rangeDataStatus');
     if(rangeDataStatusEl && currentRange === 'all') rangeDataStatusEl.textContent = `All-time view: showing up to ${fmt(filtered.length)} of the newest 5,000 snapshots`;

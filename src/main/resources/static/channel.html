@@ -571,7 +571,8 @@
 
   async function getHistory(from, to){
     if(!channelName) return [];
-    const params = new URLSearchParams({name:channelName, limit:'20000'});
+    // Current cards only need recent samples; historical charts request the selected window separately.
+    const params = new URLSearchParams({name:channelName, limit: from && to ? '20000' : '100'});
     if(from && to){
       params.set('from', from.toISOString());
       params.set('to', to.toISOString());
