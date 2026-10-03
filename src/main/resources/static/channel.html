@@ -319,6 +319,10 @@
         max-width:180px;
       }
     }
+    .presence-pill{display:inline-flex;align-items:center;gap:7px;margin-top:8px;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:750;letter-spacing:.04em;border:1px solid #334155;background:#17202b;color:#aab6c5}
+    .presence-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+    .presence-pill.live{color:#37d67a;background:#0d2b20;border-color:#145b3b}
+    .presence-pill.offline{color:#a0a9b6;background:#202630;border-color:#374151}
   </style>
 </head>
 
@@ -328,6 +332,7 @@
 
   <div>
     <h1 id="channelName">Channel Analytics</h1>
+    <div id="channelPresence" class="presence-pill unknown" aria-live="polite">Checking status…</div>
     <div class="sub">
       Cross-platform VALORANT viewer history
     </div>
@@ -545,8 +550,23 @@
 
   const params = new URLSearchParams(location.search);
 
-  const channelName =
-          params.get('name') || '';
+  const channelName = params.get('name') || '';
+  const channelPlatform = params.get('platform') || '';
+
+  async function loadChannelPresence(){
+    const badge=document.getElementById('channelPresence');
+    if(!badge || !channelName) return;
+    try{
+      const response=await fetch('/api/channels/catalog',{cache:'no-store'});
+      if(!response.ok) throw new Error('status request failed');
+      const catalog=await response.json();
+      const matches=catalog.filter(item=>String(item.channel||'').toLocaleLowerCase()===channelName.toLocaleLowerCase() && (!channelPlatform || String(item.platform||'').toLocaleLowerCase()===channelPlatform.toLocaleLowerCase()));
+      const item=matches[0];
+      if(!item){badge.textContent='STATUS UNKNOWN';badge.className='presence-pill unknown';return;}
+      badge.textContent=item.live?'LIVE NOW':'OFFLINE · LAST SEEN '+new Date(item.lastSeen).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      badge.className='presence-pill '+(item.live?'live':'offline');
+    }catch(error){badge.textContent='STATUS UNAVAILABLE';badge.className='presence-pill unknown';console.warn('Could not load channel live status',error);}
+  }
 
   const fmt = value =>
           Number(value || 0).toLocaleString('en-IN');
@@ -1533,6 +1553,8 @@
           `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
   load();
+  loadChannelPresence();
+  setInterval(loadChannelPresence,60000);
 
 
   /*

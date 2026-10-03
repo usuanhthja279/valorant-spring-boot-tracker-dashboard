@@ -115,6 +115,57 @@ public class TrackerController {
     return List.copyOf(uniqueChannels.values());
   }
 
+  /** Searchable catalog of every channel ever sampled, with live status from the latest collection. */
+  @GetMapping("/channels/catalog")
+  public List<Map<String, Object>> channelCatalog() {
+    OffsetDateTime latestTimestamp = entityManager.createQuery(
+        "select max(s.timestamp) from StreamSample s", OffsetDateTime.class).getSingleResult();
+    if (latestTimestamp == null) return List.of();
+
+    List<Object[]> grouped = entityManager.createQuery(
+        "select s.platform, s.channel, s.channelId, s.url, max(s.timestamp) "
+            + "from StreamSample s group by s.platform, s.channel, s.channelId, s.url",
+        Object[].class).getResultList();
+    List<StreamSample> current = entityManager.createQuery(
+        "select s from StreamSample s where s.timestamp = :timestamp", StreamSample.class)
+        .setParameter("timestamp", latestTimestamp).getResultList();
+    Map<String, StreamSample> liveByIdentity = new HashMap<>();
+    for (StreamSample sample : current) {
+      String identity = channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel());
+      liveByIdentity.putIfAbsent(identity, sample);
+    }
+
+    List<Map<String, Object>> catalog = new ArrayList<>();
+    for (Object[] row : grouped) {
+      String platform = (String) row[0];
+      String channel = (String) row[1];
+      String channelId = (String) row[2];
+      String url = (String) row[3];
+      OffsetDateTime lastSeen = (OffsetDateTime) row[4];
+      String identity = channelIdentity(platform, channelId, channel);
+      StreamSample liveSample = lastSeen.equals(latestTimestamp) ? liveByIdentity.get(identity) : null;
+      Map<String, Object> item = new LinkedHashMap<>();
+      item.put("platform", platform);
+      item.put("channel", channel);
+      item.put("channelId", channelId);
+      item.put("identity", identity);
+      item.put("url", url);
+      item.put("live", liveSample != null);
+      item.put("viewers", liveSample == null ? null : liveSample.getViewers());
+      item.put("lastSeen", lastSeen);
+      catalog.add(item);
+    }
+    catalog.sort(Comparator.comparing((Map<String, Object> item) -> String.valueOf(item.get("channel")), String.CASE_INSENSITIVE_ORDER)
+        .thenComparing(item -> String.valueOf(item.get("platform")), String.CASE_INSENSITIVE_ORDER));
+    return catalog;
+  }
+
+  private String channelIdentity(String platform, String channelId, String channel) {
+    String identity = channelId == null || channelId.isBlank()
+        ? String.valueOf(channel).trim().toLowerCase(Locale.ROOT) : channelId;
+    return String.valueOf(platform).toLowerCase(Locale.ROOT) + ":" + identity;
+  }
+
   /** Channel history supports database-side time filtering and a hard result cap. */
   @GetMapping("/channels/history")
   public List<StreamSample> channelHistory(
@@ -223,6 +274,10 @@ public class TrackerController {
     fastestGrowing.sort(Comparator.comparingLong((Map<String, Object> c) -> (Long)c.get("growthViewers")).reversed());
     if (fastestGrowing.size() > 10) fastestGrowing = new ArrayList<>(fastestGrowing.subList(0, 10));
 
+    List<Map<String, Object>> topChannelsByPeak = new ArrayList<>(channels.values());
+    topChannelsByPeak.sort(Comparator.comparingLong((Map<String, Object> c) -> (Long)c.get("peakViewers")).reversed());
+    if (topChannelsByPeak.size() > 10) topChannelsByPeak = new ArrayList<>(topChannelsByPeak.subList(0, 10));
+
     for (Map<String, Object> metric : platforms.values()) {
       long count = (Long) metric.get("viewerSamples"), total = (Long) metric.get("viewerTotal");
       metric.put("averageViewers", count == 0 ? 0.0 : (double) total / count);
@@ -235,6 +290,7 @@ public class TrackerController {
     result.put("overallPeakViewers", overallPeak);
     result.put("overallAverageViewers", sampleCount == 0 ? 0.0 : (double) overallViewerTotal / sampleCount);
     result.put("platforms", platforms.values()); result.put("fastestGrowingChannels", fastestGrowing);
+    result.put("topChannelsByPeak", topChannelsByPeak);
     return result;
   }
 
