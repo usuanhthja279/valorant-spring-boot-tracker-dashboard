@@ -57,6 +57,7 @@ public class TrackerController {
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("running", true);
     result.put("lastRun", tracker.getLastRun() == null ? "not-run" : tracker.getLastRun());
+    result.put("intervalMs", tracker.getIntervalMs());
     result.put("providers", tracker.getProviderHealth());
     return result;
   }
@@ -160,6 +161,46 @@ public class TrackerController {
     return catalog;
   }
 
+  /** Fast live-status lookup for a single channel page; avoids grouping the full sample history. */
+  @GetMapping("/channels/status")
+  public List<Map<String, Object>> channelStatus(
+      @RequestParam String name,
+      @RequestParam(required = false) String platform) {
+    if (name.isBlank()) return List.of();
+    OffsetDateTime latestTimestamp = entityManager.createQuery(
+        "select max(s.timestamp) from StreamSample s", OffsetDateTime.class).getSingleResult();
+    if (latestTimestamp == null) return List.of();
+
+    List<String> platforms = platform == null || platform.isBlank()
+        ? List.of("YouTube", "Twitch", "Kick")
+        : List.of(platform.trim());
+    List<Map<String, Object>> status = new ArrayList<>();
+    for (String requestedPlatform : platforms) {
+      List<StreamSample> latest = entityManager.createQuery(
+              "select s from StreamSample s where s.channel = :name "
+                  + "and lower(s.platform) = lower(:platform) "
+                  + "order by s.timestamp desc, s.id desc", StreamSample.class)
+          .setParameter("name", name.trim())
+          .setParameter("platform", requestedPlatform)
+          .setMaxResults(1)
+          .getResultList();
+      if (latest.isEmpty()) continue;
+      StreamSample sample = latest.get(0);
+      boolean live = latestTimestamp.equals(sample.getTimestamp());
+      Map<String, Object> item = new LinkedHashMap<>();
+      item.put("platform", sample.getPlatform());
+      item.put("channel", sample.getChannel());
+      item.put("channelId", sample.getChannelId());
+      item.put("identity", channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel()));
+      item.put("url", sample.getUrl());
+      item.put("live", live);
+      item.put("viewers", live ? sample.getViewers() : null);
+      item.put("lastSeen", sample.getTimestamp());
+      status.add(item);
+    }
+    return status;
+  }
+
   private String channelIdentity(String platform, String channelId, String channel) {
     String identity = channelId == null || channelId.isBlank()
         ? String.valueOf(channel).trim().toLowerCase(Locale.ROOT) : channelId;
@@ -193,6 +234,89 @@ public class TrackerController {
     return history;
   }
 
+  /** Compares a channel's selected window with the same window one calendar period earlier. */
+  @GetMapping("/channels/comparison")
+  public Map<String, Object> channelComparison(
+      @RequestParam String name,
+      @RequestParam(required = false) String platform,
+      @RequestParam OffsetDateTime from,
+      @RequestParam OffsetDateTime to,
+      @RequestParam String period) {
+    if (name.isBlank()) return Map.of();
+    validateRange(from, to);
+    OffsetDateTime previousFrom = shiftComparisonDate(from, period);
+    OffsetDateTime previousTo = shiftComparisonDate(to, period);
+
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("period", period);
+    result.put("currentFrom", from);
+    result.put("currentTo", to);
+    result.put("previousFrom", previousFrom);
+    result.put("previousTo", previousTo);
+    result.put("current", summarizeChannelWindow(name, platform, from, to));
+    result.put("previous", summarizeChannelWindow(name, platform, previousFrom, previousTo));
+    return result;
+  }
+
+  private OffsetDateTime shiftComparisonDate(OffsetDateTime value, String period) {
+    return switch (period.toLowerCase(Locale.ROOT)) {
+      case "day" -> value.minusDays(1);
+      case "week" -> value.minusWeeks(1);
+      case "month" -> value.minusMonths(1);
+      case "quarter" -> value.minusMonths(3);
+      case "year" -> value.minusYears(1);
+      default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "period must be day, week, month, quarter, or year");
+    };
+  }
+
+  private Map<String, Object> summarizeChannelWindow(
+      String name, String platform, OffsetDateTime from, OffsetDateTime to) {
+    Map<Long, Long> minuteTotals = new HashMap<>();
+    long lastId = 0L;
+    final int pageSize = 5000;
+    while (true) {
+      String query = "select s from StreamSample s where s.channel = :name "
+          + "and s.timestamp >= :from and s.timestamp < :to and s.id > :lastId ";
+      if (platform != null && !platform.isBlank()) {
+        query += "and lower(s.platform) = lower(:platform) ";
+      }
+      query += "order by s.id asc";
+      var typedQuery = entityManager.createQuery(query, StreamSample.class)
+          .setParameter("name", name)
+          .setParameter("from", from)
+          .setParameter("to", to)
+          .setParameter("lastId", lastId)
+          .setMaxResults(pageSize);
+      if (platform != null && !platform.isBlank()) {
+        typedQuery.setParameter("platform", platform.trim());
+      }
+      List<StreamSample> page = typedQuery.getResultList();
+      if (page.isEmpty()) break;
+      for (StreamSample sample : page) {
+        long minute = sample.getTimestamp().toInstant().toEpochMilli() / 60000L;
+        minuteTotals.merge(minute, sample.getViewers(), Long::sum);
+        lastId = sample.getId();
+      }
+      if (page.size() < pageSize) break;
+    }
+
+    long peak = 0L;
+    long total = 0L;
+    long latestMinute = Long.MIN_VALUE;
+    for (Map.Entry<Long, Long> entry : minuteTotals.entrySet()) {
+      peak = Math.max(peak, entry.getValue());
+      total += entry.getValue();
+      latestMinute = Math.max(latestMinute, entry.getKey());
+    }
+    Map<String, Object> summary = new LinkedHashMap<>();
+    summary.put("peakViewers", peak);
+    summary.put("averageViewers", minuteTotals.isEmpty() ? 0L : Math.round((double) total / minuteTotals.size()));
+    summary.put("latestViewers", minuteTotals.getOrDefault(latestMinute, 0L));
+    summary.put("minutesWithData", minuteTotals.size());
+    return summary;
+  }
+
   /** Historical analytics for [from, to), processed in bounded keyset pages. */
   @GetMapping("/analytics")
   public Map<String, Object> analytics(
@@ -215,22 +339,28 @@ public class TrackerController {
     OffsetDateTime cursorTimestamp = null;
     Long cursorId = null;
     while (true) {
-      String jpql = "select s from StreamSample s where s.timestamp >= :from and s.timestamp < :to ";
-      if (cursorTimestamp != null) {
-        jpql += "and (s.timestamp > :cursorTimestamp or (s.timestamp = :cursorTimestamp and s.id > :cursorId)) ";
-      }
-      jpql += "order by s.timestamp asc, s.id asc";
-      var query = entityManager.createQuery(jpql, StreamSample.class)
+      // Analytics only needs these five fields. Avoid hydrating StreamSample entities,
+      // especially their large title and URL columns, while scanning long ranges.
+      var pageQuery = entityManager.createQuery(
+          "select s.timestamp, s.id, s.platform, s.channelId, s.channel, s.viewers "
+              + "from StreamSample s where s.timestamp >= :from and s.timestamp < :to "
+              + (cursorTimestamp != null
+                  ? "and (s.timestamp > :cursorTimestamp or (s.timestamp = :cursorTimestamp and s.id > :cursorId)) "
+                  : "")
+              + "order by s.timestamp asc, s.id asc", Object[].class)
           .setParameter("from", from).setParameter("to", to);
       if (cursorTimestamp != null) {
-        query.setParameter("cursorTimestamp", cursorTimestamp).setParameter("cursorId", cursorId);
+        pageQuery.setParameter("cursorTimestamp", cursorTimestamp).setParameter("cursorId", cursorId);
       }
-      List<StreamSample> page = query.setMaxResults(pageSize).getResultList();
+      List<Object[]> page = pageQuery.setMaxResults(pageSize).getResultList();
       if (page.isEmpty()) break;
 
-      for (StreamSample sample : page) {
-        String platform = sample.getPlatform() == null ? "Unknown" : sample.getPlatform();
-        long viewers = Math.max(0L, sample.getViewers());
+      for (Object[] row : page) {
+        OffsetDateTime timestamp = (OffsetDateTime) row[0];
+        String platform = row[2] == null ? "Unknown" : (String) row[2];
+        String channelId = (String) row[3];
+        String channelName = (String) row[4];
+        long viewers = Math.max(0L, ((Number) row[5]).longValue());
         Map<String, Object> platformMetric = platforms.computeIfAbsent(platform, name -> {
           Map<String, Object> metric = new LinkedHashMap<>();
           metric.put("platform", name); metric.put("samples", 0L); metric.put("peakViewers", 0L);
@@ -243,29 +373,30 @@ public class TrackerController {
         overallPeak = Math.max(overallPeak, viewers); overallViewerTotal += viewers; sampleCount++;
 
         String identity = platform.toLowerCase(Locale.ROOT) + ":" +
-            (sample.getChannelId() == null || sample.getChannelId().isBlank()
-                ? String.valueOf(sample.getChannel()).trim().toLowerCase(Locale.ROOT)
-                : sample.getChannelId());
+            (channelId == null || channelId.isBlank()
+                ? String.valueOf(channelName).trim().toLowerCase(Locale.ROOT)
+                : channelId);
         Map<String, Object> channel = channels.computeIfAbsent(identity, key -> {
           Map<String, Object> metric = new LinkedHashMap<>();
-          metric.put("platform", platform); metric.put("channel", sample.getChannel());
-          metric.put("url", sample.getUrl()); metric.put("firstViewers", viewers);
+          metric.put("platform", platform); metric.put("channel", channelName);
+          metric.put("firstViewers", viewers);
           metric.put("lastViewers", viewers); metric.put("peakViewers", viewers);
           metric.put("viewerTotal", 0L); metric.put("samples", 0L);
-          metric.put("firstTimestamp", sample.getTimestamp()); metric.put("lastTimestamp", sample.getTimestamp());
-          metric.put("peakTimestamp", sample.getTimestamp());
+          metric.put("firstTimestamp", timestamp); metric.put("lastTimestamp", timestamp);
+          metric.put("peakTimestamp", timestamp);
           return metric;
         });
-        channel.put("lastViewers", viewers); channel.put("lastTimestamp", sample.getTimestamp());
+        channel.put("lastViewers", viewers); channel.put("lastTimestamp", timestamp);
         if (viewers > (Long) channel.get("peakViewers")) {
           channel.put("peakViewers", viewers);
-          channel.put("peakTimestamp", sample.getTimestamp());
+          channel.put("peakTimestamp", timestamp);
         }
         channel.put("viewerTotal", (Long) channel.get("viewerTotal") + viewers);
         channel.put("samples", (Long) channel.get("samples") + 1L);
       }
-      StreamSample last = page.get(page.size() - 1);
-      cursorTimestamp = last.getTimestamp(); cursorId = last.getId();
+      Object[] last = page.get(page.size() - 1);
+      cursorTimestamp = (OffsetDateTime) last[0];
+      cursorId = (Long) last[1];
       if (page.size() < pageSize) break;
     }
 

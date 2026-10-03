@@ -10,9 +10,15 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -29,7 +35,10 @@ public class TrackerService {
   final TransactionTemplate transactions;
 
   private volatile OffsetDateTime lastRun;
-  private final Map<String, ProviderHealth> providerHealth = new LinkedHashMap<>();
+  @Value("${tracker.interval-ms:60000}")
+  private long intervalMs;
+  private final Map<String, ProviderHealth> providerHealth = new ConcurrentHashMap<>();
+  private final ExecutorService providerExecutor = Executors.newFixedThreadPool(3);
 
   public TrackerService(
       YouTubeScraperService y,
@@ -55,9 +64,20 @@ public class TrackerService {
   public synchronized void collect() {
     OffsetDateTime timestamp = OffsetDateTime.now(ZoneId.of("Asia/Kolkata"));
 
-    ProviderResult youtube = fetchProvider("YouTube", yt::fetch, timestamp);
-    ProviderResult twitch = fetchProvider("Twitch", tw::fetch, timestamp);
-    ProviderResult kickResult = fetchProvider("Kick", kick::fetch, timestamp);
+    CompletableFuture<ProviderResult> youtubeFetch =
+        CompletableFuture.supplyAsync(
+            () -> fetchProvider("YouTube", yt::fetch, timestamp), providerExecutor);
+    CompletableFuture<ProviderResult> twitchFetch =
+        CompletableFuture.supplyAsync(
+            () -> fetchProvider("Twitch", tw::fetch, timestamp), providerExecutor);
+    CompletableFuture<ProviderResult> kickFetch =
+        CompletableFuture.supplyAsync(
+            () -> fetchProvider("Kick", kick::fetch, timestamp), providerExecutor);
+
+    CompletableFuture.allOf(youtubeFetch, twitchFetch, kickFetch).join();
+    ProviderResult youtube = youtubeFetch.join();
+    ProviderResult twitch = twitchFetch.join();
+    ProviderResult kickResult = kickFetch.join();
 
     List<LiveStream> streams = new ArrayList<>();
     streams.addAll(youtube.streams());
@@ -96,6 +116,11 @@ public class TrackerService {
         kickViewers,
         healthLabel(kickResult.success()),
         youtubeViewers + twitchViewers + kickViewers);
+  }
+
+  @PreDestroy
+  void shutdownProviderExecutor() {
+    providerExecutor.shutdown();
   }
 
   private ProviderResult fetchProvider(
@@ -186,6 +211,10 @@ public class TrackerService {
 
   public OffsetDateTime getLastRun() {
     return lastRun;
+  }
+
+  public long getIntervalMs() {
+    return intervalMs;
   }
 
   public synchronized Map<String, ProviderHealth> getProviderHealth() {

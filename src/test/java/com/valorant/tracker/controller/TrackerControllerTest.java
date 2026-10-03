@@ -12,9 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.valorant.tracker.model.LiveStream;
 import com.valorant.tracker.model.Snapshot;
-import com.valorant.tracker.model.StreamSample;
 import com.valorant.tracker.service.TrackerService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
@@ -86,19 +84,17 @@ class TrackerControllerTest {
   @Test
   void analyticsCalculatesMetricsFromTheMostRecentWindowSamples() throws Exception {
     @SuppressWarnings("unchecked")
-    TypedQuery<StreamSample> query = mock(TypedQuery.class);
-    when(entityManager.createQuery(contains("order by s.timestamp asc, s.id asc"), eq(StreamSample.class)))
+    TypedQuery<Object[]> query = mock(TypedQuery.class);
+    when(entityManager.createQuery(contains("order by s.timestamp asc, s.id asc"), eq(Object[].class)))
         .thenReturn(query);
     when(query.setParameter(eq("from"), any(OffsetDateTime.class))).thenReturn(query);
     when(query.setParameter(eq("to"), any(OffsetDateTime.class))).thenReturn(query);
     when(query.setMaxResults(5000)).thenReturn(query);
     OffsetDateTime first = OffsetDateTime.parse("2026-10-02T09:00:00Z");
     OffsetDateTime last = OffsetDateTime.parse("2026-10-02T10:00:00Z");
-    StreamSample earlier =
-        new StreamSample(first, new LiveStream("Twitch", "s1", "channel-1", "Channel", "Title", 100, "url"));
-    StreamSample later =
-        new StreamSample(last, new LiveStream("Twitch", "s2", "channel-1", "Channel", "Title", 200, "url"));
-    when(query.getResultList()).thenReturn(List.of(earlier, later));
+    Object[] earlier = {first, 1L, "Twitch", "channel-1", "Channel", 100L};
+    Object[] later = {last, 2L, "Twitch", "channel-1", "Channel", 200L};
+    when(query.getResultList()).thenReturn(List.<Object[]>of(earlier, later));
 
     mockMvc
         .perform(
@@ -120,14 +116,14 @@ class TrackerControllerTest {
   @Test
   void analyticsProcessesSamplesBeyondOnePageWithoutMarkingResultsTruncated() throws Exception {
     @SuppressWarnings("unchecked")
-    TypedQuery<StreamSample> firstPageQuery = mock(TypedQuery.class);
+    TypedQuery<Object[]> firstPageQuery = mock(TypedQuery.class);
     @SuppressWarnings("unchecked")
-    TypedQuery<StreamSample> secondPageQuery = mock(TypedQuery.class);
-    when(entityManager.createQuery(contains("order by s.timestamp asc, s.id asc"), eq(StreamSample.class)))
+    TypedQuery<Object[]> secondPageQuery = mock(TypedQuery.class);
+    when(entityManager.createQuery(contains("order by s.timestamp asc, s.id asc"), eq(Object[].class)))
         .thenReturn(firstPageQuery);
     doReturn(secondPageQuery).when(entityManager)
-        .createQuery(contains("cursorTimestamp"), eq(StreamSample.class));
-    for (TypedQuery<StreamSample> query : List.of(firstPageQuery, secondPageQuery)) {
+        .createQuery(contains("cursorTimestamp"), eq(Object[].class));
+    for (TypedQuery<Object[]> query : List.of(firstPageQuery, secondPageQuery)) {
       when(query.setParameter(eq("from"), any(OffsetDateTime.class))).thenReturn(query);
       when(query.setParameter(eq("to"), any(OffsetDateTime.class))).thenReturn(query);
       when(query.setMaxResults(5000)).thenReturn(query);
@@ -137,15 +133,15 @@ class TrackerControllerTest {
     when(secondPageQuery.setParameter(eq("cursorId"), any())).thenReturn(secondPageQuery);
 
     OffsetDateTime start = OffsetDateTime.parse("2026-10-02T09:00:00Z");
-    List<StreamSample> firstPage = new java.util.ArrayList<>();
+    List<Object[]> firstPage = new java.util.ArrayList<>();
     for (int i = 0; i < 5000; i++) {
-      firstPage.add(new StreamSample(start.plusSeconds(i),
-          new LiveStream("Twitch", "stream-" + i, "channel-1", "Channel", "Title", 100, "url")));
+      firstPage.add(new Object[] {start.plusSeconds(i), (long) i + 1,
+          "Twitch", "channel-1", "Channel", 100L});
     }
-    StreamSample finalSample = new StreamSample(start.plusSeconds(5000),
-        new LiveStream("Twitch", "stream-final", "channel-1", "Channel", "Title", 250, "url"));
+    Object[] finalSample = {start.plusSeconds(5000), 5001L,
+        "Twitch", "channel-1", "Channel", 250L};
     when(firstPageQuery.getResultList()).thenReturn(firstPage);
-    when(secondPageQuery.getResultList()).thenReturn(List.of(finalSample));
+    when(secondPageQuery.getResultList()).thenReturn(List.<Object[]>of(finalSample));
 
     mockMvc.perform(get("/api/analytics")
             .param("from", "2026-10-02T08:00:00Z")
