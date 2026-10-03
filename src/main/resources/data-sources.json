@@ -3,7 +3,8 @@
     "scraperSearchUrls": [
       "https://www.youtube.com/results?search_query=valorant&sp=CAMSBBABQAE%253D",
       "https://www.youtube.com/watch?v=gwap8BHITn0",
-      "https://www.youtube.com/watch?v=vNDagsEr-xA"
+      "https://www.youtube.com/watch?v=vNDagsEr-xA",
+      "https://www.youtube.com/channel/UCiMRGE8Sc6oxIGuu_JxFoHg/live"
     ],
     "watchPageUrlTemplate": "https://www.youtube.com/watch?v={videoId}",
     "apiSearchUrl": "https://www.googleapis.com/youtube/v3/search",

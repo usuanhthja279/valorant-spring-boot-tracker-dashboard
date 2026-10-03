@@ -11,6 +11,7 @@ body{margin:0;background:#0b0e13;color:#eef2f7;font-family:Inter,system-ui,Segoe
 header{padding:16px 22px;border-bottom:1px solid #222832;background:#0c121a;display:flex;justify-content:space-between;align-items:center;gap:18px;position:relative;z-index:5}
 .header-search{position:relative;display:flex;align-items:center;gap:8px;margin:0 20px;flex:1;max-width:520px}
 .header-search input{width:100%;min-width:0}
+.header-link{white-space:nowrap;border:1px solid #2b3441;border-radius:8px;padding:9px 12px;background:#151b24;color:#e7edf5;text-decoration:none}.header-link:hover{background:#1b222d;text-decoration:none}
 .search-field{position:relative;flex:1;min-width:0}
 .search-field input{padding:12px 14px;background:#151b24;border-color:#2b3441}
 .search-field input:focus{outline:none;border-color:#36b9ff;box-shadow:0 0 0 2px #36b9ff22}
@@ -30,6 +31,7 @@ h1{margin:0;font-size:25px}.sub{color:#8e99a8;font-size:13px;margin-top:5px}
 .dot{width:9px;height:9px;border-radius:50%;background:#37d67a;display:inline-block}
 main{padding:18px 22px 28px;max-width:1800px;margin:auto}
 .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.live-viewership{margin-bottom:14px}.live-viewership-heading{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.live-viewership-heading h2{font-size:16px;margin:0}
 .card{background:linear-gradient(145deg,#111c27,#0e151e);border:1px solid #202d39;border-radius:11px;padding:12px 15px;display:grid;grid-template-columns:auto 1fr;column-gap:9px;align-items:start}.live-card-icon{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;margin-top:1px}.live-card-main{min-width:0}.live-card-label{display:flex;align-items:center;gap:6px}.live-card-spark-wrap{grid-column:1/-1;position:relative;height:32px;min-height:32px;max-height:32px;overflow:hidden;margin-top:8px}.live-card-spark{display:block!important;position:absolute!important;inset:0;width:100%!important;height:32px!important;max-height:32px!important}
 .label{font-size:12px;color:#8e99a8;text-transform:uppercase;letter-spacing:.08em}
 .value{font-size:28px;font-weight:750;margin-top:7px;font-variant-numeric:tabular-nums}
@@ -52,7 +54,7 @@ a{color:#e7edf5;text-decoration:none}.title{color:#8e99a8;max-width:500px;white-
 button.active{border-color:#eef2f7;background:#202834}
 .custom-range{display:none;gap:8px;align-items:center;flex-wrap:wrap}
 .custom-range.visible{display:flex}
-.range-brush{display:grid;grid-template-columns:1fr;gap:7px;margin-top:12px;padding:10px 2px 2px;border-top:1px solid #202d39}.brush-row{display:grid;grid-template-columns:105px 1fr 90px;gap:10px;align-items:center;color:#9eacbd;font-size:12px}.brush-row input{width:100%;padding:0;accent-color:#38bdf8}.brush-readout{color:#dbeafe;text-align:right;font-variant-numeric:tabular-nums}
+.range-brush{display:none;grid-template-columns:1fr;gap:7px;margin-top:12px;padding:10px 2px 2px;border-top:1px solid #202d39}.range-brush.visible{display:grid}.brush-row{display:grid;grid-template-columns:105px 1fr 90px;gap:10px;align-items:center;color:#9eacbd;font-size:12px}.brush-row input{width:100%;padding:0;accent-color:#38bdf8}.brush-readout{color:#dbeafe;text-align:right;font-variant-numeric:tabular-nums}
 .pagination{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:16px}
 button,select,input{background:#151b24;color:#eef2f7;border:1px solid #2b3441;border-radius:8px;padding:9px 12px}
 input{min-width:220px}
@@ -65,9 +67,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
 .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .metric{padding:12px;background:#111e29;border:1px solid #20303d;border-radius:9px;min-width:0}.metric .value{font-size:22px}.metric .label{font-size:10px}.table-wrap{overflow-x:auto} table{min-width:560px} th,td{padding:8px 9px}.subtle{color:#8e9dad;font-size:12px}.channel-pick{border:0;background:transparent;padding:0;color:#dbeafe;font-weight:650;cursor:pointer}.channel-pick:hover{color:#36b9ff;text-decoration:underline}
+.rising-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.rising-heading h2{margin-bottom:10px}.rising-window{padding:6px 9px;font-size:12px}.growth-change{color:#52df9c;font-weight:700;white-space:nowrap}
+.live-card-freshness{font-size:10px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.freshness-fresh{color:#52df9c}.freshness-stale{color:#fbbf24}.freshness-down{color:#ff8585}.freshness-unknown{color:#8e99a8}.dot.stale{background:#fbbf24}.dot.down{background:#ff6464}
+.alerts-panel{margin-top:14px}.alerts-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.alerts-heading h2{margin:0}.alert-controls{display:flex;align-items:center;gap:8px;color:#9eacbd;font-size:12px}.alert-controls input{width:120px;min-width:0;padding:7px 9px}.alert-controls button{padding:7px 10px}.alert-list{display:grid;gap:7px;margin-top:10px}.peak-alert{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;background:#111e29;border:1px solid #293746;font-size:12px}.peak-alert-title{font-weight:700}.peak-alert-reason{color:#52df9c}.peak-alert-time{color:#8e99a8;white-space:nowrap}
 @media(max-width:1000px){header{flex-wrap:wrap;gap:12px}.header-search{order:3;flex-basis:100%;margin:0;max-width:none}.cards,.peak-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.grid,.analytics-grid{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:550px){.cards,.peak-cards,.metric-grid{grid-template-columns:1fr}main{padding:12px}.grid{grid-template-columns:1fr}.value{font-size:25px}.peak-value{font-size:22px}}
 @media(max-width:550px){.cards{grid-template-columns:1fr}main{padding:15px}.grid{grid-template-columns:1fr}}
+*{scrollbar-width:thin;scrollbar-color:#344454 #0b0e13}*::-webkit-scrollbar{width:8px;height:8px}*::-webkit-scrollbar-track{background:#0b0e13}*::-webkit-scrollbar-thumb{background:#344454;border:2px solid #0b0e13;border-radius:999px}*::-webkit-scrollbar-thumb:hover{background:#4a6074}*::-webkit-scrollbar-corner{background:#0b0e13}
 </style>
 </head>
 <body>
@@ -80,16 +86,26 @@ button:disabled{opacity:.45;cursor:not-allowed}
   </div>
   <button type="submit">View stats</button>
 </form>
+<a class="header-link" href="/stream-comparison.html">Compare streams</a>
 <div class="status"><span class="dot"></span><span id="status">Connecting…</span></div>
 </header>
 
 <main>
+<section class="live-viewership" aria-labelledby="liveViewershipHeading">
+<div class="live-viewership-heading"><h2 id="liveViewershipHeading">Live viewership</h2><span class="subtle">Current viewers by platform</span></div>
 <div class="cards">
-<div class="card"><div class="live-card-icon" id="liveYoutubeIcon"></div><div class="live-card-main"><div class="label live-card-label">YouTube</div><div class="value yt" id="yt">—</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveYoutubeSpark"></canvas></div></div>
-<div class="card"><div class="live-card-icon" id="liveTwitchIcon"></div><div class="live-card-main"><div class="label live-card-label">Twitch</div><div class="value tw" id="tw">—</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveTwitchSpark"></canvas></div></div>
-<div class="card"><div class="live-card-icon" id="liveKickIcon"></div><div class="live-card-main"><div class="label live-card-label">Kick</div><div class="value kick" id="kick">—</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveKickSpark"></canvas></div></div>
+<div class="card"><div class="live-card-icon" id="liveYoutubeIcon"></div><div class="live-card-main"><div class="label live-card-label">YouTube</div><div class="value yt" id="yt">—</div><div class="live-card-freshness freshness-unknown" id="freshnessYoutube">Checking freshness…</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveYoutubeSpark"></canvas></div></div>
+<div class="card"><div class="live-card-icon" id="liveTwitchIcon"></div><div class="live-card-main"><div class="label live-card-label">Twitch</div><div class="value tw" id="tw">—</div><div class="live-card-freshness freshness-unknown" id="freshnessTwitch">Checking freshness…</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveTwitchSpark"></canvas></div></div>
+<div class="card"><div class="live-card-icon" id="liveKickIcon"></div><div class="live-card-main"><div class="label live-card-label">Kick</div><div class="value kick" id="kick">—</div><div class="live-card-freshness freshness-unknown" id="freshnessKick">Checking freshness…</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveKickSpark"></canvas></div></div>
 <div class="card"><div class="live-card-icon" id="liveCombinedIcon"></div><div class="live-card-main"><div class="label live-card-label">Combined</div><div class="value total" id="total">—</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveCombinedSpark"></canvas></div></div>
 </div>
+</section>
+
+<section class="panel alerts-panel" aria-label="Peak alerts">
+  <div class="alerts-heading"><h2>Peak alerts</h2><div class="alert-controls"><label for="peakAlertThreshold">Viewer threshold</label><input id="peakAlertThreshold" type="number" min="1" step="1000" value="10000"><button type="button" onclick="clearPeakAlerts()">Clear</button></div></div>
+  <div class="subtle">Alerts appear when a live stream crosses the threshold or sets a new peak during this dashboard session.</div>
+  <div class="alert-list" id="peakAlertList"><div class="subtle">Waiting for live stream samples…</div></div>
+</section>
 
 <!-- Time range panel (matches channel.html UX) -->
 <section class="range-panel">
@@ -111,7 +127,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <button onclick="applyDateRange()">Apply date</button>
   </div>
 
-  <div class="range-brush" aria-label="Draggable historical time range">
+  <div class="range-brush" id="rangeBrush" aria-label="Draggable historical time range">
     <div class="brush-row"><label for="brushStart">Start (hours ago)</label><input id="brushStart" type="range" min="1" max="24" step="1" value="7" oninput="updateBrush('start',this.value)"><span class="brush-readout" id="brushStartLabel">7h ago</span></div>
     <div class="brush-row"><label for="brushEnd">End (hours ago)</label><input id="brushEnd" type="range" min="0" max="23" step="1" value="1" oninput="updateBrush('end',this.value)"><span class="brush-readout" id="brushEndLabel">1h ago</span></div>
   </div>
@@ -169,6 +185,21 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <div class="table-wrap"><table><thead><tr><th>#</th><th>Channel</th><th>Platform</th><th>Peak viewers</th><th>Average viewers</th><th>Samples</th><th>Trend</th></tr></thead>
     <tbody id="topChannels"><tr><td colspan="7">Loading…</td></tr></tbody></table></div>
   </section>
+  <section class="panel">
+    <div class="rising-heading">
+      <h2>Rising channels</h2>
+      <label class="subtle">Window
+        <select id="risingWindow" class="rising-window" aria-label="Rising channels time window" onchange="refreshRisingChannels()">
+          <option value="5">5 min</option>
+          <option value="15" selected>15 min</option>
+          <option value="30">30 min</option>
+        </select>
+      </label>
+    </div>
+    <div class="subtle" id="risingMeta" style="margin-bottom:8px">Viewer gain from first to latest sample; channels need at least two samples.</div>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>Channel</th><th>Platform</th><th>Latest sample</th><th>Viewer gain</th></tr></thead>
+    <tbody id="risingChannels"><tr><td colspan="5">Loading rising channels…</td></tr></tbody></table></div>
+  </section>
   <section class="panel" id="channelHistoryPanel">
     <h2>Channel viewer history <span class="subtle" id="channelHistoryTitle">(select a channel)</span></h2>
     <div class="subtle" id="channelHistoryHint">Select a channel from the ranked table to inspect its history for the selected time range.</div>
@@ -220,7 +251,14 @@ let peakSparklines=[];
 let liveCardSparklines=[];
 let currentSnapshots=[];
 let analyticsRequestId = 0;
+let analyticsRefreshTimer = null;
+let risingRequestId = 0;
+let analyticsPanelVisible = false;
+let dashboardDataLoaded = false;
 let allStreams=[];
+let previousStreamViewers=new Map();
+let sessionStreamPeaks=new Map();
+let peakAlerts=[];
 let allChannelNames=[];
 let channelCatalogLoaded=false;
 let searchMatches=[];
@@ -257,6 +295,7 @@ function setRange(range){
 
   document.getElementById('customRange').classList.toggle('visible', range === 'custom');
   document.getElementById('dateRange').classList.toggle('visible', range === 'day');
+  document.getElementById('rangeBrush').classList.toggle('visible', range === 'custom');
 
   if(range === 'day'){
     applyDateRange();
@@ -299,6 +338,7 @@ function updateBrush(which,value){
   currentRange='custom';
   document.querySelectorAll('.range-buttons button').forEach(b=>b.classList.remove('active'));
   document.getElementById('rangeCustom').classList.add('active');
+  document.getElementById('rangeBrush').classList.add('visible');
   document.getElementById('customRange').classList.remove('visible'); document.getElementById('dateRange').classList.remove('visible');
   document.getElementById('rangeStatus').textContent=customFrom.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' → '+customTo.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' ('+(start-end)+' hour'+(start-end===1?'':'s')+')';
   clearTimeout(window.brushRefreshTimer); window.brushRefreshTimer=setTimeout(()=>refresh(),180);
@@ -449,6 +489,61 @@ async function refreshAnalytics(){
   }
 }
 
+function scheduleAnalyticsRefresh(){
+  clearTimeout(analyticsRefreshTimer);
+  analyticsRefreshTimer=setTimeout(()=>refreshAnalytics(),750);
+}
+
+function initializeAnalyticsObserver(){
+  const panel=document.getElementById('analyticsPanel');
+  if(!panel)return;
+  if(!('IntersectionObserver' in window)){
+    analyticsPanelVisible=true;
+    return;
+  }
+  const observer=new IntersectionObserver(entries=>{
+    analyticsPanelVisible=entries.some(entry=>entry.isIntersecting);
+    if(analyticsPanelVisible&&dashboardDataLoaded){
+      scheduleAnalyticsRefresh();
+      refreshRisingChannels();
+    }
+  },{rootMargin:'250px 0px'});
+  observer.observe(panel);
+}
+
+async function refreshRisingChannels(){
+  const requestId=++risingRequestId;
+  const body=document.getElementById('risingChannels');
+  const meta=document.getElementById('risingMeta');
+  const windowMinutes=Number(document.getElementById('risingWindow')?.value||15);
+  const now=new Date();
+  const from=new Date(now.getTime()-windowMinutes*60*1000);
+  if(body && !body.dataset.loaded) body.innerHTML='<tr><td colspan="5">Loading rising channels…</td></tr>';
+  try{
+    const query=new URLSearchParams({from:from.toISOString(),to:now.toISOString()});
+    const data=await getJson('/api/analytics?'+query.toString());
+    if(requestId!==risingRequestId) return;
+    const rising=(data.fastestGrowingChannels||[])
+      .filter(channel=>Number(channel.growthViewers)>0 && Number(channel.samples)>=2)
+      .sort((a,b)=>Number(b.growthViewers)-Number(a.growthViewers))
+      .slice(0,10);
+    if(meta) meta.textContent=`Positive viewer gain over the last ${windowMinutes} minutes · latest sample may be up to one collection interval old.`;
+    if(body){
+      body.dataset.loaded='true';
+      body.innerHTML=rising.map((channel,index)=>{
+        const gain=Number(channel.growthViewers||0);
+        const percent=channel.growthPercent==null?'':` (${Number(channel.growthPercent).toFixed(1)}%)`;
+        return `<tr><td class="rank">${index+1}</td><td><button class="channel-pick" type="button" onclick="showChannelHistory('${escapeJs(channel.channel||'')}','${escapeJs(channel.platform||'')}')">${escapeHtml(channel.channel||'Unknown')}</button></td><td>${platformIcon(channel.platform)} ${escapeHtml(channel.platform||'Unknown')}</td><td class="viewers">${fmt(channel.lastViewers)}</td><td class="growth-change">+${fmt(gain)}${percent}</td></tr>`;
+      }).join('')||'<tr><td colspan="5">No channels gained viewers in this window.</td></tr>';
+    }
+  }catch(error){
+    if(requestId!==risingRequestId) return;
+    if(body) body.innerHTML='<tr><td colspan="5">Rising channel data unavailable.</td></tr>';
+    if(meta) meta.textContent='Could not load the selected growth window.';
+    console.error('Unable to load rising channels',error);
+  }
+}
+
 async function refresh(){
   try{
     // Summary cards always use the newest snapshot; chart history is fetched separately
@@ -473,11 +568,9 @@ async function refresh(){
     const snapshotInfoEl = document.getElementById('snapshotInfo');
     if(snapshotInfoEl) snapshotInfoEl.textContent = 'Latest snapshot: '+fmt(latestData.length ? latestData.length : 0);
 
-    // Do not block chart rendering on the expensive all-sample analytics endpoint.
-    // Analytics has its own loading state and updates independently.
-    refreshAnalytics();
     const filtered = (chartData || []).slice().sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
     currentSnapshots=filtered;
+    dashboardDataLoaded=true;
     renderPeakCards(filtered);
     renderLiveCardSparklines(filtered);
     const rangeDataStatusEl = document.getElementById('rangeDataStatus');
@@ -489,17 +582,14 @@ async function refresh(){
       if(rangeStatusEl) rangeStatusEl.textContent='No data available for selected range';
       if(combinedChart){ combinedChart.destroy(); combinedChart=null; }
       if(platformChart){ platformChart.destroy(); platformChart=null; }
+      if(analyticsPanelVisible){
+        scheduleAnalyticsRefresh();
+        refreshRisingChannels();
+      }
       return;
     }
 
-    try {
-      const health = await getJson('/api/status');
-      const providers = health.providers || {};
-      const healthLabel = ['YouTube','Twitch','Kick'].map(name => name + ': ' + (providers[name]?.status || 'UNKNOWN')).join(' · ');
-      document.getElementById('status').textContent='Live · ' + healthLabel;
-    } catch {
-      document.getElementById('status').textContent='Live · provider status unavailable';
-    }
+    refreshProviderFreshness();
 
     const maxPoints = 1440;
     const points = filtered.length > maxPoints ? filtered.slice(-maxPoints) : filtered;
@@ -521,16 +611,20 @@ async function refresh(){
 
     if(combinedChart) combinedChart.destroy();
     combinedChart=new Chart(document.getElementById('combinedChart'),{
-      type:'line',data:{labels,datasets:[{label:'Combined',data:combined,borderColor:'#eef2f7',backgroundColor:'rgba(238,242,247,0.12)',fill:true,tension:.25,pointRadius:1,spanGaps:false}]},options:opts
+      type:'line',data:{labels,datasets:[{label:'Combined',data:combined,borderColor:'#eef2f7',backgroundColor:'rgba(238,242,247,0.12)',fill:true,tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3,spanGaps:false}]},options:opts
     });
     if(platformChart) platformChart.destroy();
     platformChart=new Chart(document.getElementById('platformChart'),{
       type:'line',data:{labels,datasets:[
-        {label:'YouTube',data:yt,borderColor:'#ff6464',backgroundColor:'transparent',tension:.25,pointRadius:1},
-        {label:'Twitch',data:tw,borderColor:'#b998ff',backgroundColor:'transparent',tension:.25,pointRadius:1},
-        {label:'Kick',data:kick,borderColor:'#52df9c',backgroundColor:'transparent',tension:.25,pointRadius:1}
+        {label:'YouTube',data:yt,borderColor:'#ff6464',backgroundColor:'transparent',tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3},
+        {label:'Twitch',data:tw,borderColor:'#b998ff',backgroundColor:'transparent',tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3},
+        {label:'Kick',data:kick,borderColor:'#52df9c',backgroundColor:'transparent',tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3}
       ]},options:opts
     });
+    if(analyticsPanelVisible){
+      scheduleAnalyticsRefresh();
+      refreshRisingChannels();
+    }
   }catch(e){
     document.getElementById('status').textContent='Tracker/API unavailable';
     document.getElementById('rangeDataStatus').textContent='Unable to load selected history';
@@ -575,6 +669,7 @@ async function loadStreams(){
     scope==='Overall'?'All live streams':`All ${scope} live streams`;
   try{
     allStreams=await getJson('/api/streams?platform='+encodeURIComponent(scope));
+    if(scope==='Overall') observePeakAlerts(allStreams);
     if(scope==='Overall') updateChannelOptions(allStreams);
     currentPage=0;
     renderStreams();
@@ -582,6 +677,60 @@ async function loadStreams(){
     body.innerHTML='<tr><td colspan="5">Unable to load streams</td></tr>';
     document.getElementById('pageInfo').textContent='Unavailable';
   }
+}
+
+function streamAlertKey(stream){
+  const platform=String(stream.platform||'').toLowerCase();
+  const identity=String(stream.id||stream.channelId||stream.channel||'').trim().toLowerCase();
+  return platform+':'+identity;
+}
+function observePeakAlerts(streams){
+  const threshold=Math.max(1,Number(document.getElementById('peakAlertThreshold')?.value)||10000);
+  for(const stream of streams||[]){
+    const key=streamAlertKey(stream),viewers=Number(stream.viewers);
+    if(!key||!Number.isFinite(viewers))continue;
+    const previous=previousStreamViewers.get(key),peak=sessionStreamPeaks.get(key),reasons=[];
+    if(previous!==undefined&&previous<threshold&&viewers>=threshold)reasons.push('Crossed '+fmt(threshold)+' viewers');
+    if(peak!==undefined&&viewers>peak)reasons.push('New session peak');
+    if(reasons.length){peakAlerts.unshift({channel:stream.channel||'Unknown',platform:stream.platform||'Stream',viewers,reasons,time:new Date()});peakAlerts=peakAlerts.slice(0,8);}
+    if(peak===undefined||viewers>peak)sessionStreamPeaks.set(key,viewers);
+    previousStreamViewers.set(key,viewers);
+  }
+  renderPeakAlerts();
+}
+function renderPeakAlerts(){
+  const list=document.getElementById('peakAlertList');if(!list)return;
+  if(!peakAlerts.length){list.innerHTML='<div class="subtle">No threshold crossings or new session peaks yet.</div>';return;}
+  list.innerHTML=peakAlerts.map(alert=>`<div class="peak-alert"><div><span class="peak-alert-title">${escapeHtml(alert.channel)}</span> <span class="platform">· ${escapeHtml(alert.platform)}</span> <strong>${fmt(alert.viewers)} viewers</strong><div class="peak-alert-reason">${alert.reasons.map(escapeHtml).join(' · ')}</div></div><span class="peak-alert-time">${alert.time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span></div>`).join('');
+}
+function clearPeakAlerts(){peakAlerts=[];renderPeakAlerts();}
+
+function freshnessAgeLabel(ageMs){
+  const seconds=Math.max(0,Math.floor(ageMs/1000));
+  if(seconds<60)return `${seconds}s ago`;
+  const minutes=Math.floor(seconds/60);if(minutes<60)return `${minutes}m ago`;
+  const hours=Math.floor(minutes/60);return `${hours}h ${minutes%60}m ago`;
+}
+async function refreshProviderFreshness(){
+  try{
+    const health=await getJson('/api/status'),providers=health.providers||{};
+    const staleAfterMs=Math.max(120000,(Number(health.intervalMs)||60000)*2);
+    let anyDown=false,anyStale=false;
+    for(const [name,id] of [['YouTube','freshnessYoutube'],['Twitch','freshnessTwitch'],['Kick','freshnessKick']]){
+      const provider=providers[name]||{},el=document.getElementById(id);if(!el)continue;
+      const status=String(provider.status||'UNKNOWN').toUpperCase(),last=provider.lastSuccessAt?new Date(provider.lastSuccessAt):null;
+      const age=last&&!Number.isNaN(last.getTime())?Date.now()-last.getTime():null;
+      el.className='live-card-freshness';
+      if(age===null){el.textContent='No successful collection yet';el.classList.add('freshness-unknown');}
+      else if(age>staleAfterMs){el.textContent=`STALE · last success ${freshnessAgeLabel(age)}`;el.classList.add('freshness-stale');anyStale=true;}
+      else if(status==='DOWN'){el.textContent=`Provider error · last success ${freshnessAgeLabel(age)}`;el.classList.add('freshness-down');anyDown=true;}
+      else{el.textContent=`Updated ${freshnessAgeLabel(age)}`;el.classList.add('freshness-fresh');}
+      if(status==='DOWN')anyDown=true;
+    }
+    const dot=document.querySelector('.status .dot');if(dot){dot.classList.toggle('down',anyDown);dot.classList.toggle('stale',!anyDown&&anyStale);}
+    const statusEl=document.getElementById('status');
+    if(statusEl)statusEl.textContent=`Live · YouTube: ${providers.YouTube?.status||'UNKNOWN'} · Twitch: ${providers.Twitch?.status||'UNKNOWN'} · Kick: ${providers.Kick?.status||'UNKNOWN'}${anyStale?' · STALE DATA':''}`;
+  }catch{const statusEl=document.getElementById('status');if(statusEl)statusEl.textContent='Live · provider status unavailable';}
 }
 
 function renderStreams(){
@@ -802,16 +951,19 @@ async function collect(){
 
 // initialize range UI and default date
 initializeChannelSearch();
+initializeAnalyticsObserver();
 setRange('1h');
 const today = new Date();
 const selDateEl = document.getElementById('selectedDate');
 if(selDateEl){ selDateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; }
 
-refresh(); loadStreams();
+loadStreams(); refreshProviderFreshness();
 getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error);
 setInterval(()=>getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error),60000);
 setInterval(()=>{ if(currentRange === '30m' || currentRange === '1h') refresh(); else refreshLiveSummary(); },60000);
 setInterval(loadStreams,60000);
+setInterval(refreshProviderFreshness,30000);
+setInterval(()=>{ if(analyticsPanelVisible) refreshRisingChannels(); },60000);
 setInterval(()=>getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error),60000);
 </script>
 </body>

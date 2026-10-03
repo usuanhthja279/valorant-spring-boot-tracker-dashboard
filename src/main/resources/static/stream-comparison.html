@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stream Comparison · VALORANT Live Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#0b0e13;color:#eef2f7;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+    header{padding:18px 24px;border-bottom:1px solid #222832;background:#0c121a;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+    h1{margin:0;font-size:24px}.sub,.muted{color:#8e99a8;font-size:13px;margin-top:5px}a{color:#dbeafe;text-decoration:none}a:hover{text-decoration:underline}
+    main{padding:20px 24px 32px;max-width:1600px;margin:auto}.panel{background:#0f1720;border:1px solid #202d39;border-radius:12px;padding:16px;margin-bottom:14px}
+    .controls{display:grid;grid-template-columns:minmax(220px,1fr) minmax(260px,2fr) auto;align-items:end;gap:12px}.field{display:grid;gap:6px}.field label{font-size:12px;color:#9eacbd}
+    input,select,button{background:#151b24;color:#eef2f7;border:1px solid #2b3441;border-radius:8px;padding:9px 12px;font:inherit;font-size:13px}button{cursor:pointer}button:hover{background:#1b222d}button:disabled{opacity:.5;cursor:not-allowed}
+    .selected-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.stream-chip{display:flex;align-items:center;gap:8px;background:#111e29;border:1px solid #263746;border-radius:999px;padding:6px 10px;font-size:12px}.stream-chip button{padding:2px 7px;border-radius:50%;line-height:1.3}
+    .range-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.range-buttons{display:flex;gap:7px;flex-wrap:wrap}.range-buttons button.active{border-color:#eef2f7;background:#202834}.custom-range{display:none;gap:8px;align-items:end;flex-wrap:wrap;margin-top:12px}.custom-range.visible{display:flex}.status{color:#9eacbd;font-size:13px}.range-brush{display:grid;gap:7px;margin-top:12px;padding-top:10px;border-top:1px solid #202d39}.brush-row{display:grid;grid-template-columns:110px 1fr 90px;gap:10px;align-items:center;color:#9eacbd;font-size:12px}.brush-row input{width:100%;padding:0;accent-color:#38bdf8}.brush-readout{text-align:right;color:#dbeafe;font-variant-numeric:tabular-nums}
+    .chart-panel h2{font-size:16px;margin:0 0 8px}.chart-wrap{position:relative;height:460px;margin-top:14px}.empty{padding:34px 12px;text-align:center;color:#8e99a8;border:1px dashed #2b3441;border-radius:9px}
+    @media(max-width:760px){header{padding:16px}main{padding:14px}.controls{grid-template-columns:1fr}.chart-wrap{height:350px}.brush-row{grid-template-columns:100px 1fr 75px}}
+    *{scrollbar-width:thin;scrollbar-color:#344454 #0b0e13}*::-webkit-scrollbar{width:8px;height:8px}*::-webkit-scrollbar-track{background:#0b0e13}*::-webkit-scrollbar-thumb{background:#344454;border:2px solid #0b0e13;border-radius:999px}*::-webkit-scrollbar-thumb:hover{background:#4a6074}*::-webkit-scrollbar-corner{background:#0b0e13}
+  </style>
+</head>
+<body>
+<header>
+  <div><h1>Stream comparison</h1><div class="sub">Compare live channels over the same elapsed time window.</div></div>
+  <a href="/">← Back to tracker</a>
+</header>
+<main>
+  <section class="panel">
+    <div class="controls">
+      <div class="field"><label for="channelSearch">Find a live channel</label><input id="channelSearch" type="search" placeholder="Search name or platform" oninput="renderCandidates()"></div>
+      <div class="field"><label for="candidatePicker">Available live streams</label><select id="candidatePicker"></select></div>
+      <button id="addStream" type="button" onclick="addSelectedStream()">Add stream</button>
+    </div>
+    <div class="muted" id="candidateStatus">Loading currently live streams…</div>
+    <div class="selected-list" id="selectedStreams"></div>
+  </section>
+
+  <section class="panel">
+    <div class="range-bar">
+      <div class="range-buttons">
+        <button id="range30m" onclick="setRange('30m')">30 min</button>
+        <button id="range1h" onclick="setRange('1h')">1 hour</button>
+        <button id="range6h" onclick="setRange('6h')">6 hours</button>
+        <button id="range24h" onclick="setRange('24h')">24 hours</button>
+        <button id="rangeDay" onclick="setRange('day')">Date</button>
+        <button id="rangeCustom" onclick="setRange('custom')">Custom</button>
+      </div>
+      <div class="status" id="rangeStatus">Last 1 hour</div>
+    </div>
+    <div class="custom-range" id="dateRange"><div class="field"><label for="selectedDate">Date</label><input type="date" id="selectedDate"></div><button onclick="applyDateRange()">Apply date</button></div>
+    <div class="range-brush" aria-label="Drag to choose a custom time range within the last 24 hours">
+      <div class="brush-row"><label for="brushStart">Start (hours ago)</label><input id="brushStart" type="range" min="1" max="24" step="1" value="7" oninput="updateBrush('start',this.value)"><span class="brush-readout" id="brushStartLabel">7h ago</span></div>
+      <div class="brush-row"><label for="brushEnd">End (hours ago)</label><input id="brushEnd" type="range" min="0" max="23" step="1" value="1" oninput="updateBrush('end',this.value)"><span class="brush-readout" id="brushEndLabel">1h ago</span></div>
+    </div>
+    <div class="custom-range" id="customRange"><div class="field"><label for="customFrom">From</label><input type="datetime-local" id="customFrom"></div><div class="field"><label for="customTo">To</label><input type="datetime-local" id="customTo"></div><button onclick="applyCustomRange()">Apply</button></div>
+  </section>
+
+  <section class="panel chart-panel">
+    <h2>Viewers over the selected range</h2>
+    <div class="status" id="comparisonStatus">Choose streams to compare.</div>
+    <div id="emptyState" class="empty">Select live streams above to compare their recorded viewer history.</div>
+    <div class="chart-wrap" id="chartWrap" hidden><canvas id="comparisonChart"></canvas></div>
+  </section>
+</main>
+<script>
+  const fmt=value=>Number(value||0).toLocaleString('en-IN');
+  const colors=['#38bdf8','#fbbf24','#a78bfa','#52df9c','#fb7185','#f97316','#2dd4bf','#c084fc'];
+  let candidates=[];
+  let candidateByKey=new Map();
+  let selected=[];
+  let chart=null;
+  let requestId=0;
+  let currentRange='1h';
+  let selectedDate=null;
+  let customFrom=null;
+  let customTo=null;
+
+  const streamKey=stream=>`${stream.platform}:${stream.channelId||stream.channel}`;
+  const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+
+  function renderCandidates(){
+    const query=document.getElementById('channelSearch').value.trim().toLocaleLowerCase();
+    const picker=document.getElementById('candidatePicker');
+    const visible=candidates.filter(stream=>`${stream.channel} ${stream.platform} ${stream.channelId||''}`.toLocaleLowerCase().includes(query));
+    candidateByKey=new Map(visible.map(stream=>[streamKey(stream),stream]));
+    picker.replaceChildren(...visible.map(stream=>{
+      const option=document.createElement('option');
+      option.value=streamKey(stream);
+      option.textContent=`${stream.channel} · ${stream.platform} · ${fmt(stream.viewers)} viewers`;
+      return option;
+    }));
+    document.getElementById('addStream').disabled=visible.length===0;
+    if(!visible.length)picker.innerHTML='<option>No matching live streams</option>';
+  }
+
+  function renderSelected(){
+    const container=document.getElementById('selectedStreams');
+    container.innerHTML=selected.map(stream=>`<span class="stream-chip"><span>${escapeHtml(stream.channel)} · ${escapeHtml(stream.platform)}</span><button type="button" aria-label="Remove ${escapeHtml(stream.channel)}" onclick="removeStream('${encodeURIComponent(streamKey(stream))}')">×</button></span>`).join('');
+  }
+
+  async function loadCandidates(){
+    const status=document.getElementById('candidateStatus');
+    try{
+      const response=await fetch('/api/streams?platform=Overall',{cache:'no-store'});
+      if(!response.ok)throw new Error('Could not load live streams');
+      candidates=await response.json();
+      candidates.sort((a,b)=>Number(b.viewers||0)-Number(a.viewers||0));
+      renderCandidates();
+      status.textContent=`${fmt(candidates.length)} live streams available. Add at most eight streams to the chart.`;
+      for(const stream of candidates.slice(0,2))selected.push(stream);
+      renderSelected();
+      loadComparison();
+    }catch(error){
+      status.textContent='Could not load live streams. Return to the tracker and try again.';
+      document.getElementById('comparisonStatus').textContent='Stream list unavailable.';
+    }
+  }
+
+  function addSelectedStream(){
+    const stream=candidateByKey.get(document.getElementById('candidatePicker').value);
+    if(!stream)return;
+    if(selected.some(item=>streamKey(item)===streamKey(stream)))return;
+    if(selected.length>=8){document.getElementById('comparisonStatus').textContent='Compare up to eight streams at a time.';return;}
+    selected.push(stream);renderSelected();loadComparison();
+  }
+
+  function removeStream(encodedKey){
+    const key=decodeURIComponent(encodedKey);
+    selected=selected.filter(stream=>streamKey(stream)!==key);
+    renderSelected();loadComparison();
+  }
+
+  function selectedBounds(){
+    const now=new Date();
+    if(currentRange==='day'){
+      if(!selectedDate)return null;
+      const from=new Date(selectedDate),to=new Date(selectedDate);to.setDate(to.getDate()+1);return {from,to};
+    }
+    if(currentRange==='custom')return customFrom&&customTo?{from:customFrom,to:customTo}:null;
+    const duration={'30m':1800000,'1h':3600000,'6h':21600000,'24h':86400000}[currentRange]||3600000;
+    return {from:new Date(now-duration),to:now};
+  }
+
+  function setRange(range){
+    currentRange=range;
+    document.querySelectorAll('.range-buttons button').forEach(button=>button.classList.remove('active'));
+    document.getElementById(range==='30m'?'range30m':range==='1h'?'range1h':range==='6h'?'range6h':range==='24h'?'range24h':range==='day'?'rangeDay':'rangeCustom').classList.add('active');
+    document.getElementById('dateRange').classList.toggle('visible',range==='day');
+    document.getElementById('customRange').classList.toggle('visible',range==='custom');
+    if(range==='day'){applyDateRange();return;}
+    if(range==='custom')return;
+    document.getElementById('rangeStatus').textContent='Last '+({'30m':'30 minutes','1h':'1 hour','6h':'6 hours','24h':'24 hours'}[range]||range);
+    loadComparison();
+  }
+
+  function applyDateRange(){
+    const value=document.getElementById('selectedDate').value;
+    if(!value){document.getElementById('rangeStatus').textContent='Choose a date to view history';return;}
+    selectedDate=new Date(value+'T00:00:00');
+    document.getElementById('rangeStatus').textContent='Date: '+selectedDate.toLocaleDateString();
+    loadComparison();
+  }
+
+  function applyCustomRange(){
+    const from=document.getElementById('customFrom').value,to=document.getElementById('customTo').value;
+    if(!from||!to){document.getElementById('rangeStatus').textContent='Choose both a start and end time';return;}
+    customFrom=new Date(from);customTo=new Date(to);
+    if(customFrom>=customTo){document.getElementById('rangeStatus').textContent='Start time must be before end time';return;}
+    document.getElementById('rangeStatus').textContent=customFrom.toLocaleString()+' → '+customTo.toLocaleString();
+    loadComparison();
+  }
+
+  function updateBrush(which){
+    let start=Number(document.getElementById('brushStart').value),end=Number(document.getElementById('brushEnd').value);
+    if(which==='start'&&start<=end){start=Math.min(24,end+1);document.getElementById('brushStart').value=start;}
+    if(which==='end'&&end>=start){end=Math.max(0,start-1);document.getElementById('brushEnd').value=end;}
+    start=Math.max(1,Math.min(24,start));end=Math.max(0,Math.min(start-1,end));
+    document.getElementById('brushStartLabel').textContent=start+'h ago';document.getElementById('brushEndLabel').textContent=end===0?'Now':end+'h ago';
+    customFrom=new Date(Date.now()-start*3600000);customTo=new Date(Date.now()-end*3600000);currentRange='custom';
+    document.querySelectorAll('.range-buttons button').forEach(button=>button.classList.remove('active'));
+    document.getElementById('rangeCustom').classList.add('active');document.getElementById('dateRange').classList.remove('visible');document.getElementById('customRange').classList.remove('visible');
+    document.getElementById('rangeStatus').textContent=customFrom.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' → '+customTo.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' ('+(start-end)+' hours)';
+    clearTimeout(window.brushRefreshTimer);window.brushRefreshTimer=setTimeout(loadComparison,180);
+  }
+
+  async function loadComparison(){
+    const id=++requestId,bounds=selectedBounds(),status=document.getElementById('comparisonStatus');
+    if(!selected.length){status.textContent='Add one or more streams to compare.';showEmpty('Select live streams above to compare their recorded viewer history.');return;}
+    if(!bounds){status.textContent='Select a valid time window.';return;}
+    status.textContent='Loading viewer history for '+selected.length+' stream'+(selected.length===1?'':'s')+'…';
+    try{
+      const rows=await Promise.all(selected.map(async stream=>{
+        const query=new URLSearchParams({name:stream.channel,platform:stream.platform,from:bounds.from.toISOString(),to:bounds.to.toISOString(),limit:'20000'});
+        const response=await fetch('/api/channels/history?'+query.toString(),{cache:'no-store'});
+        if(!response.ok)throw new Error('History request failed for '+stream.channel);
+        return {stream,records:await response.json()};
+      }));
+      if(id!==requestId)return;
+      const keyed=rows.map(({stream,records},index)=>{
+        const points=new Map();
+        for(const record of records||[]){
+          const minute=Math.round((new Date(record.timestamp)-bounds.from)/60000);
+          points.set(minute,(points.get(minute)||0)+Number(record.viewers||0));
+        }
+        return {stream,index,points};
+      });
+      const labels=[...new Set(keyed.flatMap(item=>[...item.points.keys()]))].sort((a,b)=>a-b);
+      if(!labels.length){status.textContent='No recorded stream samples in this window.';showEmpty('No history was recorded for the selected streams and time range.');return;}
+      document.getElementById('emptyState').hidden=true;document.getElementById('chartWrap').hidden=false;
+      if(chart)chart.destroy();
+      chart=new Chart(document.getElementById('comparisonChart'),{
+        type:'line',
+        data:{labels:labels.map(minute=>`${Math.floor(minute/60)}h ${String(minute%60).padStart(2,'0')}m`),datasets:keyed.map(({stream,index,points})=>({label:`${stream.channel} · ${stream.platform}`,data:labels.map(key=>points.get(key)??null),borderColor:colors[index%colors.length],backgroundColor:colors[index%colors.length]+'22',fill:false,tension:.22,pointRadius:0,borderWidth:2,spanGaps:false}))},
+        options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#aeb7c4'}}},scales:{x:{ticks:{color:'#77818f',maxTicksLimit:14},grid:{color:'#202731'}},y:{beginAtZero:true,ticks:{color:'#77818f'},grid:{color:'#202731'}}}}
+      });
+      status.textContent=`${labels.length} elapsed-time points · ${bounds.from.toLocaleString()} → ${bounds.to.toLocaleString()}`;
+    }catch(error){
+      if(id!==requestId)return;
+      status.textContent='Unable to load stream comparison history.';showEmpty('History could not be loaded. Try a shorter time range.');
+    }
+  }
+
+  function showEmpty(message){
+    document.getElementById('emptyState').textContent=message;document.getElementById('emptyState').hidden=false;document.getElementById('chartWrap').hidden=true;
+    if(chart){chart.destroy();chart=null;}
+  }
+
+  const today=new Date();
+  document.getElementById('selectedDate').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  setRange('1h');
+  loadCandidates();
+</script>
+</body>
+</html>
