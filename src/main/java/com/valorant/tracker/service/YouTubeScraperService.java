@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.valorant.tracker.model.LiveStream;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -11,6 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,9 +33,8 @@ import reactor.core.publisher.Mono;
 public class YouTubeScraperService {
 
   private static final Logger logger = LoggerFactory.getLogger(YouTubeScraperService.class);
-  private static final String SEARCH_URL =
-      "https://www.youtube.com/results?search_query=valorant&sp=CAMSBBABQAE%253D";
   private static final String INITIAL_DATA_MARKER = "ytInitialData";
+  private static final String PLAYER_RESPONSE_MARKER = "ytInitialPlayerResponse";
   private static final int MAX_PAGE_SIZE_BYTES = 2 * 1024 * 1024;
   private static final Pattern VIEWER_COUNT =
       Pattern.compile("([\\d,.]+)\\s*([KMB]?)\\s+watching", Pattern.CASE_INSENSITIVE);
@@ -49,19 +51,24 @@ public class YouTubeScraperService {
 
   private final WebClient client;
   private final ObjectMapper mapper;
+  private final DataSourceCatalog sources;
+  private final List<String> searchUrls;
   private final Map<String, Instant> lastWatchPageAttempt = new ConcurrentHashMap<>();
   private final Map<String, CachedViewerCount> cachedWatchPageStatus = new ConcurrentHashMap<>();
   private final AtomicLong watchPageBlockedUntilMillis = new AtomicLong();
   private volatile Instant lastFetchTime;
   private volatile List<LiveStream> cachedFetchResults = List.of();
 
-  public YouTubeScraperService(WebClient.Builder webClientBuilder, ObjectMapper mapper) {
+  public YouTubeScraperService(
+      WebClient.Builder webClientBuilder, ObjectMapper mapper, DataSourceCatalog sources) {
     this.client =
         webClientBuilder
             .clone()
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(MAX_PAGE_SIZE_BYTES))
             .build();
     this.mapper = mapper;
+    this.sources = sources;
+    this.searchUrls = List.copyOf(sources.youtubeScraperSearchUrls());
   }
 
   public synchronized List<LiveStream> fetch() {
@@ -71,32 +78,66 @@ public class YouTubeScraperService {
       return cachedFetchResults;
     }
 
-    logger.info("YouTube streams: requesting live search results from {}", SEARCH_URL);
-    String html =
-        client
-            .get()
-            .uri(URI.create(SEARCH_URL))
-            .header("User-Agent", "Mozilla/5.0")
-            .header("Accept-Language", "en-US,en;q=0.9")
-            .retrieve()
-            .bodyToMono(String.class)
-            .block();
-
-    if (html == null || html.isBlank()) {
-      throw new IllegalStateException("YouTube search page returned an empty response");
-    }
-
-    logger.info("YouTube search page returned {} characters", html.length());
-
     try {
-      String initialDataJson = extractInitialData(html);
-      JsonNode initialData = mapper.readTree(initialDataJson);
-      List<JsonNode> videoRenderers = new ArrayList<>();
-      collectVideoRenderers(initialData, videoRenderers);
-      logger.info("YouTube search page contained {} video results", videoRenderers.size());
+      Map<String, JsonNode> videoRenderers = new LinkedHashMap<>();
+      List<LiveStream> individualVideos = new ArrayList<>();
+      RuntimeException lastSearchError = null;
+      int successfulSearches = 0;
+      for (String searchUrl : searchUrls) {
+        try {
+          logger.info("YouTube streams: requesting live results from {}", searchUrl);
+          String html =
+              client
+                  .get()
+                  .uri(URI.create(searchUrl))
+                  .header("User-Agent", "Mozilla/5.0")
+                  .header("Accept-Language", "en-US,en;q=0.9")
+                  .retrieve()
+                  .bodyToMono(String.class)
+                  .block();
+          if (html == null || html.isBlank()) {
+            throw new IllegalStateException("YouTube search page returned an empty response");
+          }
 
-      List<LiveStream> streams = new ArrayList<>();
-      for (JsonNode video : videoRenderers) {
+          String videoId = videoIdFromWatchUrl(searchUrl);
+          if (!videoId.isBlank()) {
+            LiveStream stream = parseIndividualVideo(html, videoId, searchUrl);
+            if (stream != null) {
+              individualVideos.add(stream);
+            }
+            successfulSearches++;
+            logger.info(
+                "YouTube individual video {} {}",
+                videoId,
+                stream == null ? "is not currently live" : "is live");
+            continue;
+          }
+
+          JsonNode initialData = mapper.readTree(extractInitialData(html));
+          List<JsonNode> pageRenderers = new ArrayList<>();
+          collectVideoRenderers(initialData, pageRenderers);
+          pageRenderers.stream()
+              .filter(video -> !video.path("videoId").asText("").isBlank())
+              .forEach(video -> videoRenderers.putIfAbsent(video.path("videoId").asText(), video));
+          successfulSearches++;
+          logger.info(
+              "YouTube search page returned {} characters and {} unique video results",
+              html.length(),
+              videoRenderers.size());
+        } catch (RuntimeException error) {
+          lastSearchError = error;
+          logger.warn("YouTube search source failed at {}: {}", searchUrl, error.getMessage());
+        }
+      }
+      if (successfulSearches == 0) {
+        throw lastSearchError == null
+            ? new IllegalStateException("All YouTube search sources failed")
+            : lastSearchError;
+      }
+      logger.info("YouTube search pages contained {} unique video results", videoRenderers.size());
+
+      List<LiveStream> streams = new ArrayList<>(individualVideos);
+      for (JsonNode video : videoRenderers.values()) {
         String videoId = video.path("videoId").asText("");
         String title = text(video.path("title"));
         String channelTitle = text(video.path("ownerText"));
@@ -130,7 +171,7 @@ public class YouTubeScraperService {
                 channelTitle,
                 title,
                 viewers,
-                "https://www.youtube.com/watch?v=" + videoId));
+                sources.youtubeWatchPageUrl(videoId)));
       }
 
       streams = new ArrayList<>(refreshViewerCounts(streams));
@@ -153,8 +194,8 @@ public class YouTubeScraperService {
       lastFetchTime = Instant.now();
       return cachedFetchResults;
     } catch (Exception e) {
-      logger.error("Failed to parse YouTube search results", e);
-      throw new IllegalStateException("Failed to parse YouTube search results", e);
+      logger.error("Failed to collect YouTube search results", e);
+      throw new IllegalStateException("Failed to collect YouTube search results", e);
     }
   }
 
@@ -353,19 +394,71 @@ public class YouTubeScraperService {
     return new WatchPageData(Boolean.parseBoolean(liveMatcher.group(1)), viewers);
   }
 
+  private LiveStream parseIndividualVideo(String html, String expectedVideoId, String url) {
+    try {
+      JsonNode playerResponse = mapper.readTree(extractJsonObject(html, PLAYER_RESPONSE_MARKER));
+      JsonNode details = playerResponse.path("videoDetails");
+      JsonNode liveDetails =
+          playerResponse
+              .path("microformat")
+              .path("playerMicroformatRenderer")
+              .path("liveBroadcastDetails");
+      String videoId = details.path("videoId").asText(expectedVideoId);
+      boolean liveNow = liveDetails.path("isLiveNow").asBoolean(false);
+      long viewers = details.path("viewCount").asLong(-1);
+      if (!videoId.equals(expectedVideoId) || !liveNow || viewers < 0) {
+        return null;
+      }
+      return new LiveStream(
+          "YouTube",
+          videoId,
+          details.path("channelId").asText(""),
+          details.path("author").asText(""),
+          details.path("title").asText(""),
+          viewers,
+          url);
+    } catch (Exception error) {
+      throw new IllegalStateException(
+          "Could not parse individual YouTube video " + expectedVideoId, error);
+    }
+  }
+
+  private String videoIdFromWatchUrl(String url) {
+    URI uri = URI.create(url);
+    if (uri.getHost() == null
+        || (!uri.getHost().equalsIgnoreCase("www.youtube.com")
+            && !uri.getHost().equalsIgnoreCase("youtube.com"))) {
+      return "";
+    }
+    if (!"/watch".equals(uri.getPath()) || uri.getRawQuery() == null) {
+      return "";
+    }
+    for (String parameter : uri.getRawQuery().split("&")) {
+      String[] pair = parameter.split("=", 2);
+      if (pair.length == 2 && pair[0].equals("v")) {
+        return URLDecoder.decode(pair[1], StandardCharsets.UTF_8);
+      }
+    }
+    return "";
+  }
+
   private record WatchPageData(boolean live, long viewers) {}
 
   private record CachedViewerCount(long viewers, Instant updatedAt, boolean live) {}
 
   private String extractInitialData(String html) {
-    int markerIndex = html.indexOf(INITIAL_DATA_MARKER);
+    return extractJsonObject(html, INITIAL_DATA_MARKER);
+  }
+
+  private String extractJsonObject(String html, String marker) {
+    int markerIndex = html.indexOf(marker);
     if (markerIndex < 0) {
-      throw new IllegalStateException("YouTube page did not contain initial search data");
+      throw new IllegalStateException("YouTube page did not contain " + marker);
     }
 
-    int start = html.indexOf('{', markerIndex + INITIAL_DATA_MARKER.length());
+    int start = html.indexOf('{', markerIndex + marker.length());
     if (start < 0) {
-      throw new IllegalStateException("YouTube initial search data was malformed");
+      throw new IllegalStateException("YouTube " + marker + " was malformed");
     }
 
     boolean inString = false;
@@ -394,7 +487,7 @@ public class YouTubeScraperService {
       }
     }
 
-    throw new IllegalStateException("YouTube initial search data was incomplete");
+    throw new IllegalStateException("YouTube " + marker + " was incomplete");
   }
 
   private void collectVideoRenderers(JsonNode node, List<JsonNode> results) {

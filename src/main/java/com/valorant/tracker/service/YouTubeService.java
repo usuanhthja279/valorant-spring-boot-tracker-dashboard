@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class YouTubeService {
@@ -24,6 +25,9 @@ public class YouTubeService {
 
   private final WebClient client;
   private final ObjectMapper mapper;
+  private final String apiSearchUrl;
+  private final String apiVideosUrl;
+  private final DataSourceCatalog sources;
 
   @Value("${tracker.youtube.refresh-interval-ms:3600000}")
   private long refreshIntervalMs;
@@ -35,9 +39,12 @@ public class YouTubeService {
   @Value("${tracker.youtube.api-key:}")
   private String apiKey;
 
-  public YouTubeService(WebClient.Builder webClientBuilder) {
+  public YouTubeService(WebClient.Builder webClientBuilder, DataSourceCatalog sources) {
 
-    this.client = webClientBuilder.baseUrl("https://www.googleapis.com/youtube/v3").build();
+    this.client = webClientBuilder.build();
+    this.apiSearchUrl = sources.youtubeApiSearchUrl();
+    this.apiVideosUrl = sources.youtubeApiVideosUrl();
+    this.sources = sources;
 
     this.mapper = new ObjectMapper();
   }
@@ -106,8 +113,7 @@ public class YouTubeService {
                 .uri(
                     uriBuilder -> {
                       var query =
-                          uriBuilder
-                              .path("/search")
+                          UriComponentsBuilder.fromUriString(apiSearchUrl)
                               .queryParam("part", "snippet")
                               .queryParam("q", "VALORANT")
                               .queryParam("type", "video")
@@ -122,7 +128,7 @@ public class YouTubeService {
                         query.queryParam("pageToken", currentPageToken);
                       }
 
-                      return query.build();
+                      return query.build().toUri();
                     })
                 .retrieve()
                 .bodyToMono(String.class)
@@ -269,12 +275,12 @@ public class YouTubeService {
                 .get()
                 .uri(
                     uriBuilder ->
-                        uriBuilder
-                            .path("/videos")
+                        UriComponentsBuilder.fromUriString(apiVideosUrl)
                             .queryParam("part", "snippet," + "liveStreamingDetails," + "status")
                             .queryParam("id", batchIds)
                             .queryParam("key", apiKey)
-                            .build())
+                            .build()
+                            .toUri())
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
@@ -360,7 +366,7 @@ public class YouTubeService {
 
           String title = snippet.path("title").asText("");
 
-          String url = "https://www.youtube.com/watch?v=" + videoId;
+          String url = sources.youtubeWatchPageUrl(videoId);
 
           streams.add(
               new LiveStream("YouTube", videoId, channelId, channelTitle, title, viewers, url));

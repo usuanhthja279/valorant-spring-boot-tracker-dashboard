@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.ArrayList;
@@ -30,6 +31,9 @@ public class TwitchService {
 
  private final WebClient client;
  private final ObjectMapper mapper;
+ private final String authUrl;
+ private final String gameUrl;
+ private final String streamsUrl;
 
  @Value("${tracker.twitch.client-id:}")
  private String clientId;
@@ -40,8 +44,11 @@ public class TwitchService {
  private String accessToken;
  private String gameId;
 
- public TwitchService(WebClient.Builder webClientBuilder) {
-  this.client = webClientBuilder.build();
+ public TwitchService(WebClient.Builder webClientBuilder, DataSourceCatalog sources) {
+  this.client = webClientBuilder.clone().build();
+  this.authUrl = sources.twitchAuthUrl();
+  this.gameUrl = sources.twitchGameUrl();
+  this.streamsUrl = sources.twitchStreamsUrl();
   this.mapper = new ObjectMapper();
  }
 
@@ -82,25 +89,13 @@ public class TwitchService {
   String tokenResponse =
           client
                   .post()
-                  .uri(uriBuilder ->
-                          uriBuilder
-                                  .scheme("https")
-                                  .host("id.twitch.tv")
-                                  .path("/oauth2/token")
-                                  .queryParam(
-                                          "client_id",
-                                          clientId
-                                  )
-                                  .queryParam(
-                                          "client_secret",
-                                          clientSecret
-                                  )
-                                  .queryParam(
-                                          "grant_type",
-                                          "client_credentials"
-                                  )
+                  .uri(
+                          UriComponentsBuilder.fromUriString(authUrl)
+                                  .queryParam("client_id", clientId)
+                                  .queryParam("client_secret", clientSecret)
+                                  .queryParam("grant_type", "client_credentials")
                                   .build()
-                  )
+                                  .toUri())
                   .retrieve()
                   .bodyToMono(String.class)
                   .block();
@@ -155,15 +150,13 @@ public class TwitchService {
           client
                   .get()
                   .uri(uriBuilder ->
-                          uriBuilder
-                                  .scheme("https")
-                                  .host("api.twitch.tv")
-                                  .path("/helix/games")
+                          UriComponentsBuilder.fromUriString(gameUrl)
                                   .queryParam(
                                           "name",
                                           "VALORANT"
                                   )
                                   .build()
+                                  .toUri()
                   )
                   .header(
                           "Client-ID",
@@ -275,10 +268,7 @@ public class TwitchService {
                     .uri(uriBuilder -> {
 
                      var query =
-                             uriBuilder
-                                     .scheme("https")
-                                     .host("api.twitch.tv")
-                                     .path("/helix/streams")
+                             UriComponentsBuilder.fromUriString(streamsUrl)
                                      .queryParam(
                                              "game_id",
                                              gameId
@@ -297,7 +287,7 @@ public class TwitchService {
                       );
                      }
 
-                     return query.build();
+                     return query.build().toUri();
                     })
                     .header(
                             "Client-ID",

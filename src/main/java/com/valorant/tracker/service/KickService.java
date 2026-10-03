@@ -29,6 +29,8 @@ public class KickService {
   private final WebClient client;
   private final WebClient authClient;
   private final ObjectMapper mapper;
+  private final String authUrl;
+  private final String streamsUrl;
 
   @Value("${tracker.kick.client-id:}")
   private String clientId;
@@ -39,12 +41,14 @@ public class KickService {
   private String token;
   private Instant tokenExpiresAt = Instant.EPOCH;
 
-  public KickService(WebClient.Builder builder) {
+  public KickService(WebClient.Builder builder, DataSourceCatalog sources) {
 
-    this.client = builder.baseUrl("https://api.kick.com/public/v2").build();
+    this.client = builder.clone().build();
 
-    this.authClient = builder.baseUrl("https://id.kick.com").build();
+    this.authClient = builder.clone().build();
 
+    this.authUrl = sources.kickAuthUrl();
+    this.streamsUrl = sources.kickStreamsUrl();
     this.mapper = new ObjectMapper();
   }
 
@@ -81,7 +85,7 @@ public class KickService {
     String response =
         authClient
             .post()
-            .uri("/oauth/token")
+            .uri(authUrl)
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .body(BodyInserters.fromFormData(form))
             .retrieve()
@@ -166,7 +170,10 @@ public class KickService {
                 .get()
                 .uri(
                     uriBuilder -> {
-                      var query = uriBuilder.path("/livestreams").queryParam("limit", PAGE_SIZE);
+                      var query =
+                          org.springframework.web.util.UriComponentsBuilder
+                              .fromUriString(streamsUrl)
+                              .queryParam("limit", PAGE_SIZE);
 
                       /*
                        * Kick v2 pagination cursor.
@@ -177,7 +184,7 @@ public class KickService {
                         query.queryParam("cursor", currentCursor);
                       }
 
-                      return query.build();
+                      return query.build().toUri();
                     })
                 .header("Accept", "application/json")
                 .headers(headers -> headers.setBearerAuth(accessToken))

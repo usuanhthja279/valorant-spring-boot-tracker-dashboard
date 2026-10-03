@@ -334,7 +334,7 @@
     <h1 id="channelName">Channel Analytics</h1>
     <div id="channelPresence" class="presence-pill unknown" aria-live="polite">Checking status…</div>
     <div class="sub">
-      Historical viewer counts for this channel and platform
+      Cross-platform VALORANT viewer history
     </div>
   </div>
 
@@ -910,11 +910,13 @@
       const status = channelPresenceByPlatform.get(String(platform).toLowerCase());
       return status ? status.live === true : false;
     };
-    const youtube = isLiveOn('YouTube') ? latestByPlatform.get('YouTube') : null;
+    const youtube = latestByPlatform.get('YouTube');
 
-    const twitch = isLiveOn('Twitch') ? latestByPlatform.get('Twitch') : null;
+    const twitch =
+            latestByPlatform.get('Twitch');
 
-    const kick = isLiveOn('Kick') ? latestByPlatform.get('Kick') : null;
+    const kick =
+            latestByPlatform.get('Kick');
 
 
     document.getElementById(
@@ -1526,7 +1528,7 @@
       allRecords.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
 
       if(!currentRecords.length && !allRecords.length){
-        document.getElementById('rangeDataStatus').textContent = 'No samples were recorded for this channel in the selected time window. Try 24 hours or choose a custom range.';
+        document.getElementById('rangeDataStatus').textContent = 'No recorded history for this channel.';
         return;
       }
       render();

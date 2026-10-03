@@ -253,10 +253,14 @@ public class TrackerController {
           metric.put("lastViewers", viewers); metric.put("peakViewers", viewers);
           metric.put("viewerTotal", 0L); metric.put("samples", 0L);
           metric.put("firstTimestamp", sample.getTimestamp()); metric.put("lastTimestamp", sample.getTimestamp());
+          metric.put("peakTimestamp", sample.getTimestamp());
           return metric;
         });
         channel.put("lastViewers", viewers); channel.put("lastTimestamp", sample.getTimestamp());
-        channel.put("peakViewers", Math.max((Long) channel.get("peakViewers"), viewers));
+        if (viewers > (Long) channel.get("peakViewers")) {
+          channel.put("peakViewers", viewers);
+          channel.put("peakTimestamp", sample.getTimestamp());
+        }
         channel.put("viewerTotal", (Long) channel.get("viewerTotal") + viewers);
         channel.put("samples", (Long) channel.get("samples") + 1L);
       }
