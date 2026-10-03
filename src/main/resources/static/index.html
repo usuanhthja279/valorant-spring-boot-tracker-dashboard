@@ -32,8 +32,6 @@ main{padding:18px 22px 28px;max-width:1800px;margin:auto}
 .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .card{background:linear-gradient(145deg,#111c27,#0e151e);border:1px solid #202d39;border-radius:11px;padding:15px}
 .label{font-size:12px;color:#8e99a8;text-transform:uppercase;letter-spacing:.08em}
-.live-card-label{display:flex;align-items:center;gap:7px}
-.live-card-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px}
 .value{font-size:28px;font-weight:750;margin-top:7px;font-variant-numeric:tabular-nums}
 .yt{color:#ff6464}.tw{color:#b998ff}.kick{color:#52df9c}.total{color:#fff}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
@@ -54,6 +52,7 @@ a{color:#e7edf5;text-decoration:none}.title{color:#8e99a8;max-width:500px;white-
 button.active{border-color:#eef2f7;background:#202834}
 .custom-range{display:none;gap:8px;align-items:center;flex-wrap:wrap}
 .custom-range.visible{display:flex}
+.range-brush{display:none;grid-template-columns:1fr;grid-template-columns:1fr;gap:7px;margin-top:12px;padding:10px 2px 2px;border-top:1px solid #202d39}.range-brush.visible{display:grid}.brush-row{display:grid;grid-template-columns:105px 1fr 90px;gap:10px;align-items:center;color:#9eacbd;font-size:12px}.brush-row input{width:100%;padding:0;accent-color:#38bdf8}.brush-readout{color:#dbeafe;text-align:right;font-variant-numeric:tabular-nums}
 .pagination{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:16px}
 button,select,input{background:#151b24;color:#eef2f7;border:1px solid #2b3441;border-radius:8px;padding:9px 12px}
 input{min-width:220px}
@@ -86,10 +85,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 <main>
 <div class="cards">
-  <div class="card"><div class="label live-card-label"><span class="live-card-icon" id="liveYoutubeIcon"></span>YouTube</div><div class="value yt" id="yt">—</div></div>
-  <div class="card"><div class="label live-card-label"><span class="live-card-icon" id="liveTwitchIcon"></span>Twitch</div><div class="value tw" id="tw">—</div></div>
-  <div class="card"><div class="label live-card-label"><span class="live-card-icon" id="liveKickIcon"></span>Kick</div><div class="value kick" id="kick">—</div></div>
-  <div class="card"><div class="label live-card-label"><span class="live-card-icon" id="liveCombinedIcon"></span>Combined</div><div class="value total" id="total">—</div></div>
+<div class="card"><div class="label">YouTube</div><div class="value yt" id="yt">—</div></div>
+<div class="card"><div class="label">Twitch</div><div class="value tw" id="tw">—</div></div>
+<div class="card"><div class="label">Kick</div><div class="value kick" id="kick">—</div></div>
+<div class="card"><div class="label">Combined</div><div class="value total" id="total">—</div></div>
 </div>
 
 <!-- Time range panel (matches channel.html UX) -->
@@ -110,6 +109,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
   <div class="custom-range" id="dateRange">
     <label>Date <input type="date" id="selectedDate"></label>
     <button onclick="applyDateRange()">Apply date</button>
+  </div>
+
+  <div class="range-brush" aria-label="Draggable historical time range">
+    <div class="brush-row"><label for="brushStart">Start (hours ago)</label><input id="brushStart" type="range" min="1" max="24" step="1" value="7" oninput="updateBrush('start',this.value)"><span class="brush-readout" id="brushStartLabel">7h ago</span></div>
+    <div class="brush-row"><label for="brushEnd">End (hours ago)</label><input id="brushEnd" type="range" min="0" max="23" step="1" value="1" oninput="updateBrush('end',this.value)"><span class="brush-readout" id="brushEndLabel">1h ago</span></div>
   </div>
 
   <div class="custom-range" id="customRange">
@@ -137,7 +141,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <article class="peak-card"><div class="peak-icon" id="peakYoutubeIcon"></div><div><div class="peak-platform">YouTube</div><div class="peak-value yt" id="peakYoutube">—</div><div class="peak-time" id="peakYoutubeTime">peak viewers</div></div><div class="peak-spark-wrap"><canvas class="peak-spark" id="peakYoutubeSpark"></canvas></div></article>
     <article class="peak-card"><div class="peak-icon" id="peakTwitchIcon"></div><div><div class="peak-platform">Twitch</div><div class="peak-value tw" id="peakTwitch">—</div><div class="peak-time" id="peakTwitchTime">peak viewers</div></div><div class="peak-spark-wrap"><canvas class="peak-spark" id="peakTwitchSpark"></canvas></div></article>
     <article class="peak-card"><div class="peak-icon" id="peakKickIcon"></div><div><div class="peak-platform">Kick</div><div class="peak-value kick" id="peakKick">—</div><div class="peak-time" id="peakKickTime">peak viewers</div></div><div class="peak-spark-wrap"><canvas class="peak-spark" id="peakKickSpark"></canvas></div></article>
-    <article class="peak-card"><div class="peak-icon" id="peakCombinedIcon"></div><div><div class="peak-platform">Combined (total)</div><div class="peak-value total" id="peakCombined">—</div><div class="peak-time" id="peakCombinedTime">peak viewers</div></div><div class="peak-spark-wrap"><canvas class="peak-spark" id="peakCombinedSpark"></canvas></div></article>
+    <article class="peak-card"><div class="peak-icon" aria-hidden="true">👥</div><div><div class="peak-platform">Combined (total)</div><div class="peak-value total" id="peakCombined">—</div><div class="peak-time" id="peakCombinedTime">peak viewers</div></div><div class="peak-spark-wrap"><canvas class="peak-spark" id="peakCombinedSpark"></canvas></div></article>
   </div>
 </section>
 
@@ -145,16 +149,16 @@ button:disabled{opacity:.45;cursor:not-allowed}
   <section class="panel">
     <h2>Historical analytics <span class="subtle" id="analyticsRangeLabel">(selected range)</span></h2>
     <div class="metric-grid">
-      <div class="metric"><div class="label">Peak total viewers</div><div class="value" id="analyticsPeak">—</div><div class="subtle" id="analyticsPeakTime"></div></div>
-      <div class="metric"><div class="label">Average total viewers</div><div class="value" id="analyticsAverage">—</div></div>
-      <div class="metric"><div class="label">Stream samples</div><div class="value" id="analyticsSamples">—</div></div>
-      <div class="metric"><div class="label">Selected range</div><div class="value" id="analyticsRangeValue">—</div><div class="subtle" id="analyticsRangeTimes"></div></div>
+      <div class="metric"><div class="label">Peak combined viewers</div><div class="value" id="analyticsPeak">—</div><div class="subtle" id="analyticsPeakTime"></div></div>
+      <div class="metric"><div class="label">Average combined viewers</div><div class="value" id="analyticsAverage">—</div></div>
+      <div class="metric"><div class="label">Individual stream samples</div><div class="value" id="analyticsSamples">—</div></div>
+      <div class="metric"><div class="label">Analysis window</div><div class="value" id="analyticsRangeValue">—</div><div class="subtle" id="analyticsRangeTimes"></div></div>
     </div>
-    <div class="sub" id="analyticsMeta" style="margin-top:10px">Analytics load with the selected time range.</div>
+    <div class="sub" id="analyticsMeta" style="margin-top:10px">Peak and average combined viewers are calculated from dashboard snapshots. Stream samples count individual channel observations; these are different units.</div>
   </section>
   <section class="panel">
     <h2>Platform comparison <span class="subtle" id="platformRangeLabel">(selected range)</span></h2>
-    <div class="table-wrap"><table><thead><tr><th>Platform</th><th>Peak viewers</th><th>Average viewers</th><th>Samples</th><th>Trend (viewers)</th></tr></thead>
+    <div class="table-wrap"><table><thead><tr><th>Platform</th><th>Peak viewers</th><th>Average viewers</th><th>Stream samples</th><th>Trend (viewers)</th></tr></thead>
     <tbody id="platformAnalytics"><tr><td colspan="5">Loading…</td></tr></tbody></table></div>
   </section>
   <section class="panel">
@@ -239,6 +243,7 @@ function changeTimeRange(){
 
 function setRange(range){
   currentRange = range;
+  resetChannelHistorySelection();
   // clear active from buttons
   const buttons = document.querySelectorAll('.range-buttons button');
   buttons.forEach(b=>b.classList.remove('active'));
@@ -247,6 +252,7 @@ function setRange(range){
   if(el) el.classList.add('active');
 
   document.getElementById('customRange').classList.toggle('visible', range === 'custom');
+  const brush=document.querySelector('.range-brush'); if(brush) brush.classList.toggle('visible', range === 'custom');
   document.getElementById('dateRange').classList.toggle('visible', range === 'day');
 
   if(range === 'day'){
@@ -262,6 +268,7 @@ function setRange(range){
 }
 
 function applyDateRange(){
+  resetChannelHistorySelection();
   const value = document.getElementById('selectedDate').value;
   if(!value){
     document.getElementById('rangeStatus').textContent = 'Choose a date to view history';
@@ -276,7 +283,26 @@ function applyDateRange(){
   refresh();
 }
 
+function updateBrush(which,value){
+  resetChannelHistorySelection();
+  let start=Number(document.getElementById('brushStart').value);
+  let end=Number(document.getElementById('brushEnd').value);
+  if(which==='start' && start<=end){start=Math.min(24,end+1);document.getElementById('brushStart').value=start;}
+  if(which==='end' && end>=start){end=Math.max(0,start-1);document.getElementById('brushEnd').value=end;}
+  start=Math.max(1,Math.min(24,start)); end=Math.max(0,Math.min(start-1,end));
+  document.getElementById('brushStartLabel').textContent=start+'h ago';
+  document.getElementById('brushEndLabel').textContent=end===0?'Now':end+'h ago';
+  customFrom=new Date(Date.now()-start*3600000); customTo=new Date(Date.now()-end*3600000);
+  currentRange='custom';
+  document.querySelectorAll('.range-buttons button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('rangeCustom').classList.add('active');
+  document.getElementById('customRange').classList.remove('visible'); document.getElementById('dateRange').classList.remove('visible');
+  document.getElementById('rangeStatus').textContent=customFrom.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' → '+customTo.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' ('+(start-end)+' hour'+(start-end===1?'':'s')+')';
+  clearTimeout(window.brushRefreshTimer); window.brushRefreshTimer=setTimeout(()=>refresh(),180);
+}
+
 function applyCustomRange(){
+  resetChannelHistorySelection();
   const from = document.getElementById('customFrom').value;
   const to = document.getElementById('customTo').value;
   if(!from || !to){ alert('Please select both start and end times.'); return; }
@@ -285,6 +311,17 @@ function applyCustomRange(){
   if(customFrom >= customTo){ alert('Start time must be before end time.'); return; }
   document.getElementById('rangeStatus').textContent = customFrom.toLocaleString() + ' → ' + customTo.toLocaleString();
   refresh();
+}
+
+function resetChannelHistorySelection(){
+  selectedHistoryChannel = null;
+  const title = document.getElementById('channelHistoryTitle');
+  const hint = document.getElementById('channelHistoryHint');
+  const metrics = document.getElementById('channelHistoryMetrics');
+  if(title) title.textContent = '(select a channel)';
+  if(hint) hint.textContent = 'Select a channel from the ranked table to inspect its history for the selected time range.';
+  if(metrics) metrics.style.display = 'none';
+  if(channelHistoryChart){ channelHistoryChart.destroy(); channelHistoryChart = null; }
 }
 
 function filterSnapshotsByRange(snapshots){
@@ -394,7 +431,6 @@ async function refreshAnalytics(){
     document.getElementById('platformAnalytics').innerHTML=platformRows.map(p=>`<tr><td>${platformIcon(p.platform)} ${escapeHtml(p.platform)}</td><td>${fmt(p.peakViewers)}</td><td>${fmt(Math.round(p.averageViewers||0))}</td><td>${fmt(p.samples)}</td><td>${sparklineSvg(p.trend, platformColor(p.platform))}</td></tr>`).join('')+`<tr><td>♟ Combined</td><td>${fmt(overallPeak?.combinedViewers||0)}</td><td>${fmt(Math.round(data.overallAverageViewers||0))}</td><td>${fmt(currentSnapshots.length)}</td><td>${sparklineSvg(currentSnapshots.map(x=>x.combinedViewers),'#eef2f7')}</td></tr>`;
     const ranked=(data.topChannelsByPeak||data.fastestGrowingChannels||[]).slice().sort((a,b)=>Number(b.peakViewers||0)-Number(a.peakViewers||0)).slice(0,10);
     document.getElementById('topChannels').innerHTML=ranked.map((c,i)=>`<tr><td>${i+1}</td><td><button class="channel-pick" type="button" onclick="showChannelHistory('${escapeJs(c.channel||'')}','${escapeJs(c.platform||'')}')">${escapeHtml(c.channel||'Unknown')}</button></td><td>${platformIcon(c.platform)} ${escapeHtml(c.platform||'')}</td><td>${fmt(c.peakViewers)}</td><td>${fmt(Math.round(c.averageViewers||0))}</td><td>${fmt(c.samples)}</td><td>${sparklineSvg([c.firstViewers,c.peakViewers,c.lastViewers],platformColor(c.platform))}</td></tr>`).join('')||'<tr><td colspan="7">No channel samples for this range</td></tr>';
-    if(selectedHistoryChannel) showChannelHistory(selectedHistoryChannel.channel,selectedHistoryChannel.platform);
   }catch(e){
     if(requestId !== analyticsRequestId) return;
     document.getElementById('analyticsMeta').textContent='Historical analytics unavailable. Check the server and try again.';
@@ -470,12 +506,12 @@ async function refresh(){
     const yt = points.map(x=>x.youtubeAvailable === false ? null : x.youtubeViewers);
     const tw = points.map(x=>x.twitchAvailable === false ? null : x.twitchViewers);
     const kick = points.map(x=>x.kickAvailable === false ? null : x.kickViewers);
-    const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#aeb7c4'}}},
+    const opts={responsive:true,maintainAspectRatio:false,spanGaps:false,plugins:{legend:{labels:{color:'#aeb7c4'}}},
       scales:{x:{ticks:{color:'#77818f'},grid:{color:'#202731'}},y:{ticks:{color:'#77818f'},grid:{color:'#202731'}}}};
 
     if(combinedChart) combinedChart.destroy();
     combinedChart=new Chart(document.getElementById('combinedChart'),{
-      type:'line',data:{labels,datasets:[{label:'Combined',data:combined,borderColor:'#eef2f7',backgroundColor:'transparent',tension:.25,pointRadius:1}]},options:opts
+      type:'line',data:{labels,datasets:[{label:'Combined',data:combined,borderColor:'#eef2f7',backgroundColor:'rgba(238,242,247,0.12)',fill:true,tension:.25,pointRadius:1,spanGaps:false}]},options:opts
     });
     if(platformChart) platformChart.destroy();
     platformChart=new Chart(document.getElementById('platformChart'),{
@@ -503,11 +539,7 @@ function platformIcon(name){
 function escapeJs(value){return String(value).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[\r\n]/g,' ');}
 function platformTrend(name){return currentSnapshots.map(s=>name==='YouTube'?s.youtubeViewers:name==='Twitch'?s.twitchViewers:name==='Kick'?s.kickViewers:s.combinedViewers).filter(v=>v!==null&&v!==undefined).map(Number);}
 function sparklineSvg(values,color){const vals=(values||[]).map(Number).filter(Number.isFinite);if(!vals.length)return '<span class="subtle">—</span>';const w=96,h=20,min=Math.min(...vals),max=Math.max(...vals),span=max-min||1;const pts=vals.map((v,i)=>`${vals.length===1?w/2:i*w/(vals.length-1)},${h-2-(v-min)/span*(h-4)}`).join(' ');return `<svg viewBox="0 0 ${w} ${h}" width="96" height="20" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;}
-function initPlatformIcons(){
-  [['liveYoutubeIcon','YouTube'],['liveTwitchIcon','Twitch'],['liveKickIcon','Kick'],['liveCombinedIcon','Combined'],
-   ['peakYoutubeIcon','YouTube'],['peakTwitchIcon','Twitch'],['peakKickIcon','Kick'],['peakCombinedIcon','Combined']]
-    .forEach(([id,name])=>{const el=document.getElementById(id);if(el)el.innerHTML=platformIcon(name);});
-}
+function initPlatformIcons(){[['peakYoutubeIcon','YouTube'],['peakTwitchIcon','Twitch'],['peakKickIcon','Kick']].forEach(([id,name])=>{const el=document.getElementById(id);if(el)el.innerHTML=platformIcon(name);});}
 initPlatformIcons();
 function renderPeakCards(points){
   const rangeText=document.getElementById('rangeStatus')?.textContent||'Selected range';document.getElementById('peakRangeLabel').textContent='('+rangeText+')';
@@ -724,6 +756,22 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
+async function refreshLiveSummary(){
+  try{
+    const latestData = await getJson('/api/snapshots');
+    if(!Array.isArray(latestData) || !latestData.length) return;
+    latestData.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+    const latest = latestData[latestData.length-1];
+    const displayProviderValue = (available, viewers) => available === false || viewers == null ? '—' : fmt(viewers);
+    document.getElementById('yt').textContent = displayProviderValue(latest.youtubeAvailable, latest.youtubeViewers);
+    document.getElementById('tw').textContent = displayProviderValue(latest.twitchAvailable, latest.twitchViewers);
+    document.getElementById('kick').textContent = displayProviderValue(latest.kickAvailable, latest.kickViewers);
+    document.getElementById('total').textContent = latest.combinedViewers == null ? '—' : fmt(latest.combinedViewers);
+    const last = document.getElementById('last');
+    if(last) last.textContent = 'Latest: ' + new Date(latest.timestamp).toLocaleString();
+  } catch(e) { console.error('Unable to refresh live summary', e); }
+}
+
 async function collect(){
   document.getElementById('status').textContent='Collecting…';
   try{
@@ -747,8 +795,9 @@ if(selDateEl){ selDateEl.value = `${today.getFullYear()}-${String(today.getMonth
 refresh(); loadStreams();
 getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error);
 setInterval(()=>getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error),60000);
-setInterval(refresh,30000);
+setInterval(()=>{ if(currentRange === '30m' || currentRange === '1h') refresh(); else refreshLiveSummary(); },60000);
 setInterval(loadStreams,60000);
+setInterval(()=>getJson('/api/streams?platform=Overall').then(updateChannelOptions).catch(console.error),60000);
 </script>
 </body>
 </html>

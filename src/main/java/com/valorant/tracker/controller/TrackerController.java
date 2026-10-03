@@ -170,6 +170,7 @@ public class TrackerController {
   @GetMapping("/channels/history")
   public List<StreamSample> channelHistory(
       @RequestParam String name,
+      @RequestParam(required = false) String platform,
       @RequestParam(required = false) OffsetDateTime from,
       @RequestParam(required = false) OffsetDateTime to,
       @RequestParam(defaultValue = "5000") int limit) {
@@ -181,9 +182,11 @@ public class TrackerController {
     int safeLimit = clampLimit(limit);
 
     String query = "select s from StreamSample s where s.channel = :name ";
+    if (platform != null && !platform.isBlank()) query += "and lower(s.platform) = lower(:platform) ";
     if (from != null) query += "and s.timestamp >= :from and s.timestamp < :to ";
     query += "order by s.timestamp desc, s.id desc";
     var typedQuery = entityManager.createQuery(query, StreamSample.class).setParameter("name", name);
+    if (platform != null && !platform.isBlank()) typedQuery.setParameter("platform", platform.trim());
     if (from != null) typedQuery.setParameter("from", from).setParameter("to", to);
     List<StreamSample> history = new ArrayList<>(typedQuery.setMaxResults(safeLimit).getResultList());
     java.util.Collections.reverse(history);
