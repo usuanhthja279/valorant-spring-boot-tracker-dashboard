@@ -53,7 +53,10 @@
     .header-actions{
       display:flex;
       align-items:center;
-      gap:14px;
+      justify-content:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-left:auto;
     }
 
     .channel-link{
@@ -64,6 +67,8 @@
       background:#151b24;
       white-space:nowrap;
     }
+    .header-actions a:not(.channel-link){display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid #2b3441;border-radius:9px;background:#151b24;white-space:nowrap;min-height:40px}.header-actions a:not(.channel-link):hover{background:#1b222d;border-color:#435368;text-decoration:none}
+    .channel-header{display:flex;align-items:center;justify-content:space-between;gap:24px}.channel-heading{min-width:0}.channel-heading .sub{margin-top:8px}
 
     main{
       padding:25px 30px;
@@ -222,7 +227,7 @@
 
     .comparison-panel{margin-top:18px}.comparison-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.comparison-heading h2{margin:0}.comparison-heading select{min-width:180px}.comparison-panel table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}.comparison-panel th,.comparison-panel td{text-align:left;padding:9px;border-bottom:1px solid #232a35}.comparison-panel th{color:#8e99a8;font-weight:600}.comparison-delta{font-weight:700;white-space:nowrap}.compare-up{color:#52df9c}.compare-down{color:#ff8585}.compare-flat{color:#aab6c5}.comparison-chart{height:270px;margin-top:16px;position:relative}
 
-    .channel-overview{--overview-left:60%;display:grid;grid-template-columns:minmax(0,var(--overview-left)) 14px minmax(0,1fr);gap:0;align-items:stretch;min-height:390px;margin-bottom:18px;width:100%}.overview-metrics{min-width:0;padding-right:12px}.overview-metrics .cards{height:100%;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(150px,1fr));gap:14px}.overview-metrics .card{display:flex;flex-direction:column;justify-content:center;min-width:0}.overview-resizer{position:relative;cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;outline:none}.overview-resizer::before{content:"";position:absolute;inset:0 6px;border-radius:8px;background:#263746;transition:background .15s}.overview-resizer::after{content:"←";z-index:1;color:#b8c8d8;font-size:12px;font-weight:700;background:#16212c;border:1px solid #3a4a5a;border-radius:8px;padding:7px 1px;line-height:1}.overview-resizer:hover::before,.overview-resizer:focus-visible::before,.channel-overview.resizing .overview-resizer::before{background:#38bdf8}.overview-resizer:focus-visible{outline:2px solid #38bdf8;outline-offset:1px}.player-panel{margin:0;min-width:0;display:flex;flex-direction:column;justify-content:flex-start}.player-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.player-toolbar h2{font-size:16px;margin:0 auto 0 0}.player-toolbar select{min-width:100px}.player-status{color:#8e99a8;font-size:12px}.player-frame{position:relative;width:100%;max-width:none;flex:1;min-height:300px;aspect-ratio:16/9;margin:12px 0 0;background:#05070a;border-radius:10px;overflow:hidden}.player-frame iframe,.player-thumbnail{position:absolute;inset:0;width:100%;height:100%;border:0;object-fit:cover}.player-thumbnail{display:block}.player-frame iframe[hidden],.player-thumbnail[hidden],.preview-play[hidden],.player-empty[hidden],.video-maximize[hidden]{display:none}.preview-play{position:absolute;inset:0;margin:auto;width:max-content;height:max-content;padding:13px 20px;border:0;border-radius:999px;background:#e11d48;color:white;font-weight:750;font-size:15px;box-shadow:0 8px 30px #0009}.preview-play:hover{background:#be123c}.player-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:#aab6c5;background:radial-gradient(ellipse at center,#17212b,#05070a 75%);font-size:14px}.video-maximize{position:absolute;z-index:2;right:10px;top:10px;padding:7px 10px;background:#080b10cc;border-color:#ffffff44;font-size:12px}.player-frame:fullscreen{width:100vw;height:100vh;max-width:none;min-height:0;aspect-ratio:auto;margin:0;border-radius:0;background:#000}.player-frame:fullscreen .player-thumbnail,.player-frame:fullscreen iframe{object-fit:contain}.player-panel[hidden]{display:none}
+    .channel-overview{--overview-left:60%;display:grid;grid-template-columns:minmax(0,var(--overview-left)) 14px minmax(0,1fr);gap:0;align-items:stretch;min-height:390px;margin-bottom:18px;width:100%}.overview-metrics{min-width:0;padding-right:12px}.overview-metrics .cards{height:100%;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(150px,1fr));gap:14px}.overview-metrics .card{display:flex;flex-direction:column;justify-content:center;min-width:0}.overview-resizer{position:relative;cursor:col-resize;touch-action:none;display:flex;align-items:center;justify-content:center;outline:none}.overview-resizer::before{content:"";position:absolute;inset:0 6px;border-radius:8px;background:#263746;transition:background .15s}.overview-resizer::after{content:"←";z-index:1;color:#b8c8d8;font-size:12px;font-weight:700;background:#16212c;border:1px solid #3a4a5a;border-radius:8px;padding:7px 1px;line-height:1}.overview-resizer:hover::before,.overview-resizer:focus-visible::before,.channel-overview.resizing .overview-resizer::before{background:#38bdf8}.overview-resizer:focus-visible{outline:2px solid #38bdf8;outline-offset:1px}.player-panel{margin:0;min-width:0;display:flex;flex-direction:column;justify-content:flex-start}.player-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.player-toolbar-heading{display:flex;align-items:baseline;gap:10px;min-width:0}.player-toolbar h2{font-size:16px;margin:0;white-space:nowrap}.player-toolbar-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.player-toolbar select{min-width:100px}.player-status{color:#8e99a8;font-size:12px}.player-frame{position:relative;width:100%;max-width:none;flex:1;min-height:300px;aspect-ratio:16/9;margin:12px 0 0;background:#05070a;border-radius:10px;overflow:hidden}.player-frame iframe,.player-thumbnail{position:absolute;inset:0;width:100%;height:100%;border:0;object-fit:cover}.player-thumbnail{display:block}.player-frame iframe[hidden],.player-thumbnail[hidden],.preview-play[hidden],.player-empty[hidden],.video-maximize[hidden]{display:none}.preview-play{position:absolute;inset:0;margin:auto;width:max-content;height:max-content;padding:13px 20px;border:0;border-radius:999px;background:#e11d48;color:white;font-weight:750;font-size:15px;box-shadow:0 8px 30px #0009}.preview-play:hover{background:#be123c}.player-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:#aab6c5;background:radial-gradient(ellipse at center,#17212b,#05070a 75%);font-size:14px}.video-maximize{position:absolute;z-index:2;right:10px;top:10px;padding:7px 10px;background:#080b10cc;border-color:#ffffff44;font-size:12px}.player-frame:fullscreen{width:100vw;height:100vh;max-width:none;min-height:0;aspect-ratio:auto;margin:0;border-radius:0;background:#000}.player-frame:fullscreen .player-thumbnail,.player-frame:fullscreen iframe{object-fit:contain}.player-panel[hidden]{display:none}
     .range-brush{display:grid;grid-template-columns:1fr;gap:7px;margin-top:12px;padding:10px 2px 2px;border-top:1px solid #232a35}.brush-row{display:grid;grid-template-columns:105px 1fr 90px;gap:10px;align-items:center;color:#8e99a8;font-size:12px}.brush-row input{width:100%;padding:0;accent-color:#38bdf8}.brush-readout{color:#dbeafe;text-align:right;font-variant-numeric:tabular-nums}
 
     /* =========================
@@ -334,7 +339,7 @@
 
 <header>
 
-  <div>
+  <div class="channel-heading">
     <h1 id="channelName">Channel Analytics</h1>
     <div id="channelPresence" class="presence-pill unknown" aria-live="polite">Checking status…</div>
     <div class="sub">
@@ -342,14 +347,12 @@
     </div>
   </div>
 
-  <nav class="header-actions">
+  <nav class="header-actions" aria-label="Channel navigation">
     <a id="channelLink" class="channel-link" target="_blank" rel="noopener noreferrer">
       Open channel
     </a>
-  <a href="/">
-      ← Back to tracker
-    </a>
-    <a href="/stream-comparison.html">Compare streams</a>
+  <a href="/">← Back to tracker</a>
+  <a href="/stream-comparison.html">Compare streams <span aria-hidden="true">↗</span></a>
   </nav>
 
 </header>
@@ -391,11 +394,8 @@
 
     <section class="panel player-panel" id="playerPanel" aria-label="Live channel video">
       <div class="player-toolbar">
-        <h2>Live video</h2>
-        <span class="player-status" id="playerStatus">Checking available live streams…</span>
-        <select id="playerPlatform" aria-label="Choose live stream platform" hidden></select>
-        <button id="playChannelButton" type="button" onclick="playChannelStream()" disabled>Start video</button>
-        <button id="stopChannelButton" type="button" onclick="stopChannelStream()" hidden>Stop video</button>
+        <div class="player-toolbar-heading"><h2>Live video</h2><span class="player-status" id="playerStatus">Checking available live streams…</span></div>
+        <div class="player-toolbar-actions"><select id="playerPlatform" aria-label="Choose live stream platform" hidden></select><button id="playChannelButton" type="button" onclick="playChannelStream()" disabled>Start video</button><button id="stopChannelButton" type="button" onclick="stopChannelStream()" hidden>Stop video</button></div>
       </div>
       <div class="player-frame" id="playerFrame">
         <div class="player-empty" id="playerEmpty">Checking for a live stream…</div>
@@ -879,17 +879,17 @@
         if(comparisonChart){comparisonChart.destroy();comparisonChart=null;}
         return;
       }
-      const labels=keys.map(minute=>`${Math.floor(minute/60)}h ${String(minute%60).padStart(2,'0')}m`);
+      const labels=keys.map(minute=>new Date(bounds.from.getTime()+minute*60000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
       if(comparisonChart)comparisonChart.destroy();
       comparisonChart=new Chart(document.getElementById('comparisonChart'),{
         type:'line',
         data:{labels,datasets:[
-          {label:'Selected window',data:keys.map(key=>current.get(key)??null),borderColor:'#38bdf8',backgroundColor:'#38bdf822',fill:false,tension:.22,pointRadius:0,borderWidth:2,spanGaps:false},
-          {label:`Previous ${period}`,data:keys.map(key=>prior.get(key)??null),borderColor:'#fbbf24',backgroundColor:'#fbbf2422',fill:false,tension:.22,pointRadius:0,borderWidth:2,spanGaps:false}
+          {label:'Selected window',data:keys.map(key=>current.get(key)??null),borderColor:'#38bdf8',backgroundColor:'#38bdf822',fill:false,tension:.22,pointRadius:0,borderWidth:2,spanGaps:true},
+          {label:`Previous ${period}`,data:keys.map(key=>prior.get(key)??null),borderColor:'#fbbf24',backgroundColor:'#fbbf2422',fill:false,tension:.22,pointRadius:0,borderWidth:2,spanGaps:true}
         ]},
-        options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#aeb7c4'}}},scales:{x:{ticks:{color:'#77818f',maxTicksLimit:12},grid:{color:'#202731'}},y:{beginAtZero:true,ticks:{color:'#77818f'},grid:{color:'#202731'}}}}
+        options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#aeb7c4'}}},scales:{x:{ticks:{color:'#77818f',maxTicksLimit:12,autoSkip:true},grid:{color:'#202731'}},y:{beginAtZero:true,min:0,ticks:{color:'#77818f'},grid:{color:'#202731'}}}}
       });
-      status.textContent=`Selected window vs. previous ${period} · both lines use elapsed time from the start of the window.`;
+      status.textContent=`Selected window vs. previous ${period} · gaps bridged · viewer axis starts at zero.`;
     }catch(error){
       if(requestId!==comparisonChartRequestId)return;
       status.textContent='Comparison trend unavailable for this window.';

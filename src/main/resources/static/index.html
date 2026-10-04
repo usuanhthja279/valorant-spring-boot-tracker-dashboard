@@ -9,9 +9,10 @@
 *{box-sizing:border-box}
 body{margin:0;background:#0b0e13;color:#eef2f7;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
 header{padding:16px 22px;border-bottom:1px solid #222832;background:#0c121a;display:flex;justify-content:space-between;align-items:center;gap:18px;position:relative;z-index:5}
-.header-search{position:relative;display:flex;align-items:center;gap:8px;margin:0 20px;flex:1;max-width:520px}
+.header-search{position:relative;display:flex;align-items:center;gap:8px;margin:0 auto;flex:0 1 560px}
+.header-brand{flex:0 0 auto}.header-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}.header-right{display:flex;align-items:center;gap:12px;flex:0 0 auto}
 .header-search input{width:100%;min-width:0}
-.header-link{white-space:nowrap;border:1px solid #2b3441;border-radius:8px;padding:9px 12px;background:#151b24;color:#e7edf5;text-decoration:none}.header-link:hover{background:#1b222d;text-decoration:none}
+.header-link,.header-action{white-space:nowrap;border:1px solid #2b3441;border-radius:9px;padding:10px 14px;background:#151b24;color:#e7edf5;text-decoration:none;font:inherit;cursor:pointer}.header-link:hover,.header-action:hover{background:#1b222d;border-color:#435368;text-decoration:none}.header-action{position:relative}.alert-count{display:none;position:absolute;top:-7px;right:-7px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#f97316;color:#fff;font-size:11px;font-weight:800;align-items:center;justify-content:center}.alert-count.visible{display:flex}
 .search-field{position:relative;flex:1;min-width:0}
 .search-field input{padding:12px 14px;background:#151b24;border-color:#2b3441}
 .search-field input:focus{outline:none;border-color:#36b9ff;box-shadow:0 0 0 2px #36b9ff22}
@@ -32,7 +33,7 @@ h1{margin:0;font-size:25px}.sub{color:#8e99a8;font-size:13px;margin-top:5px}
 main{padding:18px 22px 28px;max-width:1800px;margin:auto}
 .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .live-viewership{margin-bottom:14px}.live-viewership-heading{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.live-viewership-heading h2{font-size:16px;margin:0}
-.card{background:linear-gradient(145deg,#111c27,#0e151e);border:1px solid #202d39;border-radius:11px;padding:12px 15px;display:grid;grid-template-columns:auto 1fr;column-gap:9px;align-items:start}.live-card-icon{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;margin-top:1px}.live-card-main{min-width:0}.live-card-label{display:flex;align-items:center;gap:6px}.live-card-spark-wrap{grid-column:1/-1;position:relative;height:32px;min-height:32px;max-height:32px;overflow:hidden;margin-top:8px}.live-card-spark{display:block!important;position:absolute!important;inset:0;width:100%!important;height:32px!important;max-height:32px!important}
+.card{background:linear-gradient(145deg,#111c27,#0e151e);border:1px solid #202d39;border-radius:11px;padding:12px 15px;display:grid;grid-template-columns:auto 1fr;column-gap:9px;align-items:start}.live-viewership .card{cursor:pointer;transition:border-color .15s,transform .15s}.live-viewership .card:hover,.live-viewership .card:focus-visible{border-color:#38bdf8;transform:translateY(-1px);outline:none}.live-viewership .card[aria-expanded="true"]{border-color:#38bdf8;box-shadow:0 0 0 1px #38bdf833}.live-card-icon{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;margin-top:1px}.live-card-main{min-width:0}.live-card-label{display:flex;align-items:center;gap:6px}.live-card-spark-wrap{grid-column:1/-1;position:relative;height:32px;min-height:32px;max-height:32px;overflow:hidden;margin-top:8px}.live-card-spark{display:block!important;position:absolute!important;inset:0;width:100%!important;height:32px!important;max-height:32px!important}
 .label{font-size:12px;color:#8e99a8;text-transform:uppercase;letter-spacing:.08em}
 .value{font-size:28px;font-weight:750;margin-top:7px;font-variant-numeric:tabular-nums}
 .yt{color:#ff6464}.tw{color:#b998ff}.kick{color:#52df9c}.total{color:#fff}
@@ -69,8 +70,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .metric{padding:12px;background:#111e29;border:1px solid #20303d;border-radius:9px;min-width:0}.metric .value{font-size:22px}.metric .label{font-size:10px}.table-wrap{overflow-x:auto} table{min-width:560px} th,td{padding:8px 9px}.subtle{color:#8e9dad;font-size:12px}.channel-pick{border:0;background:transparent;padding:0;color:#dbeafe;font-weight:650;cursor:pointer}.channel-pick:hover{color:#36b9ff;text-decoration:underline}
 .rising-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.rising-heading h2{margin-bottom:10px}.rising-window{padding:6px 9px;font-size:12px}.growth-change{color:#52df9c;font-weight:700;white-space:nowrap}
 .live-card-freshness{font-size:10px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.freshness-fresh{color:#52df9c}.freshness-stale{color:#fbbf24}.freshness-down{color:#ff8585}.freshness-unknown{color:#8e99a8}.dot.stale{background:#fbbf24}.dot.down{background:#ff6464}
-.alerts-panel{margin-top:14px}.alerts-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.alerts-heading h2{margin:0}.alert-controls{display:flex;align-items:center;gap:8px;color:#9eacbd;font-size:12px}.alert-controls input{width:120px;min-width:0;padding:7px 9px}.alert-controls button{padding:7px 10px}.alert-list{display:grid;gap:7px;margin-top:10px}.peak-alert{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;background:#111e29;border:1px solid #293746;font-size:12px}.peak-alert-title{font-weight:700}.peak-alert-reason{color:#52df9c}.peak-alert-time{color:#8e99a8;white-space:nowrap}
-@media(max-width:1000px){header{flex-wrap:wrap;gap:12px}.header-search{order:3;flex-basis:100%;margin:0;max-width:none}.cards,.peak-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.grid,.analytics-grid{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.alerts-panel{position:fixed;top:74px;right:22px;z-index:20;width:min(540px,calc(100vw - 28px));margin:0;box-shadow:0 20px 60px #000b}.alerts-panel[hidden],.streams-panel[hidden]{display:none}.alerts-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.alerts-heading h2{margin:0}.alert-controls{display:flex;align-items:center;gap:8px;color:#9eacbd;font-size:12px}.alert-controls input{width:120px;min-width:0;padding:7px 9px}.alert-controls button{padding:7px 10px}.alert-list{display:grid;gap:7px;margin-top:10px;max-height:45vh;overflow:auto}.peak-alert{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;background:#111e29;border:1px solid #293746;font-size:12px}.peak-alert-title{font-weight:700}.peak-alert-reason{color:#52df9c}.peak-alert-time{color:#8e99a8;white-space:nowrap}.streams-panel{margin-top:10px}.streams-panel-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.streams-panel-heading h2{margin:0}.streams-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.streams-controls .sub{margin:0}.streams-table{overflow:auto;max-height:55vh}.streams-table table{min-width:620px}.analytics-grid>#channelHistoryPanel{grid-column:1/-1}.history-chart{height:260px}
+.channel-history-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.channel-page-link{display:inline-flex;align-items:center;justify-content:center;padding:7px 10px;border:1px solid #2b3441;border-radius:8px;background:#151b24;color:#dbeafe;text-decoration:none;font-size:12px}.channel-page-link:hover{background:#1b222d;color:#fff}.channel-page-link[hidden]{display:none}
+@media(max-width:1000px){header{flex-wrap:wrap;gap:12px}.header-brand{flex:1}.header-search{order:3;flex-basis:100%;margin:0;max-width:none}.header-right{margin-left:auto}.cards,.peak-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.grid,.analytics-grid{grid-template-columns:1fr}.analytics-grid>#channelHistoryPanel{grid-column:auto}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:550px){.cards,.peak-cards,.metric-grid{grid-template-columns:1fr}main{padding:12px}.grid{grid-template-columns:1fr}.value{font-size:25px}.peak-value{font-size:22px}}
 @media(max-width:550px){.cards{grid-template-columns:1fr}main{padding:15px}.grid{grid-template-columns:1fr}}
 *{scrollbar-width:thin;scrollbar-color:#344454 #0b0e13}*::-webkit-scrollbar{width:8px;height:8px}*::-webkit-scrollbar-track{background:#0b0e13}*::-webkit-scrollbar-thumb{background:#344454;border:2px solid #0b0e13;border-radius:999px}*::-webkit-scrollbar-thumb:hover{background:#4a6074}*::-webkit-scrollbar-corner{background:#0b0e13}
@@ -78,7 +80,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </head>
 <body>
 <header>
-<div><h1>VALORANT Live Tracker</h1><div class="sub">YouTube · Twitch · Kick · minute-by-minute viewership</div></div>
+<div class="header-brand"><h1>VALORANT Live Tracker</h1><div class="sub">YouTube · Twitch · Kick · minute-by-minute viewership</div></div>
 <form class="header-search" onsubmit="openChannelStats(event)">
   <div class="search-field">
     <input id="channelLookup" type="search" placeholder="Search channel stats (name, platform, ID)" aria-label="Search channel stats" autocomplete="off" aria-autocomplete="list" aria-controls="channelSuggestions" aria-expanded="false">
@@ -86,25 +88,30 @@ button:disabled{opacity:.45;cursor:not-allowed}
   </div>
   <button type="submit">View stats</button>
 </form>
-<a class="header-link" href="/stream-comparison.html">Compare streams</a>
-<div class="status"><span class="dot"></span><span id="status">Connecting…</span></div>
+<div class="header-right"><div class="header-actions"><a class="header-link" href="/stream-comparison.html">Compare streams <span aria-hidden="true">↗</span></a><button class="header-action" type="button" id="alertsToggle" aria-expanded="false" aria-controls="alertsPanel" onclick="togglePeakAlerts()">Alerts <span id="alertCount" class="alert-count"></span></button></div><div class="status"><span class="dot"></span><span id="status">Connecting…</span></div></div>
 </header>
 
 <main>
 <section class="live-viewership" aria-labelledby="liveViewershipHeading">
 <div class="live-viewership-heading"><h2 id="liveViewershipHeading">Live viewership</h2><span class="subtle">Current viewers by platform</span></div>
 <div class="cards">
-<div class="card"><div class="live-card-icon" id="liveYoutubeIcon"></div><div class="live-card-main"><div class="label live-card-label">YouTube</div><div class="value yt" id="yt">—</div><div class="live-card-freshness freshness-unknown" id="freshnessYoutube">Checking freshness…</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveYoutubeSpark"></canvas></div></div>
-<div class="card"><div class="live-card-icon" id="liveTwitchIcon"></div><div class="live-card-main"><div class="label live-card-label">Twitch</div><div class="value tw" id="tw">—</div><div class="live-card-freshness freshness-unknown" id="freshnessTwitch">Checking freshness…</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveTwitchSpark"></canvas></div></div>
-<div class="card"><div class="live-card-icon" id="liveKickIcon"></div><div class="live-card-main"><div class="label live-card-label">Kick</div><div class="value kick" id="kick">—</div><div class="live-card-freshness freshness-unknown" id="freshnessKick">Checking freshness…</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveKickSpark"></canvas></div></div>
-<div class="card"><div class="live-card-icon" id="liveCombinedIcon"></div><div class="live-card-main"><div class="label live-card-label">Combined</div><div class="value total" id="total">—</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveCombinedSpark"></canvas></div></div>
+<div class="card" role="button" tabindex="0" data-scope="YouTube" aria-expanded="false" aria-label="Show YouTube live streams" onclick="toggleStreamsPanel('YouTube',this)" onkeydown="activateStreamCard(event,this)"><div class="live-card-icon" id="liveYoutubeIcon"></div><div class="live-card-main"><div class="label live-card-label">YouTube</div><div class="value yt" id="yt">—</div><div class="live-card-freshness freshness-unknown" id="freshnessYoutube">Checking freshness…</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveYoutubeSpark"></canvas></div></div>
+<div class="card" role="button" tabindex="0" data-scope="Twitch" aria-expanded="false" aria-label="Show Twitch live streams" onclick="toggleStreamsPanel('Twitch',this)" onkeydown="activateStreamCard(event,this)"><div class="live-card-icon" id="liveTwitchIcon"></div><div class="live-card-main"><div class="label live-card-label">Twitch</div><div class="value tw" id="tw">—</div><div class="live-card-freshness freshness-unknown" id="freshnessTwitch">Checking freshness…</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveTwitchSpark"></canvas></div></div>
+<div class="card" role="button" tabindex="0" data-scope="Kick" aria-expanded="false" aria-label="Show Kick live streams" onclick="toggleStreamsPanel('Kick',this)" onkeydown="activateStreamCard(event,this)"><div class="live-card-icon" id="liveKickIcon"></div><div class="live-card-main"><div class="label live-card-label">Kick</div><div class="value kick" id="kick">—</div><div class="live-card-freshness freshness-unknown" id="freshnessKick">Checking freshness…</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveKickSpark"></canvas></div></div>
+<div class="card" role="button" tabindex="0" data-scope="Overall" aria-expanded="false" aria-label="Show live streams across platforms" onclick="toggleStreamsPanel('Overall',this)" onkeydown="activateStreamCard(event,this)"><div class="live-card-icon" id="liveCombinedIcon"></div><div class="live-card-main"><div class="label live-card-label">Combined</div><div class="value total" id="total">—</div><div class="live-card-freshness freshness-unknown">Click to browse all platforms</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveCombinedSpark"></canvas></div></div>
 </div>
 </section>
 
-<section class="panel alerts-panel" aria-label="Peak alerts">
+<section class="panel alerts-panel" id="alertsPanel" aria-label="Peak alerts" hidden>
   <div class="alerts-heading"><h2>Peak alerts</h2><div class="alert-controls"><label for="peakAlertThreshold">Viewer threshold</label><input id="peakAlertThreshold" type="number" min="1" step="1000" value="10000"><button type="button" onclick="clearPeakAlerts()">Clear</button></div></div>
   <div class="subtle">Alerts appear when a live stream crosses the threshold or sets a new peak during this dashboard session.</div>
   <div class="alert-list" id="peakAlertList"><div class="subtle">Waiting for live stream samples…</div></div>
+</section>
+
+<section class="panel streams-panel" id="streamsPanel" aria-label="Live streams by platform" hidden>
+<div class="streams-panel-heading"><h2 id="streamsTitle">All live streams</h2><div class="streams-controls"><select id="scope" aria-label="Filter live streams by platform" onchange="loadStreams()"><option>Overall</option><option>YouTube</option><option>Twitch</option><option>Kick</option></select><button onclick="collect()">Collect now</button><button id="viewerSort" onclick="toggleViewerSort()" aria-label="Sort viewers high to low">Viewers: High-Low</button><span class="sub" id="last">—</span><span class="sub" id="snapshotInfo">—</span><button type="button" onclick="closeStreamsPanel()" aria-label="Close live streams">Close</button></div></div>
+<div class="streams-table"><table><thead><tr><th>#</th><th>Platform</th><th>Channel</th><th>Title</th><th style="text-align:right">Viewers</th></tr></thead><tbody id="streams"><tr><td colspan="5">Loading…</td></tr></tbody></table></div>
+<div class="pagination"><span class="sub" id="pageInfo">Page 1</span><button id="previousPage" onclick="changePage(-1)" disabled>Previous</button><button id="nextPage" onclick="changePage(1)" disabled>Next</button></div>
 </section>
 
 <!-- Time range panel (matches channel.html UX) -->
@@ -120,6 +127,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     </div>
     <div class="status" id="rangeStatus">Last 1 hour</div>
     <div class="status" id="rangeDataStatus">Loading history…</div>
+    <select id="timeRange" onchange="changeTimeRange()" title="Filter charts by time range" aria-label="Chart history range"><option value="30m">Last 30m</option><option value="1h" selected>Last 1h</option><option value="6h">Last 6h</option><option value="24h">Last 24h</option><option value="all">Overall</option></select>
   </div>
 
   <div class="custom-range" id="dateRange">
@@ -177,8 +185,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
   </section>
   <section class="panel">
     <h2>Platform comparison <span class="subtle" id="platformRangeLabel">(selected range)</span></h2>
-    <div class="table-wrap"><table><thead><tr><th>Platform</th><th>Peak viewers</th><th>Average viewers</th><th>Stream samples</th><th>Trend (viewers)</th></tr></thead>
-    <tbody id="platformAnalytics"><tr><td colspan="5">Loading…</td></tr></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Platform</th><th>Peak viewers</th><th>Average viewers</th><th>Stream samples</th><th>Top individual stream</th><th>Trend (viewers)</th></tr></thead>
+    <tbody id="platformAnalytics"><tr><td colspan="6">Loading…</td></tr></tbody></table></div>
   </section>
   <section class="panel">
     <h2>Top channels by peak viewers <span class="subtle" id="topChannelsRangeLabel">(selected range)</span></h2>
@@ -201,9 +209,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <tbody id="risingChannels"><tr><td colspan="5">Loading rising channels…</td></tr></tbody></table></div>
   </section>
   <section class="panel" id="channelHistoryPanel">
-    <h2>Channel viewer history <span class="subtle" id="channelHistoryTitle">(select a channel)</span></h2>
+    <div class="channel-history-heading"><h2>Channel viewer history <span class="subtle" id="channelHistoryTitle">(select a channel)</span></h2><a class="channel-page-link" id="channelHistoryLink" href="#" hidden>Go to channel</a></div>
     <div class="subtle" id="channelHistoryHint">Select a channel from the ranked table to inspect its history for the selected time range.</div>
-    <div class="chart" style="height:190px;margin-top:10px"><canvas id="channelHistoryChart"></canvas></div>
+<div class="chart history-chart" style="height:260px;margin-top:10px"><canvas id="channelHistoryChart"></canvas></div>
     <div class="metric-grid" id="channelHistoryMetrics" style="margin-top:10px;display:none">
       <div class="metric"><div class="label">Peak viewers</div><div class="value" id="channelPeak">—</div><div class="subtle" id="channelPeakTime"></div></div>
       <div class="metric"><div class="label">Average viewers</div><div class="value" id="channelAverage">—</div></div>
@@ -213,35 +221,6 @@ button:disabled{opacity:.45;cursor:not-allowed}
   </section>
 </div>
 
-<div class="toolbar">
-  <select id="timeRange" onchange="changeTimeRange()" title="Filter charts by time range">
-    <option value="30m">Last 30m</option>
-    <option value="1h" selected>Last 1h</option>
-    <option value="6h">Last 6h</option>
-    <option value="24h">Last 24h</option>
-    <option value="all">Overall</option>
-  </select>
-  <select id="scope" onchange="loadStreams()">
-    <option>Overall</option><option>YouTube</option><option>Twitch</option><option>Kick</option>
-  </select>
-  <button onclick="collect()">Collect now</button>
-  <button id="viewerSort" onclick="toggleViewerSort()" aria-label="Sort viewers high to low">Viewers: High-Low</button>
-  <span class="sub" id="last">—</span>
-  <span class="sub" id="snapshotInfo">—</span>
-</div>
-
-<div class="panel">
-<h2 id="streamsTitle">All live streams</h2>
-<table>
-<thead><tr><th>#</th><th>Platform</th><th>Channel</th><th>Title</th><th style="text-align:right">Viewers</th></tr></thead>
-<tbody id="streams"><tr><td colspan="5">Loading…</td></tr></tbody>
-</table>
-<div class="pagination">
-<span class="sub" id="pageInfo">Page 1</span>
-<button id="previousPage" onclick="changePage(-1)" disabled>Previous</button>
-<button id="nextPage" onclick="changePage(1)" disabled>Next</button>
-</div>
-</div>
 </main>
 
 <script>
@@ -285,11 +264,12 @@ function changeTimeRange(){
 
 function setRange(range){
   currentRange = range;
+  const rangeSelect=document.getElementById('timeRange');if(rangeSelect&&[...rangeSelect.options].some(option=>option.value===range))rangeSelect.value=range;
   resetChannelHistorySelection();
   // clear active from buttons
   const buttons = document.querySelectorAll('.range-buttons button');
   buttons.forEach(b=>b.classList.remove('active'));
-  let id = range === '30m' ? 'range30m' : range === '1h' ? 'range1h' : range === '6h' ? 'range6h' : range === '24h' ? 'range24h' : range === 'day' ? 'rangeDay' : 'rangeCustom';
+  let id = range === '30m' ? 'range30m' : range === '1h' ? 'range1h' : range === '6h' ? 'range6h' : range === '24h' ? 'range24h' : range === 'day' ? 'rangeDay' : range === 'custom' ? 'rangeCustom' : '';
   const el = document.getElementById(id);
   if(el) el.classList.add('active');
 
@@ -299,6 +279,12 @@ function setRange(range){
 
   if(range === 'day'){
     applyDateRange();
+    return;
+  }
+
+  if(range==='all'){
+    document.getElementById('rangeStatus').textContent='All available history';
+    refresh();
     return;
   }
 
@@ -364,6 +350,8 @@ function resetChannelHistorySelection(){
   if(title) title.textContent = '(select a channel)';
   if(hint) hint.textContent = 'Select a channel from the ranked table to inspect its history for the selected time range.';
   if(metrics) metrics.style.display = 'none';
+  const link = document.getElementById('channelHistoryLink');
+  if(link){link.hidden=true;link.removeAttribute('href');}
   if(channelHistoryChart){ channelHistoryChart.destroy(); channelHistoryChart = null; }
 }
 
@@ -447,7 +435,7 @@ async function fetchSnapshotsForSelectedRange(){
 async function refreshAnalytics(){
   const requestId = ++analyticsRequestId;
   const metaEl = document.getElementById('analyticsMeta');
-  document.getElementById('platformAnalytics').innerHTML='<tr><td colspan="5">Loading analytics…</td></tr>';
+  document.getElementById('platformAnalytics').innerHTML='<tr><td colspan="6">Loading analytics…</td></tr>';
   document.getElementById('topChannels').innerHTML='<tr><td colspan="7">Loading channel rankings…</td></tr>';
   document.getElementById('peakIndividualStreams').innerHTML='<tr><td colspan="5">Loading peak streams…</td></tr>';
   if(metaEl) metaEl.textContent='Loading complete analytics for the selected window…';
@@ -474,7 +462,9 @@ async function refreshAnalytics(){
     const platformRows=(data.platforms||[]).map(p=>{const vals=currentSnapshots.filter(x=>p.platform==='YouTube'?x.youtubeAvailable!==false&&x.youtubeViewers!=null:p.platform==='Twitch'?x.twitchAvailable!==false&&x.twitchViewers!=null:p.platform==='Kick'?x.kickAvailable!==false&&x.kickViewers!=null:false).map(x=>Number(p.platform==='YouTube'?x.youtubeViewers:p.platform==='Twitch'?x.twitchViewers:x.kickViewers));return {...p, peakViewers:vals.length?Math.max(...vals):0, averageViewers:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0, trend: platformTrend(p.platform)};});
     const overallPeak = snapshotPeak;
     if(overallPeak) document.getElementById('analyticsPeakTime').textContent='at '+new Date(overallPeak.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-    document.getElementById('platformAnalytics').innerHTML=platformRows.map(p=>`<tr><td>${platformIcon(p.platform)} ${escapeHtml(p.platform)}</td><td>${fmt(p.peakViewers)}</td><td>${fmt(Math.round(p.averageViewers||0))}</td><td>${fmt(p.samples)}</td><td>${sparklineSvg(p.trend, platformColor(p.platform))}</td></tr>`).join('')+`<tr><td>♟ Combined</td><td>${fmt(overallPeak?.combinedViewers||0)}</td><td>${fmt(combinedAverage)}</td><td>${fmt(currentSnapshots.length)}</td><td>${sparklineSvg(currentSnapshots.map(x=>x.combinedViewers),'#eef2f7')}</td></tr>`;
+    const topByPlatform=data.topIndividualStreamsByPlatform||{};
+    const topStreamCell=stream=>stream?`<button class="channel-pick" type="button" onclick="showChannelHistory('${escapeJs(stream.channel||'')}','${escapeJs(stream.platform||'')}')">${escapeHtml(stream.channel||'Unknown')}</button><div class="subtle">${fmt(stream.peakViewers)} peak · ${stream.peakTimestamp?new Date(stream.peakTimestamp).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'time unavailable'}</div>`:'<span class="subtle">No individual stream data</span>';
+    document.getElementById('platformAnalytics').innerHTML=platformRows.map(p=>`<tr><td>${platformIcon(p.platform)} ${escapeHtml(p.platform)}</td><td>${fmt(p.peakViewers)}</td><td>${fmt(Math.round(p.averageViewers||0))}</td><td>${fmt(p.samples)}</td><td>${topStreamCell(topByPlatform[p.platform])}</td><td>${sparklineSvg(p.trend, platformColor(p.platform))}</td></tr>`).join('')+`<tr><td>♟ Combined</td><td>${fmt(overallPeak?.combinedViewers||0)}</td><td>${fmt(combinedAverage)}</td><td>${fmt(currentSnapshots.length)}</td><td>—</td><td>${sparklineSvg(currentSnapshots.map(x=>x.combinedViewers),'#eef2f7')}</td></tr>`;
     const peakStreams=(data.topChannelsByPeak||[]).slice().sort((a,b)=>Number(b.peakViewers||0)-Number(a.peakViewers||0)).slice(0,1);
     document.getElementById('peakIndividualStreams').innerHTML=peakStreams.map((c,i)=>`<tr><td>${i+1}</td><td><button class="channel-pick" type="button" onclick="showChannelHistory('${escapeJs(c.channel||'')}','${escapeJs(c.platform||'')}')">${escapeHtml(c.channel||'Unknown')}</button></td><td>${platformIcon(c.platform)} ${escapeHtml(c.platform||'Unknown')}</td><td>${fmt(c.peakViewers)}</td><td>${c.peakTimestamp?new Date(c.peakTimestamp).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</td></tr>`).join('')||'<tr><td colspan="5">No individual stream samples in this range</td></tr>';
     const ranked=(data.topChannelsByPeak||data.fastestGrowingChannels||[]).slice().sort((a,b)=>Number(b.peakViewers||0)-Number(a.peakViewers||0)).slice(0,10);
@@ -482,7 +472,7 @@ async function refreshAnalytics(){
   }catch(e){
     if(requestId !== analyticsRequestId) return;
     document.getElementById('analyticsMeta').textContent='Historical analytics unavailable. Check the server and try again.';
-    document.getElementById('platformAnalytics').innerHTML='<tr><td colspan="5">Unable to load analytics</td></tr>';
+    document.getElementById('platformAnalytics').innerHTML='<tr><td colspan="6">Unable to load analytics</td></tr>';
     document.getElementById('peakIndividualStreams').innerHTML='<tr><td colspan="5">Unable to load peak streams</td></tr>';
     document.getElementById('topChannels').innerHTML='<tr><td colspan="7">Unable to load analytics</td></tr>';
     console.error(e);
@@ -658,6 +648,7 @@ function renderPeakCards(points){
 }
 async function showChannelHistory(channel,platform){
   selectedHistoryChannel={channel,platform};document.getElementById('channelHistoryTitle').textContent=`(${channel} · ${platform} · selected range)`;document.getElementById('channelHistoryHint').textContent='Loading channel history…';
+  const link=document.getElementById('channelHistoryLink');link.href='/channel.html?'+new URLSearchParams({name:channel,platform}).toString();link.hidden=false;
   const range=selectedSnapshotRange();if(!range)return;const params=new URLSearchParams({name:channel,from:range.from.toISOString(),to:range.to.toISOString(),limit:'20000'});
   try{const rows=await getJson('/api/channels/history?'+params.toString());const pts=rows||[];document.getElementById('channelHistoryHint').textContent=pts.length?`${fmt(pts.length)} samples in selected range`:'No channel samples found for this range';document.getElementById('channelHistoryMetrics').style.display=pts.length?'grid':'none';if(!pts.length){if(channelHistoryChart){channelHistoryChart.destroy();channelHistoryChart=null;}return;}const viewers=pts.map(p=>Number(p.viewers||0)),peakIndex=viewers.indexOf(Math.max(...viewers));document.getElementById('channelPeak').textContent=fmt(viewers[peakIndex]);document.getElementById('channelPeakTime').textContent='at '+new Date(pts[peakIndex].timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});document.getElementById('channelAverage').textContent=fmt(Math.round(viewers.reduce((a,b)=>a+b,0)/viewers.length));document.getElementById('channelSamples').textContent=fmt(pts.length);document.getElementById('channelFirstLast').textContent=`${fmt(viewers[0])} → ${fmt(viewers[viewers.length-1])}`;const change=viewers[0]===0?null:Math.round((viewers[viewers.length-1]-viewers[0])/viewers[0]*100);document.getElementById('channelChange').textContent=change===null?'Change unavailable':`${change>=0?'+':''}${change}%`;if(channelHistoryChart)channelHistoryChart.destroy();channelHistoryChart=new Chart(document.getElementById('channelHistoryChart'),{type:'line',data:{labels:pts.map(p=>new Date(p.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})),datasets:[{label:'Viewers',data:viewers,borderColor:platformColor(platform),backgroundColor:platformColor(platform)+'18',fill:true,tension:.25,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#91a0b1',maxTicksLimit:10},grid:{color:'#202b36'}},y:{beginAtZero:true,ticks:{color:'#91a0b1'},grid:{color:'#202b36'}}}}});}catch(e){document.getElementById('channelHistoryHint').textContent='Unable to load this channel history';console.error(e);}
 }
@@ -700,10 +691,15 @@ function observePeakAlerts(streams){
 }
 function renderPeakAlerts(){
   const list=document.getElementById('peakAlertList');if(!list)return;
+  const badge=document.getElementById('alertCount');if(badge){badge.textContent=peakAlerts.length?String(peakAlerts.length):'';badge.classList.toggle('visible',peakAlerts.length>0);}
   if(!peakAlerts.length){list.innerHTML='<div class="subtle">No threshold crossings or new session peaks yet.</div>';return;}
   list.innerHTML=peakAlerts.map(alert=>`<div class="peak-alert"><div><span class="peak-alert-title">${escapeHtml(alert.channel)}</span> <span class="platform">· ${escapeHtml(alert.platform)}</span> <strong>${fmt(alert.viewers)} viewers</strong><div class="peak-alert-reason">${alert.reasons.map(escapeHtml).join(' · ')}</div></div><span class="peak-alert-time">${alert.time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span></div>`).join('');
 }
 function clearPeakAlerts(){peakAlerts=[];renderPeakAlerts();}
+function togglePeakAlerts(){const panel=document.getElementById('alertsPanel'),button=document.getElementById('alertsToggle'),open=panel.hidden;panel.hidden=!open;button.setAttribute('aria-expanded',String(open));}
+function closeStreamsPanel(){document.getElementById('streamsPanel').hidden=true;document.querySelectorAll('.live-viewership .card').forEach(card=>card.setAttribute('aria-expanded','false'));}
+function toggleStreamsPanel(scope,card){const panel=document.getElementById('streamsPanel'),wasOpen=!panel.hidden&&document.getElementById('scope').value===scope;document.querySelectorAll('.live-viewership .card').forEach(item=>item.setAttribute('aria-expanded','false'));if(wasOpen){closeStreamsPanel();return;}document.getElementById('scope').value=scope;card.setAttribute('aria-expanded','true');panel.hidden=false;loadStreams();panel.scrollIntoView({behavior:'smooth',block:'nearest'});}
+function activateStreamCard(event,card){if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleStreamsPanel(card.dataset.scope,card);}}
 
 function freshnessAgeLabel(ageMs){
   const seconds=Math.max(0,Math.floor(ageMs/1000));

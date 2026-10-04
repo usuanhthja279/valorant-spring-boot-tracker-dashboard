@@ -161,6 +161,59 @@ public class TrackerController {
     return catalog;
   }
 
+  /** Bounded, indexed channel search for historical comparisons, including offline channels. */
+  @GetMapping("/channels/catalog/search")
+  public List<Map<String, Object>> searchChannelCatalog(@RequestParam String query) {
+    String term = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+    if (term.length() < 2) return List.of();
+
+    OffsetDateTime latestTimestamp = entityManager.createQuery(
+        "select max(s.timestamp) from StreamSample s", OffsetDateTime.class).getSingleResult();
+    if (latestTimestamp == null) return List.of();
+
+    List<Object[]> grouped = entityManager.createQuery(
+            "select s.platform, s.channel, s.channelId, s.url, max(s.timestamp) "
+                + "from StreamSample s where lower(s.channel) like :term "
+                + "or lower(s.platform) like :term "
+                + "or lower(coalesce(s.channelId, '')) like :term "
+                + "group by s.platform, s.channel, s.channelId, s.url "
+                + "order by lower(s.channel), lower(s.platform)", Object[].class)
+        .setParameter("term", "%" + term + "%")
+        .setMaxResults(100)
+        .getResultList();
+    if (grouped.isEmpty()) return List.of();
+
+    List<StreamSample> current = entityManager.createQuery(
+            "select s from StreamSample s where s.timestamp = :timestamp", StreamSample.class)
+        .setParameter("timestamp", latestTimestamp).getResultList();
+    Map<String, StreamSample> liveByIdentity = new HashMap<>();
+    for (StreamSample sample : current) {
+      liveByIdentity.putIfAbsent(
+          channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel()), sample);
+    }
+
+    List<Map<String, Object>> matches = new ArrayList<>();
+    for (Object[] row : grouped) {
+      String platform = (String) row[0];
+      String channel = (String) row[1];
+      String channelId = (String) row[2];
+      OffsetDateTime lastSeen = (OffsetDateTime) row[4];
+      StreamSample liveSample = lastSeen.equals(latestTimestamp)
+          ? liveByIdentity.get(channelIdentity(platform, channelId, channel)) : null;
+      Map<String, Object> item = new LinkedHashMap<>();
+      item.put("platform", platform);
+      item.put("channel", channel);
+      item.put("channelId", channelId);
+      item.put("identity", channelIdentity(platform, channelId, channel));
+      item.put("url", row[3]);
+      item.put("live", liveSample != null);
+      item.put("viewers", liveSample == null ? null : liveSample.getViewers());
+      item.put("lastSeen", lastSeen);
+      matches.add(item);
+    }
+    return matches;
+  }
+
   /** Fast live-status lookup for a single channel page; avoids grouping the full sample history. */
   @GetMapping("/channels/status")
   public List<Map<String, Object>> channelStatus(
@@ -416,6 +469,15 @@ public class TrackerController {
     topChannelsByPeak.sort(Comparator.comparingLong((Map<String, Object> c) -> (Long)c.get("peakViewers")).reversed());
     if (topChannelsByPeak.size() > 10) topChannelsByPeak = new ArrayList<>(topChannelsByPeak.subList(0, 10));
 
+    Map<String, Map<String, Object>> topIndividualByPlatform = new LinkedHashMap<>();
+    for (Map<String, Object> channel : channels.values()) {
+      String platform = String.valueOf(channel.get("platform"));
+      Map<String, Object> current = topIndividualByPlatform.get(platform);
+      if (current == null || (Long) channel.get("peakViewers") > (Long) current.get("peakViewers")) {
+        topIndividualByPlatform.put(platform, channel);
+      }
+    }
+
     for (Map<String, Object> metric : platforms.values()) {
       long count = (Long) metric.get("viewerSamples"), total = (Long) metric.get("viewerTotal");
       metric.put("averageViewers", count == 0 ? 0.0 : (double) total / count);
@@ -429,6 +491,7 @@ public class TrackerController {
     result.put("overallAverageViewers", sampleCount == 0 ? 0.0 : (double) overallViewerTotal / sampleCount);
     result.put("platforms", platforms.values()); result.put("fastestGrowingChannels", fastestGrowing);
     result.put("topChannelsByPeak", topChannelsByPeak);
+    result.put("topIndividualStreamsByPlatform", topIndividualByPlatform);
     return result;
   }
 
