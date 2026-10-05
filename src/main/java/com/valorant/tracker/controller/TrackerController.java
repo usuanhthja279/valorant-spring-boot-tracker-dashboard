@@ -1,6 +1,7 @@
 package com.valorant.tracker.controller;
 
 import com.valorant.tracker.model.Snapshot;
+import com.valorant.tracker.constant.GameConfig;
 import com.valorant.tracker.model.StreamSample;
 import com.valorant.tracker.service.tracker.TrackerService;
 import jakarta.persistence.EntityManager;
@@ -45,15 +46,17 @@ public class TrackerController {
 
   @PostMapping("/collect")
   public Map<String, Object> collect() {
-    tracker.collectValorantData();
+    tracker.collectAllGames();
     return Map.of("status", "collected", "lastRun", tracker.getLastRun());
   }
 
   /** Recent snapshots, kept for compatibility with the existing dashboard. */
   @GetMapping("/snapshots")
-  public List<Snapshot> snapshots() {
+  public List<Snapshot> snapshots(@RequestParam(defaultValue = "VALORANT") String game) {
+    GameConfig config = GameConfig.from(game);
     return entityManager.createQuery(
-            "select s from Snapshot s order by s.timestamp desc, s.id desc", Snapshot.class)
+            "select s from Snapshot s where (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) order by s.timestamp desc, s.id desc", Snapshot.class)
+        .setParameter("game", config.getId())
         .setMaxResults(500).getResultList();
   }
 
@@ -62,6 +65,7 @@ public class TrackerController {
   public List<Snapshot> snapshotsInRange(
       @RequestParam OffsetDateTime from,
       @RequestParam OffsetDateTime to,
+      @RequestParam(defaultValue = "VALORANT") String game,
       @RequestParam(defaultValue = "5000") int limit) {
     validateRange(from, to);
     int safeLimit = clampLimit(limit);
@@ -74,9 +78,42 @@ public class TrackerController {
     return results;
   }
 
+  @GetMapping("/games")
+  public List<Map<String, Object>> games() {
+    OffsetDateTime latestTimestamp = entityManager.createQuery("select max(s.timestamp) from StreamSample s", OffsetDateTime.class).getSingleResult();
+    List<Map<String, Object>> result = new ArrayList<>();
+    for (GameConfig game : GameConfig.values()) {
+      Map<String, Object> item = new LinkedHashMap<>();
+      item.put("id", game.getId());
+      item.put("name", game.getDisplayName());
+      item.put("liveStreams", 0L);
+      item.put("totalViewers", 0L);
+      item.put("youtubeStreams", 0L); item.put("twitchStreams", 0L); item.put("kickStreams", 0L);
+      if (latestTimestamp != null) {
+        List<StreamSample> samples = entityManager.createQuery(
+            "select s from StreamSample s where s.timestamp = :timestamp and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT'))", StreamSample.class)
+            .setParameter("timestamp", latestTimestamp).setParameter("game", game.getId()).getResultList();
+        item.put("liveStreams", (long) samples.size());
+        item.put("totalViewers", samples.stream().mapToLong(StreamSample::getViewers).sum());
+        item.put("youtubeStreams", samples.stream().filter(x -> "YouTube".equalsIgnoreCase(x.getPlatform())).count());
+        item.put("twitchStreams", samples.stream().filter(x -> "Twitch".equalsIgnoreCase(x.getPlatform())).count());
+        item.put("kickStreams", samples.stream().filter(x -> "Kick".equalsIgnoreCase(x.getPlatform())).count());
+        samples.stream().max(Comparator.comparingLong(StreamSample::getViewers)).ifPresent(top -> {
+          item.put("topChannel", top.getChannel()); item.put("topViewers", top.getViewers()); item.put("topPlatform", top.getPlatform());
+        });
+      }
+      result.add(item);
+    }
+    result.sort(Comparator.comparingLong((Map<String,Object> x) -> ((Number)x.get("totalViewers")).longValue()).reversed());
+    return result;
+  }
+
   @GetMapping("/streams")
   public List<Map<String, Object>> streams(
+          @RequestParam(defaultValue = "VALORANT") String game,
           @RequestParam(defaultValue = "Overall") String platform) {
+
+    GameConfig config = GameConfig.from(game);
 
     OffsetDateTime latestTimestamp = entityManager.createQuery(
             "select max(s.timestamp) from StreamSample s",
@@ -89,14 +126,17 @@ public class TrackerController {
     String query = platform.equalsIgnoreCase("Overall")
             ? "select s from StreamSample s " +
             "where s.timestamp = :timestamp " +
+            "and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) " +
             "order by s.viewers desc, s.id desc"
             : "select s from StreamSample s " +
             "where s.timestamp = :timestamp " +
+            "and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) " +
             "and lower(s.platform) = lower(:platform) " +
             "order by s.viewers desc, s.id desc";
 
     var streams = entityManager.createQuery(query, StreamSample.class)
-            .setParameter("timestamp", latestTimestamp);
+            .setParameter("timestamp", latestTimestamp)
+            .setParameter("game", config.getId());
 
     if (!platform.equalsIgnoreCase("Overall")) {
       streams.setParameter("platform", platform);
@@ -223,103 +263,55 @@ public class TrackerController {
 
   /** Searchable catalog of every channel ever sampled, with live status from the latest collection. */
   @GetMapping("/channels/catalog")
-  public List<Map<String, Object>> channelCatalog() {
-    OffsetDateTime latestTimestamp = entityManager.createQuery(
-        "select max(s.timestamp) from StreamSample s", OffsetDateTime.class).getSingleResult();
+  public List<Map<String, Object>> channelCatalog(@RequestParam(defaultValue = "VALORANT") String game) {
+    GameConfig config = GameConfig.from(game);
+    OffsetDateTime latestTimestamp = entityManager.createQuery("select max(s.timestamp) from StreamSample s", OffsetDateTime.class).getSingleResult();
     if (latestTimestamp == null) return List.of();
-
     List<Object[]> grouped = entityManager.createQuery(
-        "select s.platform, s.channel, s.channelId, s.url, max(s.timestamp) "
-            + "from StreamSample s group by s.platform, s.channel, s.channelId, s.url",
-        Object[].class).getResultList();
+        "select s.platform, s.channel, s.channelId, s.url, max(s.timestamp) from StreamSample s " +
+            "where (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) " +
+            "group by s.platform, s.channel, s.channelId, s.url", Object[].class)
+        .setParameter("game", config.getId()).getResultList();
     List<StreamSample> current = entityManager.createQuery(
-        "select s from StreamSample s where s.timestamp = :timestamp", StreamSample.class)
-        .setParameter("timestamp", latestTimestamp).getResultList();
+        "select s from StreamSample s where s.timestamp = :timestamp and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT'))", StreamSample.class)
+        .setParameter("timestamp", latestTimestamp).setParameter("game", config.getId()).getResultList();
     Map<String, StreamSample> liveByIdentity = new HashMap<>();
-    for (StreamSample sample : current) {
-      String identity = channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel());
-      liveByIdentity.putIfAbsent(identity, sample);
-    }
-
+    for (StreamSample sample : current) liveByIdentity.putIfAbsent(channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel()), sample);
     List<Map<String, Object>> catalog = new ArrayList<>();
     for (Object[] row : grouped) {
-      String platform = (String) row[0];
-      String channel = (String) row[1];
-      String channelId = (String) row[2];
-      String url = (String) row[3];
-      OffsetDateTime lastSeen = (OffsetDateTime) row[4];
-      String identity = channelIdentity(platform, channelId, channel);
-      StreamSample liveSample = lastSeen.equals(latestTimestamp) ? liveByIdentity.get(identity) : null;
-      Map<String, Object> item = new LinkedHashMap<>();
-      item.put("platform", platform);
-      item.put("channel", channel);
-      item.put("channelId", channelId);
-      item.put("identity", identity);
-      item.put("url", url);
-      item.put("live", liveSample != null);
-      item.put("viewers", liveSample == null ? null : liveSample.getViewers());
-      item.put("lastSeen", lastSeen);
-      catalog.add(item);
+      String platform=(String)row[0], channel=(String)row[1], channelId=(String)row[2], url=(String)row[3];
+      OffsetDateTime lastSeen=(OffsetDateTime)row[4];
+      StreamSample liveSample=lastSeen.equals(latestTimestamp)?liveByIdentity.get(channelIdentity(platform,channelId,channel)):null;
+      Map<String,Object> item=new LinkedHashMap<>(); item.put("platform",platform); item.put("channel",channel); item.put("channelId",channelId);
+      item.put("identity",channelIdentity(platform,channelId,channel)); item.put("url",url); item.put("live",liveSample!=null);
+      item.put("viewers",liveSample==null?null:liveSample.getViewers()); item.put("lastSeen",lastSeen); catalog.add(item);
     }
-    catalog.sort(Comparator.comparing((Map<String, Object> item) -> String.valueOf(item.get("channel")), String.CASE_INSENSITIVE_ORDER)
-        .thenComparing(item -> String.valueOf(item.get("platform")), String.CASE_INSENSITIVE_ORDER));
+    catalog.sort(Comparator.comparing((Map<String,Object> x)->String.valueOf(x.get("channel")),String.CASE_INSENSITIVE_ORDER).thenComparing(x->String.valueOf(x.get("platform")),String.CASE_INSENSITIVE_ORDER));
     return catalog;
   }
 
   /** Bounded, indexed channel search for historical comparisons, including offline channels. */
   @GetMapping("/channels/catalog/search")
-  public List<Map<String, Object>> searchChannelCatalog(@RequestParam String query) {
-    String term = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-    if (term.length() < 2) return List.of();
-
-    OffsetDateTime latestTimestamp = entityManager.createQuery(
-        "select max(s.timestamp) from StreamSample s", OffsetDateTime.class).getSingleResult();
-    if (latestTimestamp == null) return List.of();
-
-    List<Object[]> grouped = entityManager.createQuery(
-            "select s.platform, s.channel, s.channelId, s.url, max(s.timestamp) "
-                + "from StreamSample s where lower(s.channel) like :term "
-                + "or lower(s.platform) like :term "
-                + "or lower(coalesce(s.channelId, '')) like :term "
-                + "group by s.platform, s.channel, s.channelId, s.url "
-                + "order by lower(s.channel), lower(s.platform)", Object[].class)
-        .setParameter("term", "%" + term + "%")
-        .setMaxResults(100)
-        .getResultList();
-    if (grouped.isEmpty()) return List.of();
-
-    List<StreamSample> current = entityManager.createQuery(
-            "select s from StreamSample s where s.timestamp = :timestamp", StreamSample.class)
-        .setParameter("timestamp", latestTimestamp).getResultList();
-    Map<String, StreamSample> liveByIdentity = new HashMap<>();
-    for (StreamSample sample : current) {
-      liveByIdentity.putIfAbsent(
-          channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel()), sample);
-    }
-
-    List<Map<String, Object>> matches = new ArrayList<>();
-    for (Object[] row : grouped) {
-      String platform = (String) row[0];
-      String channel = (String) row[1];
-      String channelId = (String) row[2];
-      OffsetDateTime lastSeen = (OffsetDateTime) row[4];
-      StreamSample liveSample = lastSeen.equals(latestTimestamp)
-          ? liveByIdentity.get(channelIdentity(platform, channelId, channel)) : null;
-      Map<String, Object> item = new LinkedHashMap<>();
-      item.put("platform", platform);
-      item.put("channel", channel);
-      item.put("channelId", channelId);
-      item.put("identity", channelIdentity(platform, channelId, channel));
-      item.put("url", row[3]);
-      item.put("live", liveSample != null);
-      item.put("viewers", liveSample == null ? null : liveSample.getViewers());
-      item.put("lastSeen", lastSeen);
-      matches.add(item);
-    }
+  public List<Map<String, Object>> searchChannelCatalog(@RequestParam String query, @RequestParam(defaultValue = "VALORANT") String game) {
+    String term=query==null?"":query.trim().toLowerCase(Locale.ROOT); if(term.length()<2)return List.of();
+    GameConfig config=GameConfig.from(game);
+    OffsetDateTime latestTimestamp=entityManager.createQuery("select max(s.timestamp) from StreamSample s",OffsetDateTime.class).getSingleResult(); if(latestTimestamp==null)return List.of();
+    List<Object[]> grouped=entityManager.createQuery(
+        "select s.platform,s.channel,s.channelId,s.url,max(s.timestamp) from StreamSample s " +
+        "where (lower(s.game)=lower(:game) or (s.game is null and :game='VALORANT')) and " +
+        "(lower(s.channel) like :term or lower(s.platform) like :term or lower(coalesce(s.channelId,'')) like :term) " +
+        "group by s.platform,s.channel,s.channelId,s.url order by lower(s.channel),lower(s.platform)",Object[].class)
+        .setParameter("term","%"+term+"%").setParameter("game",config.getId()).setMaxResults(100).getResultList();
+    if(grouped.isEmpty())return List.of();
+    List<StreamSample> current=entityManager.createQuery(
+        "select s from StreamSample s where s.timestamp=:timestamp and (lower(s.game)=lower(:game) or (s.game is null and :game='VALORANT'))",StreamSample.class)
+        .setParameter("timestamp",latestTimestamp).setParameter("game",config.getId()).getResultList();
+    Map<String,StreamSample> liveByIdentity=new HashMap<>(); for(StreamSample sample:current) liveByIdentity.putIfAbsent(channelIdentity(sample.getPlatform(),sample.getChannelId(),sample.getChannel()),sample);
+    List<Map<String,Object>> matches=new ArrayList<>();
+    for(Object[] row:grouped){String platform=(String)row[0],channel=(String)row[1],channelId=(String)row[2];OffsetDateTime lastSeen=(OffsetDateTime)row[4];StreamSample live=lastSeen.equals(latestTimestamp)?liveByIdentity.get(channelIdentity(platform,channelId,channel)):null;Map<String,Object> item=new LinkedHashMap<>();item.put("platform",platform);item.put("channel",channel);item.put("channelId",channelId);item.put("identity",channelIdentity(platform,channelId,channel));item.put("url",row[3]);item.put("live",live!=null);item.put("viewers",live==null?null:live.getViewers());item.put("lastSeen",lastSeen);matches.add(item);}
     return matches;
   }
 
-  /** Fast live-status lookup for a single channel page; avoids grouping the full sample history. */
   @GetMapping("/channels/status")
   public List<Map<String, Object>> channelStatus(
       @RequestParam String name,
@@ -372,6 +364,7 @@ public class TrackerController {
       @RequestParam(required = false) String platform,
       @RequestParam(required = false) OffsetDateTime from,
       @RequestParam(required = false) OffsetDateTime to,
+      @RequestParam(defaultValue = "VALORANT") String game,
       @RequestParam(defaultValue = "5000") int limit) {
     if (name.isBlank()) return List.of();
     if ((from == null) != (to == null)) {
@@ -379,12 +372,14 @@ public class TrackerController {
     }
     if (from != null) validateRange(from, to);
     int safeLimit = clampLimit(limit);
+    GameConfig config = GameConfig.from(game);
 
-    String query = "select s from StreamSample s where s.channel = :name ";
+    String query = "select s from StreamSample s where s.channel = :name "
+        + "and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) ";
     if (platform != null && !platform.isBlank()) query += "and lower(s.platform) = lower(:platform) ";
     if (from != null) query += "and s.timestamp >= :from and s.timestamp < :to ";
     query += "order by s.timestamp desc, s.id desc";
-    var typedQuery = entityManager.createQuery(query, StreamSample.class).setParameter("name", name);
+    var typedQuery = entityManager.createQuery(query, StreamSample.class).setParameter("name", name).setParameter("game", config.getId());
     if (platform != null && !platform.isBlank()) typedQuery.setParameter("platform", platform.trim());
     if (from != null) typedQuery.setParameter("from", from).setParameter("to", to);
     List<StreamSample> history = new ArrayList<>(typedQuery.setMaxResults(safeLimit).getResultList());
@@ -479,8 +474,10 @@ public class TrackerController {
   @GetMapping("/analytics")
   public Map<String, Object> analytics(
       @RequestParam OffsetDateTime from,
-      @RequestParam OffsetDateTime to) {
+      @RequestParam OffsetDateTime to,
+      @RequestParam(defaultValue = "VALORANT") String game) {
     validateRange(from, to);
+    GameConfig config = GameConfig.from(game);
     // Keep each database read bounded, but process every sample in the selected range.
     // This avoids misleading growth rankings caused by applying one global row cap.
     final int pageSize = 5000;
@@ -506,7 +503,7 @@ public class TrackerController {
                   ? "and (s.timestamp > :cursorTimestamp or (s.timestamp = :cursorTimestamp and s.id > :cursorId)) "
                   : "")
               + "order by s.timestamp asc, s.id asc", Object[].class)
-          .setParameter("from", from).setParameter("to", to);
+          .setParameter("from", from).setParameter("to", to).setParameter("game", config.getId());
       if (cursorTimestamp != null) {
         pageQuery.setParameter("cursorTimestamp", cursorTimestamp).setParameter("cursorId", cursorId);
       }
@@ -601,8 +598,9 @@ public class TrackerController {
   }
 
   @GetMapping("/top10")
-  public List<Map<String, Object>> top(@RequestParam(defaultValue = "Overall") String platform) {
-    return streams(platform).stream().limit(10).toList();
+  public List<Map<String, Object>> top(@RequestParam(defaultValue = "VALORANT") String game,
+          @RequestParam(defaultValue = "Overall") String platform) {
+    return streams(game, platform).stream().limit(10).toList();
   }
 
   private static int clampLimit(int limit) {

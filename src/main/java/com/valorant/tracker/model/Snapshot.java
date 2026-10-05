@@ -14,6 +14,7 @@ public class Snapshot {
   Long id;
 
   OffsetDateTime timestamp;
+  String game;
   long youtubeViewers, twitchViewers, kickViewers, combinedViewers;
   int youtubeStreams, twitchStreams, kickStreams;
   Boolean youtubeAvailable, twitchAvailable, kickAvailable;
@@ -31,7 +32,16 @@ public class Snapshot {
       boolean youtubeAvailable,
       boolean twitchAvailable,
       boolean kickAvailable) {
+    this(timestamp, "VALORANT", youtubeViewers, twitchViewers, kickViewers, youtubeStreams, twitchStreams, kickStreams, youtubeAvailable, twitchAvailable, kickAvailable);
+  }
+
+  public Snapshot(
+      OffsetDateTime timestamp, String game,
+      long youtubeViewers, long twitchViewers, long kickViewers,
+      int youtubeStreams, int twitchStreams, int kickStreams,
+      boolean youtubeAvailable, boolean twitchAvailable, boolean kickAvailable) {
     this.timestamp = timestamp;
+    this.game = game;
     this.youtubeViewers = youtubeViewers;
     this.twitchViewers = twitchViewers;
     this.kickViewers = kickViewers;
@@ -46,6 +56,7 @@ public class Snapshot {
 
   public Long getId() { return id; }
   public OffsetDateTime getTimestamp() { return timestamp; }
+  public String getGame() { return game; }
   public long getYoutubeViewers() { return youtubeViewers; }
   public long getTwitchViewers() { return twitchViewers; }
   public long getKickViewers() { return kickViewers; }
