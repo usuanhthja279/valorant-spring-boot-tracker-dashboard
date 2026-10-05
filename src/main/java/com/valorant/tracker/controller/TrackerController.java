@@ -2,7 +2,7 @@ package com.valorant.tracker.controller;
 
 import com.valorant.tracker.model.Snapshot;
 import com.valorant.tracker.model.StreamSample;
-import com.valorant.tracker.service.TrackerService;
+import com.valorant.tracker.service.tracker.TrackerService;
 import jakarta.persistence.EntityManager;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -94,26 +94,151 @@ public class TrackerController {
   }
 
   @GetMapping("/streams")
-  public List<StreamSample> streams(@RequestParam(defaultValue = "Overall") String platform) {
+  public List<Map<String, Object>> streams(
+          @RequestParam(defaultValue = "Overall") String platform) {
+
     OffsetDateTime latestTimestamp = entityManager.createQuery(
-            "select max(s.timestamp) from StreamSample s", OffsetDateTime.class).getSingleResult();
-    if (latestTimestamp == null) return List.of();
+            "select max(s.timestamp) from StreamSample s",
+            OffsetDateTime.class
+    ).getSingleResult();
+
+    if (latestTimestamp == null) {
+      return List.of();
+    }
 
     String query = platform.equalsIgnoreCase("Overall")
-        ? "select s from StreamSample s where s.timestamp = :timestamp order by s.viewers desc, s.id desc"
-        : "select s from StreamSample s where s.timestamp = :timestamp and lower(s.platform) = lower(:platform) order by s.viewers desc, s.id desc";
-    var streams = entityManager.createQuery(query, StreamSample.class).setParameter("timestamp", latestTimestamp);
-    if (!platform.equalsIgnoreCase("Overall")) streams.setParameter("platform", platform);
-    List<StreamSample> results = streams.getResultList();
-    Map<String, StreamSample> uniqueChannels = new LinkedHashMap<>();
-    for (StreamSample stream : results) {
-      String channelKey = stream.getPlatform().toLowerCase() + ":"
-          + (stream.getChannelId() == null || stream.getChannelId().isBlank()
-              ? (stream.getChannel() == null ? "" : stream.getChannel().trim().toLowerCase())
-              : stream.getChannelId());
-      uniqueChannels.putIfAbsent(channelKey, stream);
+            ? "select s from StreamSample s " +
+            "where s.timestamp = :timestamp " +
+            "order by s.viewers desc, s.id desc"
+            : "select s from StreamSample s " +
+            "where s.timestamp = :timestamp " +
+            "and lower(s.platform) = lower(:platform) " +
+            "order by s.viewers desc, s.id desc";
+
+    var streams = entityManager.createQuery(query, StreamSample.class)
+            .setParameter("timestamp", latestTimestamp);
+
+    if (!platform.equalsIgnoreCase("Overall")) {
+      streams.setParameter("platform", platform);
     }
-    return List.copyOf(uniqueChannels.values());
+
+    List<StreamSample> results = streams.getResultList();
+
+    /*
+     * One stream/channel per platform.
+     * Prefer a sample containing a title if duplicate records exist.
+     */
+    Map<String, StreamSample> uniqueChannels = new LinkedHashMap<>();
+
+    for (StreamSample stream : results) {
+
+      String channelKey =
+              String.valueOf(stream.getPlatform()).toLowerCase(Locale.ROOT) + ":"
+                      + ((stream.getChannelId() == null || stream.getChannelId().isBlank())
+                      ? String.valueOf(stream.getChannel())
+                      .trim()
+                      .toLowerCase(Locale.ROOT)
+                      : stream.getChannelId());
+
+      StreamSample existing = uniqueChannels.get(channelKey);
+
+      if (existing == null) {
+        uniqueChannels.put(channelKey, stream);
+        continue;
+      }
+
+      // Do not let a blank title replace a valid title.
+      String existingTitle = existing.getTitle() == null
+              ? ""
+              : existing.getTitle().trim();
+
+      String currentTitle = stream.getTitle() == null
+              ? ""
+              : stream.getTitle().trim();
+
+      if (existingTitle.isBlank() && !currentTitle.isBlank()) {
+        uniqueChannels.put(channelKey, stream);
+      }
+    }
+
+    /*
+     * Some older samples can have an empty title even though the same channel
+     * had a valid title in a previous collection. Hydrate only those missing
+     * titles from the most recent non-blank historical sample.
+     */
+    Map<String, String> titleFallbacks = new HashMap<>();
+    for (StreamSample stream : uniqueChannels.values()) {
+      String title = stream.getTitle() == null ? "" : stream.getTitle().trim();
+      if (!title.isBlank()) continue;
+
+      String channelId = stream.getChannelId();
+      String channel = stream.getChannel();
+      String platformName = stream.getPlatform();
+      String fallback = null;
+
+      if (channelId != null && !channelId.isBlank()) {
+        List<String> titles = entityManager.createQuery(
+                "select s.title from StreamSample s " +
+                "where lower(s.platform) = lower(:platform) " +
+                "and s.channelId = :channelId " +
+                "and s.title is not null and trim(s.title) <> '' " +
+                "order by s.timestamp desc, s.id desc", String.class)
+            .setParameter("platform", platformName)
+            .setParameter("channelId", channelId)
+            .setMaxResults(1)
+            .getResultList();
+        if (!titles.isEmpty()) fallback = titles.get(0);
+      } else if (channel != null && !channel.isBlank()) {
+        List<String> titles = entityManager.createQuery(
+                "select s.title from StreamSample s " +
+                "where lower(s.platform) = lower(:platform) " +
+                "and lower(s.channel) = lower(:channel) " +
+                "and s.title is not null and trim(s.title) <> '' " +
+                "order by s.timestamp desc, s.id desc", String.class)
+            .setParameter("platform", platformName)
+            .setParameter("channel", channel.trim())
+            .setMaxResults(1)
+            .getResultList();
+        if (!titles.isEmpty()) fallback = titles.get(0);
+      }
+
+      if (fallback != null && !fallback.isBlank()) {
+        titleFallbacks.put(String.valueOf(stream.getId()), fallback);
+      }
+    }
+
+    /*
+     * Explicit response mapping.
+     * This guarantees that "title" is present in /api/streams.
+     */
+    List<Map<String, Object>> response = new ArrayList<>();
+
+    for (StreamSample stream : uniqueChannels.values()) {
+
+      Map<String, Object> item = new LinkedHashMap<>();
+
+      item.put("id", stream.getId());
+      item.put("streamId", stream.getStreamId());
+      item.put("platform", stream.getPlatform());
+
+      item.put("channelId", stream.getChannelId());
+      item.put("channel", stream.getChannel());
+      item.put("channelTitle", stream.getChannel());
+
+      String responseTitle = stream.getTitle() == null ? "" : stream.getTitle().trim();
+      if (responseTitle.isBlank()) {
+        responseTitle = titleFallbacks.getOrDefault(String.valueOf(stream.getId()), "");
+      }
+      item.put("title", responseTitle);
+
+      item.put("viewers", stream.getViewers());
+      item.put("url", stream.getUrl());
+      item.put("timestamp", stream.getTimestamp());
+
+      response.add(item);
+    }
+
+    return response;
   }
 
   /** Searchable catalog of every channel ever sampled, with live status from the latest collection. */
@@ -496,7 +621,7 @@ public class TrackerController {
   }
 
   @GetMapping("/top10")
-  public List<StreamSample> top(@RequestParam(defaultValue = "Overall") String platform) {
+  public List<Map<String, Object>> top(@RequestParam(defaultValue = "Overall") String platform) {
     return streams(platform).stream().limit(10).toList();
   }
 

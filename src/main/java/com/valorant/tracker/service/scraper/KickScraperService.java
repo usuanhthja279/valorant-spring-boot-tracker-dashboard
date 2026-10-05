@@ -1,4 +1,4 @@
-package com.valorant.tracker.service;
+package com.valorant.tracker.service.scraper;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -6,6 +6,8 @@ import com.valorant.tracker.model.LiveStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+
+import com.valorant.tracker.service.tracker.DataSourceCatalog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

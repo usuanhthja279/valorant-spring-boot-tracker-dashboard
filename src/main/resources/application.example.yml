@@ -14,10 +14,14 @@ server:
 
 tracker:
   enabled: true
-  interval-ms: ${TRACKER_INTERVAL_MS:60000}
+  initial-delay-ms: ${TRACKER_INITIAL_DELAY_MS:0}
+  interval-ms: ${TRACKER_INTERVAL_MS:120000}
   youtube:
     refresh-interval-ms: ${YOUTUBE_REFRESH_INTERVAL_MS:300000}
     api-key: ${YOUTUBE_API_KEY:}
+    selenium:
+      live-url: ${YOUTUBE_SELENIUM_LIVE_URL:https://www.youtube.com/channel/UCiMRGE8Sc6oxIGuu_JxFoHg/live}
+      headless: ${YOUTUBE_SELENIUM_HEADLESS:true}
   twitch:
     client-id: ${TWITCH_CLIENT_ID:}
     client-secret: ${TWITCH_CLIENT_SECRET:}

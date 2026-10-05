@@ -1,0 +1,337 @@
+{
+  "info": {
+    "_postman_id": "c73467fe-3f62-4f4a-a7a6-e681e951fef0",
+    "name": "VALORANT Stream Tracker API",
+    "description": "Importable Postman collection for the tracker REST API. Set the collection variable baseUrl to the running application URL. Experimental YouTube test endpoints make outbound requests to YouTube and are not part of production collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "from",
+      "value": "2026-10-03T00:00:00+05:30"
+    },
+    {
+      "key": "to",
+      "value": "2026-10-04T00:00:00+05:30"
+    },
+    {
+      "key": "channelName",
+      "value": "VALORANT Champions Tour"
+    },
+    {
+      "key": "platform",
+      "value": "YouTube"
+    },
+    {
+      "key": "period",
+      "value": "day"
+    },
+    {
+      "key": "continuation",
+      "value": "PASTE_WORLDWIDE_CONTINUATION_TOKEN"
+    },
+    {
+      "key": "pageUrl",
+      "value": "https://www.youtube.com/channel/UCiMRGE8Sc6oxIGuu_JxFoHg/live"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health and collection",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/health",
+            "description": "Application and database health, last collection time, and provider health."
+          }
+        },
+        {
+          "name": "Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/status",
+            "description": "Tracker scheduler interval, last run, and provider status."
+          }
+        },
+        {
+          "name": "Collect now",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/collect",
+            "description": "Manually trigger a collection from all configured providers."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Snapshots and streams",
+      "item": [
+        {
+          "name": "Recent snapshots",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/snapshots",
+            "description": "Returns up to 500 recent dashboard snapshots."
+          }
+        },
+        {
+          "name": "Snapshots in range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/snapshots/range?from={{from}}&to={{to}}&limit=5000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "snapshots", "range"],
+              "query": [
+                {"key": "from", "value": "{{from}}", "description": "Inclusive ISO-8601 OffsetDateTime."},
+                {"key": "to", "value": "{{to}}", "description": "Exclusive ISO-8601 OffsetDateTime."},
+                {"key": "limit", "value": "5000", "description": "Optional result limit; server caps at 20000."}
+              ]
+            },
+            "description": "Bounded snapshot history for [from, to). Update the collection's from and to variables as needed."
+          }
+        },
+        {
+          "name": "Latest streams by platform",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/streams?platform={{platform}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "streams"],
+              "query": [
+                {"key": "platform", "value": "{{platform}}", "description": "YouTube, Twitch, Kick, or Overall."}
+              ]
+            },
+            "description": "Stream samples from the latest collection. Use platform=Overall for every provider."
+          }
+        },
+        {
+          "name": "Top 10 streams",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/top10?platform={{platform}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "top10"],
+              "query": [
+                {"key": "platform", "value": "{{platform}}", "description": "YouTube, Twitch, Kick, or Overall."}
+              ]
+            },
+            "description": "Top 10 streams from the latest collection for the selected platform."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Channel catalog and history",
+      "item": [
+        {
+          "name": "Channel catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/channels/catalog",
+            "description": "Catalog of sampled channels with latest live/offline status."
+          }
+        },
+        {
+          "name": "Search channel catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/channels/catalog/search?query={{channelName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "channels", "catalog", "search"],
+              "query": [
+                {"key": "query", "value": "{{channelName}}", "description": "At least two characters; matches channel, platform, or channel ID."}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Channel status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/channels/status?name={{channelName}}&platform={{platform}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "channels", "status"],
+              "query": [
+                {"key": "name", "value": "{{channelName}}"},
+                {"key": "platform", "value": "{{platform}}", "disabled": true, "description": "Optional; omit to return status across platforms."}
+              ]
+            },
+            "description": "Latest live/offline status for the named channel."
+          }
+        },
+        {
+          "name": "Channel history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/channels/history?name={{channelName}}&platform={{platform}}&from={{from}}&to={{to}}&limit=5000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "channels", "history"],
+              "query": [
+                {"key": "name", "value": "{{channelName}}", "description": "Required channel name."},
+                {"key": "platform", "value": "{{platform}}", "disabled": true, "description": "Optional platform filter."},
+                {"key": "from", "value": "{{from}}", "disabled": true, "description": "Optional inclusive range start; supply together with to."},
+                {"key": "to", "value": "{{to}}", "disabled": true, "description": "Optional exclusive range end; supply together with from."},
+                {"key": "limit", "value": "5000", "description": "Optional result limit; server caps at 20000."}
+              ]
+            },
+            "description": "Channel samples. Enable both from and to for a bounded time range."
+          }
+        },
+        {
+          "name": "Channel comparison",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/channels/comparison?name={{channelName}}&platform={{platform}}&from={{from}}&to={{to}}&period={{period}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "channels", "comparison"],
+              "query": [
+                {"key": "name", "value": "{{channelName}}", "description": "Required channel name."},
+                {"key": "platform", "value": "{{platform}}", "disabled": true, "description": "Optional platform filter."},
+                {"key": "from", "value": "{{from}}", "description": "Inclusive ISO-8601 OffsetDateTime."},
+                {"key": "to", "value": "{{to}}", "description": "Exclusive ISO-8601 OffsetDateTime."},
+                {"key": "period", "value": "{{period}}", "description": "day, week, month, quarter, or year."}
+              ]
+            },
+            "description": "Compares the selected interval to the same interval one calendar period earlier."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Historical analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics?from={{from}}&to={{to}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics"],
+              "query": [
+                {"key": "from", "value": "{{from}}", "description": "Inclusive ISO-8601 OffsetDateTime."},
+                {"key": "to", "value": "{{to}}", "description": "Exclusive ISO-8601 OffsetDateTime."}
+              ]
+            },
+            "description": "Historical provider and channel analytics for [from, to)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Provider stream endpoints",
+      "item": [
+        {
+          "name": "YouTube streams (scraper)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/streams/youtube",
+            "description": "Fetch YouTube streams through the configured scraper sources."
+          }
+        },
+        {
+          "name": "YouTube scraped streams (alias)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/streams/youtube/scraped"
+          }
+        },
+        {
+          "name": "Twitch streams",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/streams/twitch",
+            "description": "Fetch VALORANT streams from Twitch. Requires Twitch credentials."
+          }
+        },
+        {
+          "name": "Kick streams",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/streams/kick",
+            "description": "Fetch VALORANT streams from the Kick scraper."
+          }
+        },
+        {
+          "name": "Kick scraped streams (alias)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/streams/kick/scraped"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Experimental YouTube tests",
+      "description": "These endpoints make live outbound requests to YouTube and are experimental.",
+      "item": [
+        {
+          "name": "YouTube Worldwide pagination test",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/test/youtube/worldwide?maxPages=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "test", "youtube", "worldwide"],
+              "query": [
+                {"key": "maxPages", "value": "5", "description": "Maximum pages to fetch; service caps this at 10."},
+                {"key": "continuation", "value": "{{continuation}}", "disabled": true, "description": "Optional token captured after choosing Worldwide in YouTube."}
+              ]
+            },
+            "description": "Experimental continuation paging. The initial page may use the default region; this does not guarantee Worldwide results."
+          }
+        },
+        {
+          "name": "YouTube Selenium Worldwide discovery",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/test/youtube/selenium/worldwide?maxStreams=50&pageUrl={{pageUrl}}&validateWithApi=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "test", "youtube", "selenium", "worldwide"],
+              "query": [
+                {"key": "maxStreams", "value": "50", "description": "Requested maximum stream count."},
+                {"key": "pageUrl", "value": "{{pageUrl}}", "description": "Optional YouTube page URL to inspect."},
+                {"key": "validateWithApi", "value": "true", "description": "Whether discovered IDs are checked using the YouTube API."}
+              ]
+            },
+            "description": "Experimental Selenium-driven discovery endpoint. May require browser dependencies and YouTube API credentials."
+          }
+        }
+      ]
+    }
+  ]
+}

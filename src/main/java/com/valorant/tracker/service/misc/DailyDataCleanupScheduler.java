@@ -1,4 +1,4 @@
-package com.valorant.tracker.service;
+package com.valorant.tracker.service.misc;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;

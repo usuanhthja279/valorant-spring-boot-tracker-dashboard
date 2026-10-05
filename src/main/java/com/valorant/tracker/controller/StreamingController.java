@@ -1,9 +1,9 @@
 package com.valorant.tracker.controller;
 
 import com.valorant.tracker.model.LiveStream;
-import com.valorant.tracker.service.KickScraperService;
-import com.valorant.tracker.service.TwitchService;
-import com.valorant.tracker.service.YouTubeScraperService;
+import com.valorant.tracker.service.scraper.KickScraperService;
+import com.valorant.tracker.service.api.TwitchService;
+import com.valorant.tracker.service.scraper.YouTubeScraperService;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

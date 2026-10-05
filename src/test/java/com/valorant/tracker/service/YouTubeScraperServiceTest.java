@@ -8,6 +8,9 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import com.valorant.tracker.service.scraper.YouTubeScraperService;
+import com.valorant.tracker.service.tracker.DataSourceCatalog;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.ClientResponse;

@@ -1,4 +1,4 @@
-package com.valorant.tracker.service;
+package com.valorant.tracker.service.tracker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;

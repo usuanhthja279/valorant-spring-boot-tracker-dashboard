@@ -1,11 +1,15 @@
-package com.valorant.tracker.service;
+package com.valorant.tracker.service.tracker;
 
 import com.valorant.tracker.model.LiveStream;
 import com.valorant.tracker.model.Snapshot;
 import com.valorant.tracker.model.StreamSample;
+import com.valorant.tracker.service.api.TwitchService;
+import com.valorant.tracker.service.selenium.YouTubeSeleniumWorldwideDiscoveryService;
+import com.valorant.tracker.service.scraper.KickScraperService;
 import jakarta.persistence.EntityManager;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,8 +23,9 @@ import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -28,20 +33,25 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class TrackerService {
   private static final Logger logger = LoggerFactory.getLogger(TrackerService.class);
 
-  final YouTubeScraperService yt;
+  final YouTubeSeleniumWorldwideDiscoveryService yt;
   final TwitchService tw;
   final KickScraperService kick;
   final EntityManager em;
   final TransactionTemplate transactions;
 
   private volatile OffsetDateTime lastRun;
-  @Value("${tracker.interval-ms:60000}")
+  @Value("${tracker.interval-ms:120000}")
   private long intervalMs;
   private final Map<String, ProviderHealth> providerHealth = new ConcurrentHashMap<>();
+  private final Map<String, CachedProviderData> lastSuccessfulData = new ConcurrentHashMap<>();
+  private final Map<String, OffsetDateTime> retryAfter = new ConcurrentHashMap<>();
+  private final Map<String, OffsetDateTime> outageStarted = new ConcurrentHashMap<>();
+  private static final Duration STALE_DATA_GRACE = Duration.ofMinutes(3);
+  private static final Duration RATE_LIMIT_COOLDOWN = Duration.ofMinutes(3);
   private final ExecutorService providerExecutor = Executors.newFixedThreadPool(3);
 
   public TrackerService(
-      YouTubeScraperService y,
+      YouTubeSeleniumWorldwideDiscoveryService y,
       TwitchService t,
       KickScraperService k,
       EntityManager e,
@@ -56,7 +66,16 @@ public class TrackerService {
     providerHealth.put("Kick", ProviderHealth.initial());
   }
 
-  @Scheduled(fixedDelayString = "${tracker.interval-ms:60000}")
+  /**
+   * Run immediately when scheduling starts, then every 2 minutes from the
+   * scheduled start time: 0-1 min collect, 1-2 min idle, 2-3 min collect, etc.
+   *
+   * fixedRate is intentional here. fixedDelay would wait two full minutes
+   * after a collection finishes and would produce a different cadence.
+   */
+  @Scheduled(
+      initialDelayString = "${tracker.initial-delay-ms:0}",
+      fixedRateString = "${tracker.interval-ms:120000}")
   public void scheduled() {
     collect();
   }
@@ -66,13 +85,25 @@ public class TrackerService {
 
     CompletableFuture<ProviderResult> youtubeFetch =
         CompletableFuture.supplyAsync(
-            () -> fetchProvider("YouTube", yt::fetch, timestamp), providerExecutor);
+            () -> fetchProvider(
+                "YouTube",
+                () -> yt.fetch(100),
+                timestamp),
+            providerExecutor);
     CompletableFuture<ProviderResult> twitchFetch =
         CompletableFuture.supplyAsync(
-            () -> fetchProvider("Twitch", tw::fetch, timestamp), providerExecutor);
+            () -> fetchProvider(
+                "Twitch",
+                tw::fetch,
+                timestamp),
+            providerExecutor);
     CompletableFuture<ProviderResult> kickFetch =
         CompletableFuture.supplyAsync(
-            () -> fetchProvider("Kick", kick::fetch, timestamp), providerExecutor);
+            () -> fetchProvider(
+                "Kick",
+                kick::fetch,
+                timestamp),
+            providerExecutor);
 
     CompletableFuture.allOf(youtubeFetch, twitchFetch, kickFetch).join();
     ProviderResult youtube = youtubeFetch.join();
@@ -125,6 +156,16 @@ public class TrackerService {
 
   private ProviderResult fetchProvider(
       String platform, Supplier<List<LiveStream>> fetch, OffsetDateTime timestamp) {
+    OffsetDateTime blockedUntil = retryAfter.get(platform);
+    if (blockedUntil != null && timestamp.isBefore(blockedUntil)) {
+      logger.warn("{} fetch is rate-limited; skipping request until {} and preserving last successful data",
+          platform, blockedUntil);
+      return staleOrEmpty(platform, timestamp, "429 cooldown until " + blockedUntil);
+    }
+    if (blockedUntil != null) {
+      retryAfter.remove(platform, blockedUntil);
+    }
+
     try {
       List<LiveStream> result = fetch.get();
       if (result == null) {
@@ -132,7 +173,24 @@ public class TrackerService {
       }
 
       List<LiveStream> unique = deduplicate(platform, result);
+
+      // A sudden empty result after a previously non-empty successful fetch can be
+      // a transient provider/API/search failure rather than a real drop to zero.
+      // Treat it as an outage signal and retain the last good data for the same
+      // three-minute grace period used for exceptions and HTTP 429 cooldowns.
+      CachedProviderData previousData = lastSuccessfulData.get(platform);
+      if (unique.isEmpty()
+              && previousData != null
+              && !previousData.streams().isEmpty()) {
+        throw new IllegalStateException(
+                platform + " returned zero streams after previously returning live streams; "
+                        + "treating empty result as transient and preserving last successful data");
+      }
+
       long viewers = unique.stream().mapToLong(LiveStream::viewers).sum();
+      lastSuccessfulData.put(platform, new CachedProviderData(timestamp, unique));
+      retryAfter.remove(platform);
+      outageStarted.remove(platform);
       providerHealth.put(
           platform,
           new ProviderHealth("UP", timestamp, null, unique.size(), viewers));
@@ -140,24 +198,53 @@ public class TrackerService {
           platform, unique.size(), viewers);
       return new ProviderResult(unique, true);
     } catch (Exception e) {
-      ProviderHealth previous = providerHealth.getOrDefault(platform, ProviderHealth.initial());
-      providerHealth.put(
-          platform,
-          new ProviderHealth(
-              "DOWN",
-              previous.lastSuccessAt(),
-              conciseError(e),
-              0,
-              0));
-      logger.error(
-          "{} collection failed; excluding stale cached streams from this snapshot. Last success: {}",
-          platform,
-          previous.lastSuccessAt(),
-          e);
-      // Do not carry old streams into a new snapshot: that would make stale counts look current.
-      return new ProviderResult(List.of(), false);
+      if (isRateLimited(e)) {
+        OffsetDateTime until = timestamp.plus(RATE_LIMIT_COOLDOWN);
+        retryAfter.put(platform, until);
+        logger.warn("{} returned HTTP 429; pausing requests for 3 minutes until {}",
+            platform, until);
+      }
+      return staleOrEmpty(platform, timestamp, conciseError(e));
     }
   }
+
+  private ProviderResult staleOrEmpty(String platform, OffsetDateTime timestamp, String error) {
+    CachedProviderData cached = lastSuccessfulData.get(platform);
+    ProviderHealth previous = providerHealth.getOrDefault(platform, ProviderHealth.initial());
+    List<LiveStream> retained = List.of();
+    OffsetDateTime outageAt = outageStarted.computeIfAbsent(platform, ignored -> timestamp);
+    boolean withinGrace = Duration.between(outageAt, timestamp).compareTo(STALE_DATA_GRACE) <= 0;
+    boolean inRateLimitCooldown = retryAfter.get(platform) != null && timestamp.isBefore(retryAfter.get(platform));
+    if (cached != null && (withinGrace || inRateLimitCooldown)) {
+      retained = cached.streams();
+      logger.warn("{} fetch unavailable; retaining {} streams / {} viewers from {} for consistency",
+          platform, retained.size(), retained.stream().mapToLong(LiveStream::viewers).sum(), cached.retrievedAt());
+    } else {
+      logger.warn("{} fetch unavailable and cached data is older than 3 minutes; using zero streams", platform);
+    }
+    long viewers = retained.stream().mapToLong(LiveStream::viewers).sum();
+    providerHealth.put(platform, new ProviderHealth(
+        "DOWN", previous.lastSuccessAt(), error, retained.size(), viewers));
+    return new ProviderResult(retained, false);
+  }
+
+  private boolean isRateLimited(Exception exception) {
+    Throwable current = exception;
+    while (current != null) {
+      if (current instanceof WebClientResponseException response
+          && response.getStatusCode().value() == 429) {
+        return true;
+      }
+      String message = current.getMessage();
+      if (message != null && (message.contains("429") || message.toLowerCase(java.util.Locale.ROOT).contains("too many requests"))) {
+        return true;
+      }
+      current = current.getCause();
+    }
+    return false;
+  }
+
+  private record CachedProviderData(OffsetDateTime retrievedAt, List<LiveStream> streams) {}
 
   private List<LiveStream> deduplicate(String platform, List<LiveStream> streams) {
     Map<String, LiveStream> unique = new LinkedHashMap<>();

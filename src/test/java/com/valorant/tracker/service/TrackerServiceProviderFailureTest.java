@@ -8,6 +8,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.valorant.tracker.model.LiveStream;
+import com.valorant.tracker.service.api.TwitchService;
+import com.valorant.tracker.service.scraper.KickScraperService;
+import com.valorant.tracker.service.scraper.YouTubeScraperService;
+import com.valorant.tracker.service.tracker.TrackerService;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;

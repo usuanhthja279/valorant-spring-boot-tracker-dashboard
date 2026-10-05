@@ -76,6 +76,41 @@ button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:550px){.cards,.peak-cards,.metric-grid{grid-template-columns:1fr}main{padding:12px}.grid{grid-template-columns:1fr}.value{font-size:25px}.peak-value{font-size:22px}}
 @media(max-width:550px){.cards{grid-template-columns:1fr}main{padding:15px}.grid{grid-template-columns:1fr}}
 *{scrollbar-width:thin;scrollbar-color:#344454 #0b0e13}*::-webkit-scrollbar{width:8px;height:8px}*::-webkit-scrollbar-track{background:#0b0e13}*::-webkit-scrollbar-thumb{background:#344454;border:2px solid #0b0e13;border-radius:999px}*::-webkit-scrollbar-thumb:hover{background:#4a6074}*::-webkit-scrollbar-corner{background:#0b0e13}
+
+/* Mobile header and viewport overflow fix */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+header,main{min-width:0;width:100%;max-width:100%}
+@media(max-width:1000px){
+  header{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:14px 16px;gap:12px}
+  .header-brand{width:100%;min-width:0;flex:0 0 auto}
+  .header-brand h1{font-size:clamp(20px,5vw,25px);line-height:1.2;overflow-wrap:anywhere}
+  .header-brand .sub{font-size:12px;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
+  .header-search{order:2;width:100%;min-width:0;max-width:none;flex:0 0 auto;margin:0;display:flex}
+  .header-search input{min-width:0;width:100%}
+  .header-right{order:3;display:flex;flex-direction:column;align-items:stretch;gap:10px;width:100%;min-width:0;margin:0}
+  .header-actions{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;width:100%;min-width:0}
+  .header-link,.header-action{white-space:normal;max-width:100%;text-align:center}
+  .status{display:flex;align-items:flex-start;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+  #status{min-width:0;white-space:normal;overflow-wrap:anywhere}
+  main{padding:14px 12px 24px}
+  .cards,.peak-cards,.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid,.analytics-grid{grid-template-columns:minmax(0,1fr)}
+  .panel,.card,.peak-section,.range-panel{min-width:0;max-width:100%}
+  canvas{max-width:100%}
+}
+@media(max-width:550px){
+  header{padding:13px 12px;gap:11px}
+  .header-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .header-link,.header-action{min-width:0;padding:10px 8px;font-size:13px}
+  .header-right{gap:9px}
+  .status{font-size:12px}
+  main{padding:12px 10px 22px}
+  .cards,.peak-cards,.metric-grid{grid-template-columns:minmax(0,1fr)}
+  .live-viewership-heading,.toolbar,.range-bar{align-items:flex-start;flex-wrap:wrap;min-width:0}
+  .chart{height:190px}
+  .panel{padding:11px}
+  .table-wrap,.streams-table{max-width:100%;overflow-x:auto}
+}
 </style>
 </head>
 <body>

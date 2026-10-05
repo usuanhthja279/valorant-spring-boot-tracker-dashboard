@@ -2,8 +2,10 @@
   "youtube": {
     "scraperSearchUrls": [
       "https://www.youtube.com/results?search_query=valorant&sp=CAMSBBABQAE%253D",
-      "https://www.youtube.com/watch?v=gwap8BHITn0",
-      "https://www.youtube.com/watch?v=vNDagsEr-xA",
+      "https://www.youtube.com/watch?v=d0qG4GztbHQ",
+      "https://www.youtube.com/watch?v=j12hJ1miDfE",
+      "https://www.youtube.com/watch?v=bOrl3ghHUgc",
+      "https://www.youtube.com/watch?v=6DJTk_v3J7c",
       "https://www.youtube.com/channel/UCiMRGE8Sc6oxIGuu_JxFoHg/live"
     ],
     "watchPageUrlTemplate": "https://www.youtube.com/watch?v={videoId}",
