@@ -2,6 +2,7 @@ package com.valorant.tracker.service.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.valorant.tracker.constant.URLData;
 import com.valorant.tracker.model.LiveStream;
 import com.valorant.tracker.service.tracker.DataSourceCatalog;
 import org.slf4j.Logger;
@@ -59,24 +60,14 @@ public class TwitchService {
   * ================================================================
   */
 
- private synchronized void authenticate() throws Exception {
+ private synchronized void authenticate(String gameCategory) throws Exception {
 
-  if (accessToken != null &&
-          !accessToken.isBlank() &&
-          gameId != null &&
-          !gameId.isBlank()) {
-
+  if (accessToken != null && !accessToken.isBlank() && gameId != null && !gameId.isBlank()) {
    return;
   }
 
-  if (clientId == null ||
-          clientId.isBlank() ||
-          clientSecret == null ||
-          clientSecret.isBlank()) {
-
-   throw new IllegalStateException(
-           "Twitch Client ID or Client Secret is not configured"
-   );
+  if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
+   throw new IllegalStateException("Twitch Client ID or Client Secret is not configured");
   }
 
   logger.info("Authenticating with Twitch...");
@@ -88,9 +79,7 @@ public class TwitchService {
    */
 
   String tokenResponse =
-          client
-                  .post()
-                  .uri(
+          client.post().uri(
                           UriComponentsBuilder.fromUriString(authUrl)
                                   .queryParam("client_id", clientId)
                                   .queryParam("client_secret", clientSecret)
@@ -101,45 +90,23 @@ public class TwitchService {
                   .bodyToMono(String.class)
                   .block();
 
-  if (tokenResponse == null ||
-          tokenResponse.isBlank()) {
-
-   throw new RuntimeException(
-           "Twitch token response was empty"
-   );
+  if (tokenResponse == null || tokenResponse.isBlank()) {
+   throw new RuntimeException("Twitch token response was empty");
   }
 
-  JsonNode tokenJson =
-          mapper.readTree(tokenResponse);
-
+  JsonNode tokenJson = mapper.readTree(tokenResponse);
   if (tokenJson.has("error")) {
-
-   logger.error(
-           "Twitch authentication error:\n{}",
-           tokenJson.toPrettyString()
-   );
-
-   throw new RuntimeException(
-           "Twitch authentication failed"
-   );
+   logger.error("Twitch authentication error:\n{}", tokenJson.toPrettyString());
+   throw new RuntimeException("Twitch authentication failed");
   }
 
-  accessToken =
-          tokenJson
-                  .path("access_token")
-                  .asText(null);
+  accessToken = tokenJson.path("access_token").asText(null);
 
-  if (accessToken == null ||
-          accessToken.isBlank()) {
-
-   throw new RuntimeException(
-           "Twitch access token was not returned"
-   );
+  if (accessToken == null || accessToken.isBlank()) {
+   throw new RuntimeException("Twitch access token was not returned");
   }
 
-  logger.info(
-          "Twitch authentication successful"
-  );
+  logger.info("Twitch authentication successful");
 
   /*
    * ------------------------------------------------------------
@@ -147,72 +114,33 @@ public class TwitchService {
    * ------------------------------------------------------------
    */
 
-  String gameResponse =
-          client
-                  .get()
-                  .uri(uriBuilder ->
+  String gameResponse = client.get().uri(uriBuilder ->
                           UriComponentsBuilder.fromUriString(gameUrl)
-                                  .queryParam(
-                                          "name",
-                                          "VALORANT"
-                                  )
+                                  .queryParam("name", gameCategory)
                                   .build()
-                                  .toUri()
-                  )
-                  .header(
-                          "Client-ID",
-                          clientId
-                  )
-                  .header(
-                          "Authorization",
-                          "Bearer " + accessToken
-                  )
+                                  .toUri())
+                  .header("Client-ID", clientId)
+                  .header("Authorization", "Bearer " + accessToken)
                   .retrieve()
                   .bodyToMono(String.class)
                   .block();
 
-  if (gameResponse == null ||
-          gameResponse.isBlank()) {
-
-   throw new RuntimeException(
-           "Twitch game response was empty"
-   );
+  if (gameResponse == null || gameResponse.isBlank()) {
+   throw new RuntimeException("Twitch game response was empty");
   }
 
-  JsonNode gameJson =
-          mapper.readTree(gameResponse);
-
+  JsonNode gameJson = mapper.readTree(gameResponse);
   if (gameJson.has("error")) {
-
-   logger.error(
-           "Twitch game API error:\n{}",
-           gameJson.toPrettyString()
-   );
-
-   throw new RuntimeException(
-           "Failed to retrieve Twitch VALORANT game ID"
-   );
+   logger.error("Twitch game API error:\n{}", gameJson.toPrettyString());
+   throw new RuntimeException("Failed to retrieve Twitch VALORANT game ID");
   }
 
-  gameId =
-          gameJson
-                  .path("data")
-                  .path(0)
-                  .path("id")
-                  .asText(null);
-
-  if (gameId == null ||
-          gameId.isBlank()) {
-
-   throw new RuntimeException(
-           "Twitch VALORANT game ID was not found"
-   );
+  gameId = gameJson.path("data").path(0).path("id").asText(null);
+  if (gameId == null || gameId.isBlank()) {
+   throw new RuntimeException("Twitch VALORANT game ID was not found");
   }
 
-  logger.info(
-          "Twitch VALORANT game ID = {}",
-          gameId
-  );
+  logger.info("Twitch VALORANT game ID = {}", gameId);
  }
 
  /*
@@ -221,25 +149,16 @@ public class TwitchService {
   * ================================================================
   */
 
- public List<LiveStream> fetch() {
+ public List<LiveStream> fetch(String gameCategory) {
 
-  if (clientId == null ||
-          clientId.isBlank() ||
-          clientSecret == null ||
-          clientSecret.isBlank()) {
-
-   throw new IllegalStateException(
-           "Twitch collection is disabled because Client ID / Client Secret is not configured"
-   );
+  if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
+   throw new IllegalStateException("Twitch collection is disabled because Client ID / Client Secret is not configured");
   }
 
   try {
+   authenticate(gameCategory);
 
-   authenticate();
-
-   List<LiveStream> streams =
-           new ArrayList<>();
-
+   List<LiveStream> streams = new ArrayList<>();
    String cursor = null;
 
    /*
@@ -251,67 +170,31 @@ public class TwitchService {
     */
 
    for (int page = 1; page <= MAX_PAGES; page++) {
-
     final String currentCursor = cursor;
-
-    logger.info(
-            "Twitch streams: requesting page {}/{}{}",
-            page,
-            MAX_PAGES,
-            currentCursor == null
-                    ? ""
-                    : " with cursor"
-    );
-
+    logger.info("Twitch streams: requesting page {}/{}{}", page, MAX_PAGES, currentCursor == null ? "" : " with cursor");
     String response =
-            client
-                    .get()
+            client.get()
                     .uri(uriBuilder -> {
+                     var query = UriComponentsBuilder.fromUriString(streamsUrl)
+                                     .queryParam("game_id", gameId)
+                                     .queryParam("first", PAGE_SIZE);
 
-                     var query =
-                             UriComponentsBuilder.fromUriString(streamsUrl)
-                                     .queryParam(
-                                             "game_id",
-                                             gameId
-                                     )
-                                     .queryParam(
-                                             "first",
-                                             PAGE_SIZE
-                                     );
-
-                     if (currentCursor != null &&
-                             !currentCursor.isBlank()) {
-
-                      query.queryParam(
-                              "after",
-                              currentCursor
-                      );
+                     if (currentCursor != null && !currentCursor.isBlank()) {
+                      query.queryParam("after", currentCursor);
                      }
-
                      return query.build().toUri();
                     })
-                    .header(
-                            "Client-ID",
-                            clientId
-                    )
-                    .header(
-                            "Authorization",
-                            "Bearer " + accessToken
-                    )
+                    .header("Client-ID", clientId)
+                    .header("Authorization", "Bearer " + accessToken)
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();
 
-    if (response == null ||
-            response.isBlank()) {
-
-     throw new RuntimeException(
-             "Twitch streams API returned an empty response"
-     );
+    if (response == null || response.isBlank()) {
+     throw new RuntimeException("Twitch streams API returned an empty response");
     }
 
-    JsonNode result =
-            mapper.readTree(response);
+    JsonNode result = mapper.readTree(response);
 
     /*
      * --------------------------------------------------------
@@ -320,15 +203,8 @@ public class TwitchService {
      */
 
     if (result.has("error")) {
-
-     logger.error(
-             "Twitch streams API error:\n{}",
-             result.toPrettyString()
-     );
-
-     throw new RuntimeException(
-             "Twitch streams API returned an error"
-     );
+     logger.error("Twitch streams API error:\n{}", result.toPrettyString());
+     throw new RuntimeException("Twitch streams API returned an error");
     }
 
     /*
@@ -338,43 +214,15 @@ public class TwitchService {
      */
 
     int pageStreams = 0;
+    for (JsonNode stream : result.path("data")) {
+     String streamId = stream.path("id").asText("");
+     String userId = stream.path("user_id").asText("");
+     String userName = stream.path("user_name").asText("");
+     String userLogin = stream.path("user_login").asText("");
+     String title = stream.path("title").asText("");
+     long viewers = stream.path("viewer_count").asLong(0);
 
-    for (JsonNode stream :
-            result.path("data")) {
-
-     String streamId =
-             stream
-                     .path("id")
-                     .asText("");
-
-     String userId =
-             stream
-                     .path("user_id")
-                     .asText("");
-
-     String userName =
-             stream
-                     .path("user_name")
-                     .asText("");
-
-     String userLogin =
-             stream
-                     .path("user_login")
-                     .asText("");
-
-     String title =
-             stream
-                     .path("title")
-                     .asText("");
-
-     long viewers =
-             stream
-                     .path("viewer_count")
-                     .asLong(0);
-
-     if (streamId.isBlank() ||
-             userId.isBlank()) {
-
+     if (streamId.isBlank() || userId.isBlank()) {
       continue;
      }
 
@@ -386,22 +234,17 @@ public class TwitchService {
                      userName,
                      title,
                      viewers,
-                     "https://www.twitch.tv/"
-                             + userLogin
-             )
+                     "https://www.twitch.tv/" + userLogin)
      );
 
      pageStreams++;
     }
 
-    logger.info(
-            "Twitch page {}/{} returned {} streams. " +
-                    "Total collected: {}",
+    logger.info("Twitch page {}/{} returned {} streams. Total collected: {}",
             page,
             MAX_PAGES,
             pageStreams,
-            streams.size()
-    );
+            streams.size());
 
     /*
      * --------------------------------------------------------
@@ -409,25 +252,14 @@ public class TwitchService {
      * --------------------------------------------------------
      */
 
-    cursor =
-            result
-                    .path("pagination")
-                    .path("cursor")
-                    .asText(null);
+    cursor = result.path("pagination").path("cursor").asText(null);
 
     /*
      * If Twitch has no next page, stop early.
      */
 
-    if (cursor == null ||
-            cursor.isBlank()) {
-
-     logger.info(
-             "Twitch has no more pages. " +
-                     "Stopped after page {}.",
-             page
-     );
-
+    if (cursor == null || cursor.isBlank()) {
+     logger.info("Twitch has no more pages. Stopped after page {}.", page);
      break;
     }
    }
@@ -440,11 +272,9 @@ public class TwitchService {
     * ============================================================
     */
 
-   streams.sort(
-           Comparator.comparingLong(
-                   LiveStream::viewers
-           ).reversed()
-   );
+   streams.sort(Comparator.comparingLong(
+           LiveStream::viewers)
+           .reversed());
 
    /*
     * ============================================================
@@ -455,11 +285,8 @@ public class TwitchService {
     * ============================================================
     */
 
-   long totalViewers =
-           streams.stream()
-                   .mapToLong(
-                           LiveStream::viewers
-                   )
+   long totalViewers = streams.stream()
+                   .mapToLong(LiveStream::viewers)
                    .sum();
 
    /*
@@ -468,27 +295,11 @@ public class TwitchService {
     * ============================================================
     */
 
-   logger.info(
-           "================================================"
-   );
-
-   logger.info(
-           "Twitch collection complete"
-   );
-
-   logger.info(
-           "Streams collected: {}",
-           streams.size()
-   );
-
-   logger.info(
-           "Total viewers across collected streams: {}",
-           totalViewers
-   );
-
-   logger.info(
-           "================================================"
-   );
+   logger.info("================================================");
+   logger.info("Twitch collection complete");
+   logger.info("Streams collected: {}", streams.size());
+   logger.info("Total viewers across collected streams: {}", totalViewers);
+   logger.info("================================================");
 
    /*
     * ============================================================
@@ -496,22 +307,17 @@ public class TwitchService {
     * ============================================================
     */
 
-   logger.info(
-           "Twitch Top 20:"
-   );
+   logger.info("Twitch Top 20:");
 
    streams.stream()
            .limit(TOP_DISPLAY_COUNT)
-           .forEachOrdered(
-                   stream ->
+           .forEachOrdered(stream ->
                            logger.info(
                                    "{}. {} -> {} viewers | {}",
                                    streams.indexOf(stream) + 1,
                                    stream.channelTitle(),
                                    stream.viewers(),
-                                   stream.title()
-                           )
-           );
+                                   stream.title()));
 
    /*
     * Return all collected streams.
@@ -520,14 +326,8 @@ public class TwitchService {
     */
 
    return streams;
-
   } catch (Exception e) {
-
-   logger.error(
-           "Twitch service failed",
-           e
-   );
-
+   logger.error("Twitch service failed", e);
    throw new IllegalStateException("Failed to fetch Twitch live streams", e);
   }
  }

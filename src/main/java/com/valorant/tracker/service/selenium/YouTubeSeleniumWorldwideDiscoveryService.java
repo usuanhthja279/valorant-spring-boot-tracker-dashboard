@@ -44,18 +44,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Service
 public class YouTubeSeleniumWorldwideDiscoveryService {
 
-  private static final Logger log =
-          LoggerFactory.getLogger(
-                  YouTubeSeleniumWorldwideDiscoveryService.class);
+  private static final Logger log = LoggerFactory.getLogger(YouTubeSeleniumWorldwideDiscoveryService.class);
 
-  private static final Pattern VIDEO_ID =
-          Pattern.compile(
-                  "(?:watch\\?v=|/live/|youtu\\.be/)([A-Za-z0-9_-]{11})");
-
-  private static final Pattern VIEWERS =
-          Pattern.compile(
-                  "([\\d,.]+)\\s*([KMB]?)\\s+watching",
-                  Pattern.CASE_INSENSITIVE);
+  private static final Pattern VIDEO_ID = Pattern.compile("(?:watch\\?v=|/live/|youtu\\.be/)([A-Za-z0-9_-]{11})");
+  private static final Pattern VIEWERS = Pattern.compile("([\\d,.]+)\\s*([KMB]?)\\s+watching", Pattern.CASE_INSENSITIVE);
 
   private final ObjectMapper mapper;
   private final WebClient http;
@@ -78,57 +70,29 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
     this.headless = headless;
   }
 
-  public Map<String, Object> discover(
-          int requestedMax,
-          String requestedUrl,
-          boolean validateWithApi) {
+  public Map<String, Object> discover(int requestedMax, String requestedUrl, String region, boolean validateWithApi) {
 
-    int max =
-            Math.max(
-                    1,
-                    Math.min(requestedMax, 100));
+    int max = Math.clamp(requestedMax, 1, 1000);
+    String pageUrl = requestedUrl == null || requestedUrl.isBlank() ? defaultPageUrl : requestedUrl.trim();
 
-    String pageUrl =
-            requestedUrl == null || requestedUrl.isBlank()
-                    ? defaultPageUrl
-                    : requestedUrl.trim();
-
-    Map<String, Object> out =
-            new LinkedHashMap<>();
-
-    Map<String, Object> diagnostics =
-            new LinkedHashMap<>();
-
-    List<LiveStream> streams =
-            new ArrayList<>();
-
-    List<String> warnings =
-            new ArrayList<>();
-
-    Instant started =
-            Instant.now();
+    Map<String, Object> out = new LinkedHashMap<>();
+    Map<String, Object> diagnostics = new LinkedHashMap<>();
+    List<LiveStream> streams = new ArrayList<>();
+    List<String> warnings = new ArrayList<>();
+    Instant started = Instant.now();
 
     log.info("YouTube Selenium scraping started | requestedMax={} | url={}", max, pageUrl);
 
     WebDriver driver = null;
-
     int scrolls = 0;
     int cardsSeen = 0;
-
     boolean worldwideClicked = false;
-
     try {
-
       validateYoutubeUrl(pageUrl);
-
-      ChromeOptions options =
-              new ChromeOptions();
-
+      ChromeOptions options = new ChromeOptions();
       if (headless) {
-        options.addArguments(
-                "--headless=new");
+        options.addArguments("--headless=new");
       }
-
       options.addArguments(
               "--disable-gpu",
               "--no-sandbox",
@@ -142,25 +106,13 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
                       + "Chrome/131.0.0.0 "
                       + "Safari/537.36");
 
-      driver =
-              new org.openqa.selenium.chrome.ChromeDriver(
-                      options);
-
-      driver.manage()
-              .timeouts()
-              .pageLoadTimeout(
-                      Duration.ofSeconds(45));
-
+      driver = new org.openqa.selenium.chrome.ChromeDriver(options);
+      driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(45));
       driver.get(pageUrl);
 
-      new WebDriverWait(
-              driver,
+      new WebDriverWait(driver,
               Duration.ofSeconds(20))
-              .until(
-                      ExpectedConditions
-                              .presenceOfElementLocated(
-                                      By.cssSelector(
-                                              "ytd-app, body")));
+              .until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("ytd-app, body")));
 
       /*
        * Give YouTube time to populate the initial
@@ -178,16 +130,9 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
        * replaced the grid after Worldwide is selected.
        * ---------------------------------------------------------
        */
-      Set<String> initialRegionVideoIds =
-              captureVisibleVideoIds(driver);
-
-      diagnostics.put(
-              "initialRegionLabel",
-              currentDropdownLabel(driver));
-
-      diagnostics.put(
-              "initialRegionVideoIds",
-              initialRegionVideoIds.size());
+      Set<String> initialRegionVideoIds = captureVisibleVideoIds(driver);
+      diagnostics.put("initialRegionLabel", currentDropdownLabel(driver));
+      diagnostics.put("initialRegionVideoIds", initialRegionVideoIds.size());
 
       /*
        * ---------------------------------------------------------
@@ -195,17 +140,9 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
        * Select Worldwide.
        * ---------------------------------------------------------
        */
-      Map<String, Object> worldwideDiagnostics =
-              new LinkedHashMap<>();
-
-      worldwideClicked =
-              clickWorldwideIfPresent(
-                      driver,
-                      worldwideDiagnostics);
-
-      out.put(
-              "worldwideSelectionDiagnostics",
-              worldwideDiagnostics);
+      Map<String, Object> worldwideDiagnostics = new LinkedHashMap<>();
+      worldwideClicked = clickWorldwideIfPresent(driver, worldwideDiagnostics);
+      out.put("worldwideSelectionDiagnostics", worldwideDiagnostics);
 
       /*
        * ---------------------------------------------------------
@@ -223,118 +160,46 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
       boolean gridRefreshed = false;
 
       if (worldwideClicked) {
-
-        gridRefreshed =
-                waitForWorldwideGridRefresh(
-                        driver,
-                        initialRegionVideoIds,
-                        20);
-
-        diagnostics.put(
-                "worldwideGridRefreshed",
-                gridRefreshed);
+        gridRefreshed = waitForWorldwideGridRefresh(driver, initialRegionVideoIds, 20);
+        diagnostics.put("worldwideGridRefreshed", gridRefreshed);
 
       } else {
-
-        diagnostics.put(
-                "worldwideGridRefreshed",
-                false);
+        diagnostics.put("worldwideGridRefreshed", false);
       }
 
-      diagnostics.put(
-              "postSelectionRegionLabel",
-              currentDropdownLabel(driver));
+      diagnostics.put("postSelectionRegionLabel", currentDropdownLabel(driver));
 
       if (!worldwideClicked) {
-
-        warnings.add(
-                "Could not select Worldwide. "
-                        + "No Worldwide data was collected.");
+        warnings.add("Could not select Worldwide. No Worldwide data was collected.");
 
         /*
          * Do not silently return My-region data.
          */
-        out.put(
-                "ok",
-                false);
-
-        out.put(
-                "isolatedTestOnly",
-                true);
-
-        out.put(
-                "requestedMaxStreams",
-                max);
-
-        out.put(
-                "streamsFound",
-                0);
-
-        out.put(
-                "elapsedMs",
-                Duration.between(
-                                started,
-                                Instant.now())
-                        .toMillis());
-
-        out.put(
-                "diagnostics",
-                diagnostics);
-
-        out.put(
-                "warnings",
-                warnings);
-
-        out.put(
-                "streams",
-                List.of());
-
+        out.put("ok", false);
+        out.put("isolatedTestOnly", true);
+        out.put("requestedMaxStreams", max);
+        out.put("streamsFound", 0);
+        out.put("elapsedMs", Duration.between(started, Instant.now()).toMillis());
+        out.put("diagnostics", diagnostics);
+        out.put("warnings", warnings);
+        out.put("streams", List.of());
         return out;
       }
 
       if (!gridRefreshed) {
-
-        warnings.add(
-                "Worldwide was selected, but the "
+        warnings.add("Worldwide was selected, but the "
                         + "video grid did not refresh within "
                         + "the expected time. Refusing to mix "
                         + "old My-region cards with Worldwide data.");
 
-        out.put(
-                "ok",
-                false);
-
-        out.put(
-                "isolatedTestOnly",
-                true);
-
-        out.put(
-                "requestedMaxStreams",
-                max);
-
-        out.put(
-                "streamsFound",
-                0);
-
-        out.put(
-                "elapsedMs",
-                Duration.between(
-                                started,
-                                Instant.now())
-                        .toMillis());
-
-        out.put(
-                "diagnostics",
-                diagnostics);
-
-        out.put(
-                "warnings",
-                warnings);
-
-        out.put(
-                "streams",
-                List.of());
-
+        out.put("ok", false);
+        out.put("isolatedTestOnly", true);
+        out.put("requestedMaxStreams", max);
+        out.put("streamsFound", 0);
+        out.put("elapsedMs", Duration.between(started, Instant.now()).toMillis());
+        out.put("diagnostics", diagnostics);
+        out.put("warnings", warnings);
+        out.put("streams", List.of());
         return out;
       }
 
@@ -348,107 +213,56 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
        * ---------------------------------------------------------
        */
 
-      Map<String, LiveStream> streamById =
-              new LinkedHashMap<>();
-
+      Map<String, LiveStream> streamById = new LinkedHashMap<>();
       int unchangedRounds = 0;
       int previousCount = 0;
 
-      while (
-              streamById.size() < max
-                      && scrolls < 12
-                      && unchangedRounds < 3) {
-
-        List<WebElement> anchors =
-                findVideoAnchors(driver);
-
-        cardsSeen =
-                Math.max(
-                        cardsSeen,
-                        anchors.size());
-
+      while (streamById.size() < max && scrolls < 12 && unchangedRounds < 3) {
+        List<WebElement> anchors = findVideoAnchors(driver);
+        cardsSeen = Math.max(cardsSeen, anchors.size());
         for (WebElement anchor : anchors) {
-
-          String href =
-                  safeAttribute(
-                          anchor,
-                          "href");
-
-          Matcher matcher =
-                  VIDEO_ID.matcher(href);
-
-          if (!matcher.find()) {
-            continue;
-          }
-
-          String id =
-                  matcher.group(1);
+          String href = safeAttribute(anchor, "href");
+          Matcher matcher = VIDEO_ID.matcher(href);
+          if (!matcher.find()) continue;
+          String id = matcher.group(1);
 
           /*
            * Deduplicate by video ID.
            */
-          if (streamById.containsKey(id)) {
-            continue;
-          }
-
-          String title =
-                  firstNonBlank(
-                          safeAttribute(
-                                  anchor,
-                                  "title"),
-                          safeAttribute(
-                                  anchor,
-                                  "aria-label"),
+          if (streamById.containsKey(id)) continue;
+          String title = firstNonBlank(safeAttribute(anchor, "title"),
+                          safeAttribute(anchor, "aria-label"),
                           safeText(anchor));
 
-          WebElement card =
-                  nearestCard(
-                          anchor,
-                          driver);
+          WebElement card = nearestCard(anchor, driver);
+          String cardText = safeText(card);
 
-          String cardText =
-                  safeText(card);
+          String channel = findChannelName(card);
 
-          String channel =
-                  findChannelName(card);
+          long viewers = parseViewers(cardText);
 
-          long viewers =
-                  parseViewers(cardText);
-
-          LiveStream stream =
-                  new LiveStream(
+          LiveStream stream = new LiveStream(
                           "YouTube",
                           id,
                           "",
                           channel,
                           title,
-                          Math.max(
-                                  0,
-                                  viewers),
-                          "https://www.youtube.com/watch?v="
-                                  + id);
+                          Math.max(0, viewers),
+                          "https://www.youtube.com/watch?v=" + id);
 
-          streamById.put(
-                  id,
-                  stream);
-
+          streamById.put(id, stream);
           if (streamById.size() >= max) {
             break;
           }
         }
 
-        if (streamById.size()
-                == previousCount) {
-
+        if (streamById.size() == previousCount) {
           unchangedRounds++;
-
         } else {
-
           unchangedRounds = 0;
         }
 
-        previousCount =
-                streamById.size();
+        previousCount = streamById.size();
 
         if (streamById.size() >= max) {
           break;
@@ -467,13 +281,10 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
                         """);
 
         Thread.sleep(850L);
-
         scrolls++;
       }
 
-      streams =
-              new ArrayList<>(
-                      streamById.values());
+      streams = new ArrayList<>(streamById.values());
 
       /*
        * ---------------------------------------------------------
@@ -484,22 +295,15 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
        * the final ranking.
        * ---------------------------------------------------------
        */
-      streams.sort(
-              Comparator
-                      .comparingLong(
-                              LiveStream::viewers)
-                      .reversed());
+      streams.sort(Comparator.comparingLong(
+              LiveStream::viewers)
+              .reversed());
 
       /*
        * Enforce max after sorting as well.
        */
       if (streams.size() > max) {
-
-        streams =
-                new ArrayList<>(
-                        streams.subList(
-                                0,
-                                max));
+        streams = new ArrayList<>(streams.subList(0, max));
       }
 
       /*
@@ -508,50 +312,30 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
        * Optional YouTube Data API validation.
        * ---------------------------------------------------------
        */
-      boolean apiValidationAttempted =
-              validateWithApi
-                      && apiKey != null
-                      && !apiKey.isBlank();
+      boolean apiValidationAttempted = validateWithApi && apiKey != null && !apiKey.isBlank();
 
-      if (validateWithApi
-              && !apiValidationAttempted) {
-
-        warnings.add(
-                "API validation requested but "
-                        + "tracker.youtube.api-key is empty.");
+      if (validateWithApi && !apiValidationAttempted) {
+        warnings.add("API validation requested but tracker.youtube.api-key is empty.");
       }
 
       if (apiValidationAttempted) {
-
-        streams =
-                validateStreams(
-                        streams,
-                        warnings);
+        streams = validateStreams(streams, warnings);
 
         /*
          * Re-sort after API validation because API viewer
          * counts may differ from the initial DOM values.
          */
-        streams.sort(
-                Comparator
-                        .comparingLong(
-                                LiveStream::viewers)
-                        .reversed());
+        streams.sort(Comparator.comparingLong(
+                LiveStream::viewers)
+                .reversed());
 
         if (streams.size() > max) {
-
-          streams =
-                  new ArrayList<>(
-                          streams.subList(
-                                  0,
-                                  max));
+          streams = new ArrayList<>(streams.subList(0, max));
         }
       }
 
       if (streams.isEmpty()) {
-
-        warnings.add(
-                "No Worldwide video cards were parsed. "
+        warnings.add("No Worldwide video cards were parsed. "
                         + "Check the configured page URL, "
                         + "consent screen, or YouTube DOM changes.");
       }
@@ -562,145 +346,49 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
        * ---------------------------------------------------------
        */
 
-      diagnostics.put(
-              "pageUrl",
-              pageUrl);
-
-      diagnostics.put(
-              "worldwideSelectorClicked",
-              worldwideClicked);
-
-      diagnostics.put(
-              "cardsSeen",
-              cardsSeen);
-
-      diagnostics.put(
-              "uniqueVideoIds",
-              streams.size());
-
-      diagnostics.put(
-              "scrollsPerformed",
-              scrolls);
-
-      diagnostics.put(
-              "unchangedRounds",
-              unchangedRounds);
-
-      diagnostics.put(
-              "apiValidationAttempted",
-              apiValidationAttempted);
-
-      diagnostics.put(
-              "apiValidationNote",
+      diagnostics.put("pageUrl", pageUrl);
+      diagnostics.put("worldwideSelectorClicked", worldwideClicked);
+      diagnostics.put("cardsSeen", cardsSeen);
+      diagnostics.put("uniqueVideoIds", streams.size());
+      diagnostics.put("scrollsPerformed", scrolls);
+      diagnostics.put("unchangedRounds", unchangedRounds);
+      diagnostics.put("apiValidationAttempted", apiValidationAttempted);
+      diagnostics.put("apiValidationNote",
               apiValidationAttempted
                       ? "Only videos returned by the Data API as currently live are retained; viewer counts may be refreshed from API."
                       : "No Data API validation performed; Selenium card data is discovery-only.");
-
-      out.put(
-              "ok",
-              true);
-
-      out.put(
-              "isolatedTestOnly",
-              true);
-
-      out.put(
-              "requestedMaxStreams",
-              max);
-
-      out.put(
-              "streamsFound",
-              streams.size());
-
-      out.put(
-              "elapsedMs",
-              Duration.between(
-                              started,
-                              Instant.now())
-                      .toMillis());
-
-      out.put(
-              "diagnostics",
-              diagnostics);
-
-      out.put(
-              "warnings",
-              warnings);
-
-      out.put(
-              "streams",
-              streams);
-
+      out.put("ok", true);
+      out.put("isolatedTestOnly", true);
+      out.put("requestedMaxStreams", max);
+      out.put("streamsFound", streams.size());
+      out.put("elapsedMs", Duration.between(started, Instant.now()).toMillis());
+      out.put("diagnostics", diagnostics);
+      out.put("warnings", warnings);
+      out.put("streams", streams);
     } catch (Exception e) {
+      log.warn("Selenium YouTube discovery failed: {}", e.toString());
 
-      log.warn(
-              "Selenium YouTube discovery failed: {}",
-              e.toString());
-
-      out.put(
-              "ok",
-              false);
-
-      out.put(
-              "isolatedTestOnly",
-              true);
-
-      out.put(
-              "requestedMaxStreams",
-              max);
-
-      out.put(
-              "streamsFound",
-              streams.size());
-
-      out.put(
-              "elapsedMs",
-              Duration.between(
-                              started,
-                              Instant.now())
-                      .toMillis());
-
-      diagnostics.put(
-              "pageUrl",
-              pageUrl);
-
-      diagnostics.put(
-              "cardsSeen",
-              cardsSeen);
-
-      diagnostics.put(
-              "scrollsPerformed",
-              scrolls);
-
-      diagnostics.put(
-              "worldwideSelectorClicked",
-              worldwideClicked);
-
-      out.put(
-              "diagnostics",
-              diagnostics);
-
-      out.put(
-              "error",
-              e.getMessage() == null
+      out.put("ok", false);
+      out.put("isolatedTestOnly", true);
+      out.put("requestedMaxStreams", max);
+      out.put("streamsFound", streams.size());
+      out.put("elapsedMs", Duration.between(started, Instant.now()).toMillis());
+      diagnostics.put("pageUrl", pageUrl);
+      diagnostics.put("cardsSeen", cardsSeen);
+      diagnostics.put("scrollsPerformed", scrolls);
+      diagnostics.put("worldwideSelectorClicked", worldwideClicked);
+      out.put("diagnostics", diagnostics);
+      out.put("error", e.getMessage() == null
                       ? e.getClass().getSimpleName()
                       : e.getMessage());
-
-      out.put(
-              "warnings",
-              warnings);
-
-      out.put(
-              "streams",
-              streams);
-
+      out.put("warnings", warnings);
+      out.put("streams", streams);
     } finally {
 
       if (driver != null) {
-
         try {
-          driver.quit();
-        } catch (Exception ignored) {
+            driver.quit();
+          } catch (Exception ignored) {
         }
       }
 
@@ -739,7 +427,6 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
         }
       }
     }
-
     return out;
   }
 
@@ -747,46 +434,29 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
    * Convenience method for SeleniumTrackerService.
    */
   public List<LiveStream> fetch() {
-    return fetch(100);
+    return fetch(100, "worldwide", defaultPageUrl);
   }
 
   /** Fetch up to the requested number of Worldwide live videos for the aggregate tracker. */
-  public List<LiveStream> fetch(int maxStreams) {
+  public List<LiveStream> fetch(int maxStreams, String region, String pageUrl) {
 
-    Map<String, Object> result =
-            discover(
-                    maxStreams,
-                    defaultPageUrl,
-                    true);
-
-    Object value =
-            result.get("streams");
+    Map<String, Object> result = discover(maxStreams, pageUrl, region, true);
+    Object value = result.get("streams");
 
     if (!(value instanceof List<?> list)) {
-
-      throw new IllegalStateException(
-              "YouTube Selenium discovery returned "
-                      + "no stream list");
+      throw new IllegalStateException("YouTube Selenium discovery returned no stream list");
     }
 
-    List<LiveStream> streams =
-            new ArrayList<>();
-
+    List<LiveStream> streams = new ArrayList<>();
     for (Object item : list) {
-
       if (item instanceof LiveStream stream) {
         streams.add(stream);
       }
     }
 
-    if (!Boolean.TRUE.equals(
-            result.get("ok"))) {
-
-      throw new IllegalStateException(
-              String.valueOf(
-                      result.getOrDefault(
-                              "error",
-                              "unknown YouTube Selenium error")));
+    if (!Boolean.TRUE.equals(result.get("ok"))) {
+      throw new IllegalStateException(String.valueOf(
+              result.getOrDefault("error", "unknown YouTube Selenium error")));
     }
 
     return List.copyOf(streams);
@@ -798,29 +468,15 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
    * This is used ONLY for detecting the transition from
    * My region -> Worldwide.
    */
-  private Set<String> captureVisibleVideoIds(
-          WebDriver driver) {
-
-    Set<String> ids =
-            new LinkedHashSet<>();
-
-    for (WebElement anchor :
-            findVideoAnchors(driver)) {
-
-      String href =
-              safeAttribute(
-                      anchor,
-                      "href");
-
-      Matcher matcher =
-              VIDEO_ID.matcher(href);
-
+  private Set<String> captureVisibleVideoIds(WebDriver driver) {
+    Set<String> ids = new LinkedHashSet<>();
+    for (WebElement anchor : findVideoAnchors(driver)) {
+      String href = safeAttribute(anchor, "href");
+      Matcher matcher = VIDEO_ID.matcher(href);
       if (matcher.find()) {
-        ids.add(
-                matcher.group(1));
+        ids.add(matcher.group(1));
       }
     }
-
     return ids;
   }
 
@@ -830,11 +486,7 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
    *
    * Merely seeing "Worldwide" in the dropdown is NOT enough.
    */
-  private boolean waitForWorldwideGridRefresh(
-          WebDriver driver,
-          Set<String> initialIds,
-          int seconds) {
-
+  private boolean waitForWorldwideGridRefresh(WebDriver driver, Set<String> initialIds, int seconds) {
     long deadline =
             System.nanoTime()
                     + Duration
@@ -960,121 +612,58 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
                             + "ytd-rich-grid-media a#video-title"));
   }
 
-  private List<LiveStream> validateStreams(
-          List<LiveStream> found,
-          List<String> warnings) {
+  private List<LiveStream> validateStreams(List<LiveStream> found, List<String> warnings) {
 
-    List<LiveStream> validated =
-            new ArrayList<>();
+    List<LiveStream> validated = new ArrayList<>();
 
-    for (
-            int start = 0;
-            start < found.size();
-            start += 50) {
-
+    for (int start = 0; start < found.size(); start += 50) {
       List<LiveStream> batch =
-              found.subList(
-                      start,
-                      Math.min(
-                              start + 50,
-                              found.size()));
+              found.subList(start, Math.min(start + 50, found.size()));
 
-      String ids =
-              batch.stream()
-                      .map(LiveStream::id)
-                      .reduce(
-                              (a, b) ->
-                                      a + "," + b)
-                      .orElse("");
-
+      String ids = batch.stream().map(LiveStream::id).reduce((a, b) -> a + "," + b).orElse("");
       try {
-
-        String body =
-                http.get()
-                        .uri(
-                                uriBuilder ->
-                                        uriBuilder
-                                                .scheme("https")
+        String body = http.get().uri(uriBuilder ->
+                                        uriBuilder.scheme("https")
                                                 .host("www.googleapis.com")
-                                                .path(
-                                                        "/youtube/v3/videos")
-                                                .queryParam(
-                                                        "part",
-                                                        "snippet,liveStreamingDetails,status")
-                                                .queryParam(
-                                                        "id",
-                                                        ids)
-                                                .queryParam(
-                                                        "key",
-                                                        apiKey)
+                                                .path("/youtube/v3/videos")
+                                                .queryParam("part", "snippet,liveStreamingDetails,status")
+                                                .queryParam("id", ids)
+                                                .queryParam("key", apiKey)
                                                 .build())
                         .retrieve()
-                        .bodyToMono(
-                                String.class)
-                        .block(
-                                Duration.ofSeconds(20));
+                        .bodyToMono(String.class)
+                        .block(Duration.ofSeconds(20));
 
-        JsonNode root =
-                mapper.readTree(
-                        body == null
-                                ? "{}"
-                                : body);
-
-        Map<String, JsonNode> apiById =
-                new LinkedHashMap<>();
-
+        JsonNode root = mapper.readTree(body == null ? "{}" : body);
+        Map<String, JsonNode> apiById = new LinkedHashMap<>();
         root.path("items")
-                .forEach(
-                        item ->
-                                apiById.put(
-                                        item.path("id")
-                                                .asText(),
-                                        item));
+                .forEach(item -> apiById.put(item.path("id").asText(), item));
 
-        for (LiveStream stream :
-                batch) {
-
-          JsonNode item =
-                  apiById.get(
-                          stream.id());
-
+        for (LiveStream stream : batch) {
+          JsonNode item = apiById.get(stream.id());
           if (item == null) {
             continue;
           }
 
-          String broadcastState =
-                  item.path("snippet")
-                          .path("liveBroadcastContent")
-                          .asText("");
-
-          if (!"live".equalsIgnoreCase(
-                  broadcastState)) {
-
+          String broadcastState = item.path("snippet").path("liveBroadcastContent").asText("");
+          if (!"live".equalsIgnoreCase(broadcastState)) {
             continue;
           }
 
           long viewers =
-                  item.path(
-                                  "liveStreamingDetails")
-                          .path(
-                                  "concurrentViewers")
-                          .asLong(
-                                  stream.viewers());
+                  item.path("liveStreamingDetails")
+                          .path("concurrentViewers")
+                          .asLong(stream.viewers());
 
-          String title =
-                  item.path("snippet")
+          String title = item.path("snippet")
                           .path("title")
-                          .asText(
-                                  stream.title());
+                          .asText(stream.title());
 
-          String channel =
-                  item.path("snippet")
+          String channel = item.path("snippet")
                           .path("channelTitle")
-                          .asText(
-                                  stream.channelTitle());
+                          .asText(stream.channelTitle());
 
-          String channelId =
-                  item.path("snippet")
+          String channelId = item.path("snippet")
                           .path("channelId")
                           .asText("");
 
@@ -1090,11 +679,7 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
         }
 
       } catch (Exception e) {
-
-        warnings.add(
-                "YouTube Data API validation failed "
-                        + "for a batch: "
-                        + e.getMessage());
+        warnings.add("YouTube Data API validation failed for a batch: " + e.getMessage());
 
         /*
          * Fail open for discovery-only operation.
@@ -1113,18 +698,13 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
           WebDriver driver,
           Map<String, Object> diag) {
 
-    diag.put(
-            "selectorStrategy",
+    diag.put("selectorStrategy",
             "click #label-icon dropdown arrow, then click the visible Worldwide menu item by YouTube DOM XPath");
 
     try {
+      WebElement label = findRegionDropdownLabel(driver);
 
-      WebElement label =
-              findRegionDropdownLabel(
-                      driver);
-
-      diag.put(
-              "initialRegionLabel",
+      diag.put("initialRegionLabel",
               label == null
                       ? findRegionLabel(driver)
                       : safeText(label));

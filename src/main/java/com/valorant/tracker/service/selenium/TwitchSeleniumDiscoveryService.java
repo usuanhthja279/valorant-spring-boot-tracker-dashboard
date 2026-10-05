@@ -31,18 +31,16 @@ public class TwitchSeleniumDiscoveryService {
           LoggerFactory.getLogger(TwitchSeleniumDiscoveryService.class);
 
   private static final Pattern VIEWERS =
-          Pattern.compile(
-                  "([\\d,.]+)\\s*([KMB]?)\\s+viewers?",
-                  Pattern.CASE_INSENSITIVE);
+          Pattern.compile("([\\d,.]+)\\s*([KMB]?)\\s+viewers?", Pattern.CASE_INSENSITIVE);
 
   private final String defaultPageUrl;
   private final boolean headless;
 
   public TwitchSeleniumDiscoveryService(
-          @Value(
-                  "${tracker.twitch.selenium.live-url:https://www.twitch.tv/directory/category/valorant?sort=VIEWER_COUNT}")
+          @Value("${tracker.twitch.selenium.live-url:https://www.twitch.tv/directory/category/valorant?sort=VIEWER_COUNT}")
           String defaultPageUrl,
-          @Value("${tracker.twitch.selenium.headless:true}") boolean headless) {
+          @Value("${tracker.twitch.selenium.headless:true}")
+          boolean headless) {
 
     this.defaultPageUrl = defaultPageUrl;
     this.headless = headless;
@@ -53,7 +51,7 @@ public class TwitchSeleniumDiscoveryService {
    */
   public List<LiveStream> fetch() {
 
-    Map<String, Object> result = discover(100, defaultPageUrl);
+    Map<String, Object> result = discover(100, defaultPageUrl, false);
 
     Object value = result.get("streams");
 
@@ -83,7 +81,7 @@ public class TwitchSeleniumDiscoveryService {
 
   public Map<String, Object> discover(
           int requestedMax,
-          String requestedUrl) {
+          String requestedUrl, boolean validateWithApi) {
 
     int max = Math.max(1, Math.min(requestedMax, 100));
 

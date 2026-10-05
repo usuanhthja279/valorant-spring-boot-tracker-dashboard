@@ -44,11 +44,8 @@ public class KickService {
   private Instant tokenExpiresAt = Instant.EPOCH;
 
   public KickService(WebClient.Builder builder, DataSourceCatalog sources) {
-
     this.client = builder.clone().build();
-
     this.authClient = builder.clone().build();
-
     this.authUrl = sources.kickAuthUrl();
     this.streamsUrl = sources.kickStreamsUrl();
     this.mapper = new ObjectMapper();
@@ -62,31 +59,21 @@ public class KickService {
 
   private synchronized String accessToken() throws Exception {
 
-    if (token != null
-        && !token.isBlank()
-        && tokenExpiresAt.isAfter(Instant.now().plusSeconds(60))) {
-
+    if (token != null && !token.isBlank() && tokenExpiresAt.isAfter(Instant.now().plusSeconds(60))) {
       return token;
     }
 
     if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
-
       throw new IllegalStateException("Kick Client ID or Client Secret is not configured");
     }
 
     logger.info("Authenticating with Kick...");
-
     MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-
     form.add("client_id", clientId);
-
     form.add("client_secret", clientSecret);
-
     form.add("grant_type", "client_credentials");
 
-    String response =
-        authClient
-            .post()
+    String response = authClient.post()
             .uri(authUrl)
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .body(BodyInserters.fromFormData(form))
@@ -95,28 +82,21 @@ public class KickService {
             .block();
 
     if (response == null || response.isBlank()) {
-
       throw new RuntimeException("Kick OAuth response was empty");
     }
 
     JsonNode tokenResponse = mapper.readTree(response);
-
     if (tokenResponse.has("error")) {
-
       logger.error("Kick OAuth error:\n{}", tokenResponse.toPrettyString());
-
       throw new RuntimeException("Kick OAuth authentication failed");
     }
 
     token = tokenResponse.path("access_token").asText("");
-
     if (token.isBlank()) {
-
       throw new IllegalStateException("Kick OAuth response did not contain an access token");
     }
 
     long expiresIn = tokenResponse.path("expires_in").asLong(3600);
-
     tokenExpiresAt = Instant.now().plusSeconds(expiresIn);
 
     logger.info("Kick authentication successful");
@@ -130,23 +110,16 @@ public class KickService {
    * ================================================================
    */
 
-  public List<LiveStream> fetch() {
+  public List<LiveStream> fetch(String gameCategory) {
 
     if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
-
-      logger.warn(
-          "Kick collection disabled because "
-              + "Kick Client ID / Client Secret is not configured.");
-
+      logger.warn("Kick collection disabled because Kick Client ID / Client Secret is not configured.");
       return List.of();
     }
 
     try {
-
       String accessToken = accessToken();
-
       List<LiveStream> streams = new ArrayList<>();
-
       String cursor = null;
 
       /*
@@ -158,19 +131,11 @@ public class KickService {
        */
 
       for (int page = 1; page <= MAX_PAGES; page++) {
-
         final String currentCursor = cursor;
 
-        logger.info(
-            "Kick livestreams: requesting page {}/{}{}",
-            page,
-            MAX_PAGES,
-            currentCursor == null ? "" : " with cursor");
+        logger.info("Kick livestreams: requesting page {}/{}{}", page, MAX_PAGES, currentCursor == null ? "" : " with cursor");
 
-        String response =
-            client
-                .get()
-                .uri(
+        String response = client.get().uri(
                     uriBuilder -> {
                       var query =
                           org.springframework.web.util.UriComponentsBuilder
@@ -182,10 +147,8 @@ public class KickService {
                        */
 
                       if (currentCursor != null && !currentCursor.isBlank()) {
-
                         query.queryParam("cursor", currentCursor);
                       }
-
                       return query.build().toUri();
                     })
                 .header("Accept", "application/json")
@@ -195,15 +158,10 @@ public class KickService {
                 .block();
 
         if (response == null || response.isBlank()) {
-
           throw new RuntimeException("Kick livestream API returned an empty response");
         }
 
-        logger.info(
-            "Kick raw livestream API response page {}: {}",
-            page,
-            response.substring(0, Math.min(2000, response.length())));
-
+        logger.info("Kick raw livestream API response page {}: {}", page, response.substring(0, Math.min(2000, response.length())));
         JsonNode root = mapper.readTree(response);
 
         /*
@@ -213,9 +171,7 @@ public class KickService {
          */
 
         if (root.has("error")) {
-
           logger.error("Kick API error:\n{}", root.toPrettyString());
-
           throw new RuntimeException("Kick livestream API returned an error");
         }
 
@@ -226,17 +182,13 @@ public class KickService {
          */
 
         JsonNode data = root.path("data");
-
         if (!data.isArray()) {
-
-          logger.warn(
-              "Kick API returned no data array. " + "Raw response:\n{}", root.toPrettyString());
-
+          logger.warn("Kick API returned no data array. " + "Raw response:\n{}", root.toPrettyString());
           break;
         }
 
         int pageStreams = 0;
-        int valorantStreams = 0;
+        int gameStreams = 0;
 
         for (JsonNode stream : data) {
 
@@ -259,15 +211,13 @@ public class KickService {
            * name or slug, so check both.
            */
 
-          boolean isValorant =
-              categoryName.equalsIgnoreCase("VALORANT")
-                  || categorySlug.equalsIgnoreCase("valorant");
+          boolean isRequiredGame = categoryName.equalsIgnoreCase(gameCategory) || categorySlug.equalsIgnoreCase(gameCategory);
 
-          if (!isValorant) {
+          if (!isRequiredGame) {
             continue;
           }
 
-          valorantStreams++;
+          gameStreams++;
 
           /*
            * ------------------------------------------------
@@ -276,13 +226,10 @@ public class KickService {
            */
 
           JsonNode channel = stream.path("channel");
-
           JsonNode broadcaster = stream.path("broadcaster_user");
-
           String channelName = channel.path("slug").asText("");
 
           if (channelName.isBlank()) {
-
             channelName = broadcaster.path("username").asText("");
           }
 
@@ -295,7 +242,6 @@ public class KickService {
           JsonNode viewerNode = stream.path("viewer_count");
 
           if (viewerNode.isMissingNode() || viewerNode.isNull()) {
-
             continue;
           }
 
@@ -310,7 +256,6 @@ public class KickService {
           String streamId = stream.path("id").asText("");
 
           if (streamId.isBlank()) {
-
             streamId = channelName;
           }
 
@@ -345,7 +290,7 @@ public class KickService {
             page,
             MAX_PAGES,
             pageStreams,
-            valorantStreams,
+            gameStreams,
             streams.size());
 
         /*
@@ -362,7 +307,6 @@ public class KickService {
         cursor = root.path("pagination").path("cursor").asText(null);
 
         if (cursor == null || cursor.isBlank()) {
-
           cursor = root.path("meta").path("pagination").path("cursor").asText(null);
         }
 
@@ -371,9 +315,7 @@ public class KickService {
          */
 
         if (cursor == null || cursor.isBlank()) {
-
           logger.info("Kick pagination finished after page {}", page);
-
           break;
         }
       }
@@ -404,13 +346,9 @@ public class KickService {
        */
 
       logger.info("================================================");
-
       logger.info("Kick collection complete");
-
       logger.info("VALORANT streams collected: {}", streams.size());
-
       logger.info("Total VALORANT viewers: {}", totalViewers);
-
       logger.info("================================================");
 
       /*
@@ -422,9 +360,7 @@ public class KickService {
       logger.info("Kick Top 20:");
 
       for (int i = 0; i < Math.min(TOP_DISPLAY_COUNT, streams.size()); i++) {
-
         LiveStream stream = streams.get(i);
-
         logger.info(
             "{}. {} -> {} viewers | {}",
             i + 1,
@@ -440,11 +376,8 @@ public class KickService {
        */
 
       return streams;
-
     } catch (Exception e) {
-
       logger.error("Kick service failed", e);
-
       throw new IllegalStateException("Failed to fetch Kick live streams", e);
     }
   }

@@ -51,7 +51,7 @@ public class KickSeleniumDiscoveryService {
         this.headless = headless;
     }
 
-    public Map<String, Object> discover(int requestedMax, String requestedUrl) {
+    public Map<String, Object> discover(int requestedMax, String requestedUrl, boolean validateWithApi) {
         int max = Math.max(1, Math.min(requestedMax, 100));
         String pageUrl = requestedUrl == null || requestedUrl.isBlank() ? defaultPageUrl : requestedUrl.trim();
         Map<String, Object> out = new LinkedHashMap<>();
@@ -867,7 +867,7 @@ public class KickSeleniumDiscoveryService {
 
     /** Fetch up to the requested number of Kick live streams for the aggregate tracker. */
     public List<LiveStream> fetch(int maxStreams) {
-        Map<String, Object> result = discover(maxStreams, defaultPageUrl);
+        Map<String, Object> result = discover(maxStreams, defaultPageUrl, true);
         Object value = result.get("streams");
         if (!(value instanceof List<?> list)) {
             throw new IllegalStateException("Kick Selenium discovery returned no stream list");

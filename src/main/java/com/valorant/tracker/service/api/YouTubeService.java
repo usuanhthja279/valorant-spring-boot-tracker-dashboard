@@ -51,18 +51,12 @@ public class YouTubeService {
     this.mapper = new ObjectMapper();
   }
 
-  public synchronized List<LiveStream> fetch() {
-
+  public synchronized List<LiveStream> fetch(String gameCategory) {
     if (apiKey == null || apiKey.isBlank()) {
-
       if (!missingApiKeyWarningLogged) {
-
-        logger.warn(
-            "YouTube collection is disabled because " + "YOUTUBE_API_KEY is not configured.");
-
+        logger.warn("YouTube collection is disabled because " + "YOUTUBE_API_KEY is not configured.");
         missingApiKeyWarningLogged = true;
       }
-
       return List.of();
     }
 
@@ -72,10 +66,10 @@ public class YouTubeService {
     }
 
     lastFetchAttemptMs = now;
-    return fetchFromApi();
+    return fetchFromApi(gameCategory);
   }
 
-  private List<LiveStream> fetchFromApi() {
+  private List<LiveStream> fetchFromApi(String gameCategory) {
     try {
 
       /*
@@ -91,33 +85,20 @@ public class YouTubeService {
        */
 
       Set<String> uniqueVideoIds = new LinkedHashSet<>();
-
       String pageToken = null;
-
       int pageNumber = 0;
-
       int totalResults = 0;
-
       do {
-
         pageNumber++;
-
         final String currentPageToken = pageToken;
-
-        logger.info(
-            "YouTube search: requesting page {}{}",
-            pageNumber,
-            currentPageToken == null ? "" : " with pageToken");
+        logger.info("YouTube search: requesting page {}{}", pageNumber, currentPageToken == null ? "" : " with pageToken");
 
         String searchResponse =
-            client
-                .get()
-                .uri(
-                    uriBuilder -> {
+            client.get().uri(uriBuilder -> {
                       var query =
                           UriComponentsBuilder.fromUriString(apiSearchUrl)
                               .queryParam("part", "snippet")
-                              .queryParam("q", "VALORANT")
+                              .queryParam("q", gameCategory)
                               .queryParam("type", "video")
                               .queryParam("eventType", "live")
                               .queryParam("order", "viewCount")
@@ -137,7 +118,6 @@ public class YouTubeService {
                 .block();
 
         if (searchResponse == null || searchResponse.isBlank()) {
-
           throw new RuntimeException("YouTube search returned an empty response");
         }
 
@@ -150,10 +130,7 @@ public class YouTubeService {
          */
 
         if (searchResult.has("error")) {
-
-          logger.error(
-              "YouTube search API error:\n{}", searchResult.path("error").toPrettyString());
-
+          logger.error("YouTube search API error:\n{}", searchResult.path("error").toPrettyString());
           throw new RuntimeException("YouTube search API returned an error");
         }
 
@@ -164,9 +141,7 @@ public class YouTubeService {
          */
 
         if (pageNumber == 1) {
-
           totalResults = searchResult.path("pageInfo").path("totalResults").asInt(0);
-
           logger.info("YouTube reports {} live search results", totalResults);
         }
 
@@ -177,24 +152,15 @@ public class YouTubeService {
          */
 
         int pageItems = 0;
-
         for (JsonNode item : searchResult.path("items")) {
-
           String videoId = item.path("id").path("videoId").asText(null);
-
           if (videoId != null && !videoId.isBlank()) {
-
             uniqueVideoIds.add(videoId);
-
             pageItems++;
           }
         }
 
-        logger.info(
-            "YouTube page {} returned {} video IDs. " + "Unique IDs collected so far: {}",
-            pageNumber,
-            pageItems,
-            uniqueVideoIds.size());
+        logger.info("YouTube page {} returned {} video IDs. " + "Unique IDs collected so far: {}", pageNumber, pageItems, uniqueVideoIds.size());
 
         /*
          * ========================================================
@@ -203,7 +169,6 @@ public class YouTubeService {
          */
 
         pageToken = searchResult.path("nextPageToken").asText(null);
-
       } while (pageToken != null && !pageToken.isBlank());
 
       /*
@@ -216,17 +181,10 @@ public class YouTubeService {
 
       List<String> videoIds = new ArrayList<>(uniqueVideoIds);
 
-      logger.info(
-          "YouTube pagination complete. "
-              + "API reported totalResults={}, "
-              + "unique video IDs collected={}",
-          totalResults,
-          videoIds.size());
+      logger.info("YouTube pagination complete. API reported totalResults={}, unique video IDs collected={}", totalResults, videoIds.size());
 
       if (videoIds.isEmpty()) {
-
         logger.info("No live VALORANT videos found.");
-
         cachedStreams = List.of();
         return List.of();
       }
@@ -258,24 +216,15 @@ public class YouTubeService {
       List<LiveStream> streams = new ArrayList<>();
 
       int totalVideoBatches = (int) Math.ceil(videoIds.size() / (double) VIDEO_BATCH_SIZE);
-
       for (int start = 0; start < videoIds.size(); start += VIDEO_BATCH_SIZE) {
-
         int end = Math.min(start + VIDEO_BATCH_SIZE, videoIds.size());
-
         int batchNumber = (start / VIDEO_BATCH_SIZE) + 1;
-
         List<String> batch = videoIds.subList(start, end);
-
         String batchIds = String.join(",", batch);
-
-        logger.info(
-            "YouTube /videos batch {}/{}: {} IDs", batchNumber, totalVideoBatches, batch.size());
+        logger.info("YouTube /videos batch {}/{}: {} IDs", batchNumber, totalVideoBatches, batch.size());
 
         String videosResponse =
-            client
-                .get()
-                .uri(
+            client.get().uri(
                     uriBuilder ->
                         UriComponentsBuilder.fromUriString(apiVideosUrl)
                             .queryParam("part", "snippet," + "liveStreamingDetails," + "status")
@@ -288,9 +237,7 @@ public class YouTubeService {
                 .block();
 
         if (videosResponse == null || videosResponse.isBlank()) {
-
           logger.warn("YouTube /videos returned empty " + "response for batch {}", batchNumber);
-
           continue;
         }
 
@@ -303,10 +250,7 @@ public class YouTubeService {
          */
 
         if (videosResult.has("error")) {
-
-          logger.error(
-              "YouTube /videos API error:\n{}", videosResult.path("error").toPrettyString());
-
+          logger.error("YouTube /videos API error:\n{}", videosResult.path("error").toPrettyString());
           continue;
         }
 
@@ -319,9 +263,7 @@ public class YouTubeService {
          */
 
         for (JsonNode video : videosResult.path("items")) {
-
           JsonNode liveDetails = video.path("liveStreamingDetails");
-
           String concurrentViewers = liveDetails.path("concurrentViewers").asText(null);
 
           /*
@@ -330,23 +272,17 @@ public class YouTubeService {
            */
 
           if (concurrentViewers == null || concurrentViewers.isBlank()) {
-
             continue;
           }
 
           long viewers;
-
           try {
-
             viewers = Long.parseLong(concurrentViewers);
-
           } catch (NumberFormatException e) {
-
             logger.warn(
                 "Invalid YouTube viewer count '{}' " + "for video {}",
                 concurrentViewers,
                 video.path("id").asText());
-
             continue;
           }
 
@@ -359,19 +295,13 @@ public class YouTubeService {
            */
 
           String videoId = video.path("id").asText("");
-
           JsonNode snippet = video.path("snippet");
-
           String channelId = snippet.path("channelId").asText("");
-
           String channelTitle = snippet.path("channelTitle").asText("");
-
           String title = snippet.path("title").asText("");
-
           String url = sources.youtubeWatchPageUrl(videoId);
 
-          streams.add(
-              new LiveStream("YouTube", videoId, channelId, channelTitle, title, viewers, url));
+          streams.add(new LiveStream("YouTube", videoId, channelId, channelTitle, title, viewers, url));
         }
       }
 
@@ -404,17 +334,11 @@ public class YouTubeService {
       long totalViewers = streams.stream().mapToLong(LiveStream::viewers).sum();
 
       logger.info("================================================");
-
       logger.info("YouTube collection complete");
-
       logger.info("Search totalResults: {}", totalResults);
-
       logger.info("Unique video IDs collected: {}", videoIds.size());
-
       logger.info("Streams with concurrent viewer count: {}", streams.size());
-
       logger.info("Total concurrent viewers: {}", totalViewers);
-
       logger.info("================================================");
 
       /*
@@ -428,24 +352,16 @@ public class YouTubeService {
 
       streams.stream()
           .limit(20)
-          .forEach(
-              stream ->
-                  logger.info(
-                      "{} -> {} viewers | {}",
-                      stream.channelTitle(),
-                      stream.viewers(),
-                      stream.title()));
+          .forEach(stream ->
+                  logger.info("{} -> {} viewers | {}", stream.channelTitle(), stream.viewers(), stream.title()));
 
       cachedStreams = List.copyOf(streams);
       return cachedStreams;
 
     } catch (Exception e) {
 
-      logger.warn(
-          "YouTube refresh failed; retrying after {} ms and reusing {} cached streams",
-          refreshIntervalMs,
-          cachedStreams.size(),
-          e);
+      logger.warn("YouTube refresh failed; retrying after {} ms and reusing {} cached streams", refreshIntervalMs,
+          cachedStreams.size(), e);
       return cachedStreams;
     }
   }

@@ -23,24 +23,19 @@ public class KickScraperService {
 
   private final WebClient client;
   private final ObjectMapper mapper;
-  private final String categoryUrl;
 
-  public KickScraperService(
-      WebClient.Builder webClientBuilder, ObjectMapper mapper, DataSourceCatalog sources) {
-    this.client =
-        webClientBuilder
+  public KickScraperService(WebClient.Builder webClientBuilder, ObjectMapper mapper, DataSourceCatalog sources) {
+    this.client = webClientBuilder
             .clone()
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(MAX_PAGE_SIZE_BYTES))
             .build();
     this.mapper = mapper;
-    this.categoryUrl = sources.kickScraperUrl();
   }
 
-  public List<LiveStream> fetch() {
-    String html =
-        client
-            .get()
-            .uri(categoryUrl)
+  public List<LiveStream> fetch(String pageUrl, boolean validateWithApi) {
+
+    String html = client.get()
+            .uri(pageUrl)
             .header("User-Agent", "Mozilla/5.0")
             .header("Accept", "text/html,application/xhtml+xml")
             .retrieve()
@@ -67,8 +62,7 @@ public class KickScraperService {
           continue;
         }
 
-        results.add(
-            new LiveStream(
+        results.add(new LiveStream(
                 "Kick",
                 streamId,
                 channel.path("id").asText(""),
@@ -80,14 +74,12 @@ public class KickScraperService {
 
       results.sort(Comparator.comparingLong(LiveStream::viewers).reversed());
       logger.info("Kick category scraper returned {} VALORANT streams", results.size());
-      logger.info(
-          "Total viewers across collected streams: {}",
-          results.stream().mapToLong(LiveStream::viewers).sum());
+      logger.info("Total viewers across collected streams: {}", results.stream().mapToLong(LiveStream::viewers).sum());
+
       logger.info("Kick Top 20:");
       for (int index = 0; index < Math.min(TOP_DISPLAY_COUNT, results.size()); index++) {
         LiveStream stream = results.get(index);
-        logger.info(
-            "{}. {} -> {} viewers | {}",
+        logger.info("{}. {} -> {} viewers | {}",
             index + 1,
             stream.channelTitle(),
             stream.viewers(),

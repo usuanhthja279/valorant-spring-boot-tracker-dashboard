@@ -73,7 +73,7 @@ public class YouTubeScraperService {
     this.searchUrls = List.copyOf(sources.youtubeScraperSearchUrls());
   }
 
-  public synchronized List<LiveStream> fetch() {
+  public synchronized List<LiveStream> fetch(String pageUrl, boolean validateWithApi) {
     Instant now = Instant.now();
     if (lastFetchTime != null && now.isBefore(lastFetchTime.plus(FETCH_CACHE_TTL))) {
       logger.debug("Returning cached YouTube scrape results");

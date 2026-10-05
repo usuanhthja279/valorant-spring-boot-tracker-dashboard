@@ -1,5 +1,6 @@
 package com.valorant.tracker.service.tracker;
 
+import com.valorant.tracker.constant.URLData;
 import com.valorant.tracker.model.LiveStream;
 import com.valorant.tracker.model.Snapshot;
 import com.valorant.tracker.model.StreamSample;
@@ -77,38 +78,23 @@ public class TrackerService {
       initialDelayString = "${tracker.initial-delay-ms:0}",
       fixedRateString = "${tracker.interval-ms:120000}")
   public void scheduled() {
-    collect();
+    collectValorantData();
   }
 
-  public synchronized void collect() {
+  public synchronized void collectValorantData() {
     OffsetDateTime timestamp = OffsetDateTime.now(ZoneId.of("Asia/Kolkata"));
 
-    CompletableFuture<ProviderResult> youtubeFetch =
-        CompletableFuture.supplyAsync(
-            () -> fetchProvider(
-                "YouTube",
-                () -> yt.fetch(100),
-                timestamp),
-            providerExecutor);
-    CompletableFuture<ProviderResult> twitchFetch =
-        CompletableFuture.supplyAsync(
-            () -> fetchProvider(
-                "Twitch",
-                tw::fetch,
-                timestamp),
-            providerExecutor);
-    CompletableFuture<ProviderResult> kickFetch =
-        CompletableFuture.supplyAsync(
-            () -> fetchProvider(
-                "Kick",
-                kick::fetch,
-                timestamp),
-            providerExecutor);
+    CompletableFuture<ProviderResult> youtubeValorantFetch = CompletableFuture.supplyAsync(
+            () -> fetchProvider("YouTube", () -> yt.fetch(100, "worldwide", URLData.YoutubeURL.VALORANT_TOPIC.getUrl()), timestamp), providerExecutor);
+    CompletableFuture<ProviderResult> twitchValorantFetch = CompletableFuture.supplyAsync(
+            () -> fetchProvider("Twitch", () -> tw.fetch(URLData.TwitchURL.VALORANT.name()), timestamp), providerExecutor);
+    CompletableFuture<ProviderResult> kickValorantFetch = CompletableFuture.supplyAsync(
+            () -> fetchProvider("Kick", () -> kick.fetch(URLData.KickURL.VALORANT.getUrl(), true), timestamp), providerExecutor);
 
-    CompletableFuture.allOf(youtubeFetch, twitchFetch, kickFetch).join();
-    ProviderResult youtube = youtubeFetch.join();
-    ProviderResult twitch = twitchFetch.join();
-    ProviderResult kickResult = kickFetch.join();
+    CompletableFuture.allOf(youtubeValorantFetch, twitchValorantFetch, kickValorantFetch).join();
+    ProviderResult youtube = youtubeValorantFetch.join();
+    ProviderResult twitch = twitchValorantFetch.join();
+    ProviderResult kickResult = kickValorantFetch.join();
 
     List<LiveStream> streams = new ArrayList<>();
     streams.addAll(youtube.streams());
