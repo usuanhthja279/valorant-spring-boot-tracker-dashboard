@@ -782,7 +782,7 @@ function renderStreams(){
       <tr>
         <td class="rank">${start+i+1}</td>
         <td><a class="platform-link" href="${escapeHtml(r.url||'#')}" target="_blank" rel="noopener noreferrer" title="Open ${escapeHtml(r.platform||'')} stream"><span class="platform">${escapeHtml(r.platform||'')}</span></a></td>
-        <td class="channel"><a href="/channel.html?name=${encodeURIComponent(r.channel||'')}" title="View channel data and trends">${escapeHtml(r.channel||'Unknown')}</a></td>
+        <td class="channel"><a href="/channel.html?name=${encodeURIComponent(r.channel||'')}&platform=${encodeURIComponent(r.platform||'')}&game=${encodeURIComponent(selectedGame)}" title="View channel data and trends">${escapeHtml(r.channel||'Unknown')}</a></td>
         <td class="title" title="${escapeHtml(r.title||'')}">${escapeHtml(r.title||'')}</td>
         <td class="viewers">${fmt(r.viewers)}</td>
       </tr>`).join('');
@@ -901,7 +901,7 @@ function selectChannelSuggestion(index){
   document.getElementById('channelLookup').value=item.channel;
   document.getElementById('channelSuggestions').classList.remove('visible');
   document.getElementById('channelLookup').setAttribute('aria-expanded','false');
-  location.href='/channel.html?name='+encodeURIComponent(item.channel)+'&platform='+encodeURIComponent(item.platform);
+  location.href='/channel.html?name='+encodeURIComponent(item.channel)+'&platform='+encodeURIComponent(item.platform)+'&game='+encodeURIComponent(selectedGame);
 }
 
 function setActiveSuggestion(nextIndex){
@@ -927,9 +927,9 @@ async function openChannelStats(event){
   }
   const normalized=query.toLocaleLowerCase();
   const exact=allChannelNames.filter(item=>item.channel.toLocaleLowerCase()===normalized);
-  if(exact.length>=1){location.href='/channel.html?name='+encodeURIComponent(exact[0].channel)+'&platform='+encodeURIComponent(exact[0].platform);return;}
+  if(exact.length>=1){location.href='/channel.html?name='+encodeURIComponent(exact[0].channel)+'&platform='+encodeURIComponent(exact[0].platform)+'&game='+encodeURIComponent(selectedGame);return;}
   const matches=allChannelNames.filter(item=>item.channel.toLocaleLowerCase().includes(normalized));
-  if(matches.length===1){location.href='/channel.html?name='+encodeURIComponent(matches[0].channel)+'&platform='+encodeURIComponent(matches[0].platform);return;}
+  if(matches.length===1){location.href='/channel.html?name='+encodeURIComponent(matches[0].channel)+'&platform='+encodeURIComponent(matches[0].platform)+'&game='+encodeURIComponent(selectedGame);return;}
   renderChannelSuggestions(query);
   if(matches.length===0) document.getElementById('status').textContent='No matching channel in recorded history';
 }

@@ -1,6 +1,7 @@
 .gradle/
 build/
 .idea/
+data_db/
 data/
 tracker.log
 tracker-startup.log

@@ -343,7 +343,7 @@
     <h1 id="channelName">Channel Analytics</h1>
     <div id="channelPresence" class="presence-pill unknown" aria-live="polite">Checking status…</div>
     <div class="sub">
-      Cross-platform VALORANT viewer history
+      Cross-platform <span id="gameHistoryLabel">VALORANT</span> viewer history
     </div>
   </div>
 
@@ -604,6 +604,8 @@
 
   const channelName = params.get('name') || '';
   const channelPlatform = params.get('platform') || '';
+  const channelGame = params.get('game') || 'VALORANT';
+  document.getElementById('gameHistoryLabel').textContent = channelGame;
 
   let channelPresenceByPlatform = new Map();
   let liveChannelMatches = [];
@@ -618,7 +620,7 @@
     const badge=document.getElementById('channelPresence');
     if(!badge || !channelName) return;
     try{
-      const query=new URLSearchParams({name:channelName});
+      const query=new URLSearchParams({name:channelName, game:channelGame});
       if(channelPlatform)query.set('platform',channelPlatform);
       const response=await fetch('/api/channels/status?'+query.toString(),{cache:'no-store'});
       if(!response.ok) throw new Error('status request failed');
@@ -783,7 +785,7 @@
   async function getHistory(from, to){
     if(!channelName) return [];
     // Current cards only need recent samples; historical charts request the selected window separately.
-    const params = new URLSearchParams({name:channelName, limit: from && to ? '20000' : '100'});
+    const params = new URLSearchParams({name:channelName, game:channelGame, limit: from && to ? '20000' : '100'});
     if(channelPlatform) params.set('platform', channelPlatform);
     if(from && to){
       params.set('from', from.toISOString());
@@ -803,7 +805,7 @@
     if(!selectedBounds){status.textContent='Select a valid time window to compare.';body.innerHTML='<tr><td colspan="4">No comparison window selected.</td></tr>';return;}
     status.textContent='Loading previous '+comparisonPeriod+' comparison…';
     body.innerHTML='<tr><td colspan="4">Loading…</td></tr>';
-    const query=new URLSearchParams({name:channelName,from:selectedBounds.from.toISOString(),to:selectedBounds.to.toISOString(),period:comparisonPeriod});
+    const query=new URLSearchParams({name:channelName,game:channelGame,from:selectedBounds.from.toISOString(),to:selectedBounds.to.toISOString(),period:comparisonPeriod});
     if(channelPlatform)query.set('platform',channelPlatform);
     try{
       const response=await fetch('/api/channels/comparison?'+query.toString(),{cache:'no-store'});
