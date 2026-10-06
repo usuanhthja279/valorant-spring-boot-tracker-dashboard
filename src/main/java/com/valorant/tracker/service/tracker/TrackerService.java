@@ -1,11 +1,12 @@
 package com.valorant.tracker.service.tracker;
 
-import com.valorant.tracker.constant.URLData;
 import com.valorant.tracker.constant.GameConfig;
 import com.valorant.tracker.model.LiveStream;
 import com.valorant.tracker.model.Snapshot;
 import com.valorant.tracker.model.StreamSample;
 import com.valorant.tracker.service.api.TwitchService;
+import com.valorant.tracker.service.misc.DynamicGameScheduler;
+import com.valorant.tracker.service.scraper.YouTubeScraperService;
 import com.valorant.tracker.service.selenium.YouTubeSeleniumWorldwideDiscoveryService;
 import com.valorant.tracker.service.scraper.KickScraperService;
 import jakarta.persistence.EntityManager;
@@ -25,8 +26,8 @@ import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -36,8 +37,10 @@ public class TrackerService {
   private static final Logger logger = LoggerFactory.getLogger(TrackerService.class);
 
   final YouTubeSeleniumWorldwideDiscoveryService yt;
+  final YouTubeScraperService yt1;
   final TwitchService tw;
   final KickScraperService kick;
+  final DynamicGameScheduler dynamicGameScheduler;
   final EntityManager em;
   final TransactionTemplate transactions;
 
@@ -53,16 +56,25 @@ public class TrackerService {
   private final ExecutorService providerExecutor = Executors.newFixedThreadPool(6);
   private final ExecutorService gameExecutor = Executors.newFixedThreadPool(2);
 
+  /*
+   * Selenium launches a full ChromeDriver instance and is much heavier than
+   * the API/scraper providers. Keep Selenium concurrency bounded separately
+   * so adding games does not create too many Chrome instances at once.
+   */
+  private final ExecutorService seleniumExecutor = Executors.newFixedThreadPool(2);
+
   public TrackerService(
-          YouTubeSeleniumWorldwideDiscoveryService y,
+          YouTubeSeleniumWorldwideDiscoveryService y, YouTubeScraperService yt12,
           TwitchService t,
-          KickScraperService k,
+          KickScraperService k, DynamicGameScheduler dynamicGameScheduler,
           EntityManager e,
           PlatformTransactionManager transactionManager) {
     yt = y;
+    yt1 = yt12;
     tw = t;
     kick = k;
-    em = e;
+      this.dynamicGameScheduler = dynamicGameScheduler;
+      em = e;
     transactions = new TransactionTemplate(transactionManager);
     providerHealth.put("YouTube", ProviderHealth.initial());
     providerHealth.put("Twitch", ProviderHealth.initial());
@@ -88,10 +100,28 @@ public class TrackerService {
   }
 
   public void collectAllGames() {
+
     List<CompletableFuture<Void>> gameFutures = new ArrayList<>();
 
     for (GameConfig game : GameConfig.values()) {
+      String gameId = game.getId();
+
+      /*
+       * Only esports games are dynamically controlled.
+       * GTA V / Minecraft and other non-esports games
+       * continue to run normally.
+       */
+      if (dynamicGameScheduler.isManagedGame(gameId) && !dynamicGameScheduler.isGameActive(gameId)) {
+        logger.info("{} | esports schedule inactive - skipping collection", gameId);
+        continue;
+      }
+
       gameFutures.add(CompletableFuture.runAsync(() -> collectGameData(game), gameExecutor));
+    }
+
+    if (gameFutures.isEmpty()) {
+      logger.info("No games scheduled for collection");
+      return;
     }
 
     CompletableFuture.allOf(gameFutures.toArray(new CompletableFuture[0])).join();
@@ -101,11 +131,18 @@ public class TrackerService {
     OffsetDateTime timestamp = OffsetDateTime.now(ZoneId.of("Asia/Kolkata"));
 
     CompletableFuture<ProviderResult> youtubeFetch = CompletableFuture.supplyAsync(
-        () -> fetchProvider("YouTube", () -> yt.fetch(100, "worldwide", game.getYoutubeUrl()), timestamp), providerExecutor);
+            () -> fetchProvider("YouTube", () -> {
+              logger.debug("{} YouTube Selenium slot acquired", game.getId());
+              try {
+                return  yt.fetch(50, "worldwide", game.getYoutubeTopicUrl());
+              } finally {
+                logger.debug("{} YouTube Selenium slot released", game.getId());
+              }
+            }, timestamp), seleniumExecutor);
     CompletableFuture<ProviderResult> twitchFetch = CompletableFuture.supplyAsync(
-        () -> fetchProvider("Twitch", () -> tw.fetch(game.getId()), timestamp), providerExecutor);
+            () -> fetchProvider("Twitch", () -> tw.fetch(game.getId()), timestamp), providerExecutor);
     CompletableFuture<ProviderResult> kickFetch = CompletableFuture.supplyAsync(
-        () -> fetchProvider("Kick", () -> kick.fetch(game.getKickUrl(), true), timestamp), providerExecutor);
+            () -> fetchProvider("Kick", () -> kick.fetch(game.getKickUrl(), true), timestamp), providerExecutor);
 
     CompletableFuture.allOf(youtubeFetch, twitchFetch, kickFetch).join();
     ProviderResult youtube = youtubeFetch.join();
@@ -123,22 +160,23 @@ public class TrackerService {
 
     transactions.executeWithoutResult(status -> {
       em.persist(new Snapshot(timestamp, game.getId(), youtubeViewers, twitchViewers, kickViewers,
-          count(streams, "YouTube"), count(streams, "Twitch"), count(streams, "Kick"),
-          youtube.success(), twitch.success(), kickResult.success()));
+              count(streams, "YouTube"), count(streams, "Twitch"), count(streams, "Kick"),
+              youtube.success(), twitch.success(), kickResult.success()));
       streams.forEach(stream -> em.persist(new StreamSample(timestamp, game.getId(), stream)));
     });
 
     lastRun = timestamp;
     logger.info("{} | {} | YouTube {} ({}) | Twitch {} ({}) | Kick {} ({}) | TOTAL {}",
-        timestamp, game.getId(), youtubeViewers, healthLabel(youtube.success()), twitchViewers,
-        healthLabel(twitch.success()), kickViewers, healthLabel(kickResult.success()),
-        youtubeViewers + twitchViewers + kickViewers);
+            timestamp, game.getId(), youtubeViewers, healthLabel(youtube.success()), twitchViewers,
+            healthLabel(twitch.success()), kickViewers, healthLabel(kickResult.success()),
+            youtubeViewers + twitchViewers + kickViewers);
   }
 
   @PreDestroy
   void shutdownExecutors() {
     providerExecutor.shutdown();
     gameExecutor.shutdown();
+    seleniumExecutor.shutdown();
   }
 
   private ProviderResult fetchProvider(
@@ -179,17 +217,17 @@ public class TrackerService {
       retryAfter.remove(platform);
       outageStarted.remove(platform);
       providerHealth.put(
-          platform,
-          new ProviderHealth("UP", timestamp, null, unique.size(), viewers));
+              platform,
+              new ProviderHealth("UP", timestamp, null, unique.size(), viewers));
       logger.info("{} collection succeeded: {} unique streams, {} viewers",
-          platform, unique.size(), viewers);
+              platform, unique.size(), viewers);
       return new ProviderResult(unique, true);
     } catch (Exception e) {
       if (isRateLimited(e)) {
         OffsetDateTime until = timestamp.plus(RATE_LIMIT_COOLDOWN);
         retryAfter.put(platform, until);
         logger.warn("{} returned HTTP 429; pausing requests for 3 minutes until {}",
-            platform, until);
+                platform, until);
       }
       return staleOrEmpty(platform, timestamp, conciseError(e));
     }
@@ -205,13 +243,13 @@ public class TrackerService {
     if (cached != null && (withinGrace || inRateLimitCooldown)) {
       retained = cached.streams();
       logger.warn("{} fetch unavailable; retaining {} streams / {} viewers from {} for consistency",
-          platform, retained.size(), retained.stream().mapToLong(LiveStream::viewers).sum(), cached.retrievedAt());
+              platform, retained.size(), retained.stream().mapToLong(LiveStream::viewers).sum(), cached.retrievedAt());
     } else {
       logger.warn("{} fetch unavailable and cached data is older than 3 minutes; using zero streams", platform);
     }
     long viewers = retained.stream().mapToLong(LiveStream::viewers).sum();
     providerHealth.put(platform, new ProviderHealth(
-        "DOWN", previous.lastSuccessAt(), error, retained.size(), viewers));
+            "DOWN", previous.lastSuccessAt(), error, retained.size(), viewers));
     return new ProviderResult(retained, false);
   }
 
@@ -219,7 +257,7 @@ public class TrackerService {
     Throwable current = exception;
     while (current != null) {
       if (current instanceof WebClientResponseException response
-          && response.getStatusCode().value() == 429) {
+              && response.getStatusCode().value() == 429) {
         return true;
       }
       String message = current.getMessage();
@@ -237,15 +275,15 @@ public class TrackerService {
     Map<String, LiveStream> unique = new LinkedHashMap<>();
     for (LiveStream stream : streams) {
       if (stream == null || stream.platform() == null
-          || !platform.equalsIgnoreCase(stream.platform())) {
+              || !platform.equalsIgnoreCase(stream.platform())) {
         continue;
       }
       String id = stream.id() == null ? "" : stream.id().trim();
       String channelId = stream.channelId() == null ? "" : stream.channelId().trim();
       String channelName = stream.channelTitle() == null ? "" : stream.channelTitle().trim();
       String identity = !id.isBlank() ? "id:" + id
-          : !channelId.isBlank() ? "channel:" + channelId
-          : "name:" + channelName.toLowerCase(java.util.Locale.ROOT);
+              : !channelId.isBlank() ? "channel:" + channelId
+              : "name:" + channelName.toLowerCase(java.util.Locale.ROOT);
       if (identity.equals("name:")) {
         logger.warn("Skipping {} stream with no usable identity", platform);
         continue;
@@ -272,15 +310,15 @@ public class TrackerService {
 
   long sum(List<LiveStream> streams, String platform) {
     return streams.stream()
-        .filter(stream -> platform.equalsIgnoreCase(stream.platform()))
-        .mapToLong(LiveStream::viewers)
-        .sum();
+            .filter(stream -> platform.equalsIgnoreCase(stream.platform()))
+            .mapToLong(LiveStream::viewers)
+            .sum();
   }
 
   int count(List<LiveStream> streams, String platform) {
     return (int) streams.stream()
-        .filter(stream -> platform.equalsIgnoreCase(stream.platform()))
-        .count();
+            .filter(stream -> platform.equalsIgnoreCase(stream.platform()))
+            .count();
   }
 
   public OffsetDateTime getLastRun() {
@@ -296,11 +334,11 @@ public class TrackerService {
   }
 
   public record ProviderHealth(
-      String status,
-      OffsetDateTime lastSuccessAt,
-      String lastError,
-      int streamCount,
-      long viewerCount) {
+          String status,
+          OffsetDateTime lastSuccessAt,
+          String lastError,
+          int streamCount,
+          long viewerCount) {
     static ProviderHealth initial() {
       return new ProviderHealth("UNKNOWN", null, null, 0, 0);
     }
