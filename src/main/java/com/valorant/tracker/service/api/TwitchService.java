@@ -15,6 +15,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class TwitchService {
@@ -44,7 +46,7 @@ public class TwitchService {
  private String clientSecret;
 
  private String accessToken;
- private String gameId;
+ private final Map<String, String> gameIds = new ConcurrentHashMap<>();
 
  public TwitchService(WebClient.Builder webClientBuilder, DataSourceCatalog sources) {
   this.client = webClientBuilder.clone().build();
@@ -62,7 +64,7 @@ public class TwitchService {
 
  private synchronized void authenticate(String gameCategory) throws Exception {
 
-  if (accessToken != null && !accessToken.isBlank() && gameId != null && !gameId.isBlank()) {
+  if (accessToken != null && !accessToken.isBlank() && gameIds.containsKey(gameCategory)) {
    return;
   }
 
@@ -135,12 +137,13 @@ public class TwitchService {
    throw new RuntimeException("Failed to retrieve Twitch VALORANT game ID");
   }
 
-  gameId = gameJson.path("data").path(0).path("id").asText(null);
+  String gameId = gameJson.path("data").path(0).path("id").asText(null);
   if (gameId == null || gameId.isBlank()) {
    throw new RuntimeException("Twitch VALORANT game ID was not found");
   }
 
-  logger.info("Twitch VALORANT game ID = {}", gameId);
+  gameIds.put(gameCategory, gameId);
+  logger.info("Twitch game ID for {} = {}", gameCategory, gameId);
  }
 
  /*
@@ -157,7 +160,7 @@ public class TwitchService {
 
   try {
    authenticate(gameCategory);
-
+   String gameId = gameIds.get(gameCategory);
    List<LiveStream> streams = new ArrayList<>();
    String cursor = null;
 

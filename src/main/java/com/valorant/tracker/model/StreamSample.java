@@ -21,6 +21,7 @@ import java.time.OffsetDateTime;
 public class StreamSample {
   @Id @GeneratedValue(strategy = GenerationType.IDENTITY) Long id;
   OffsetDateTime timestamp;
+  String game;
   String platform, streamId, channelId, channel;
   @Column(length = 1000) String title;
   long viewers;
@@ -29,7 +30,12 @@ public class StreamSample {
   protected StreamSample() {}
 
   public StreamSample(OffsetDateTime timestamp, LiveStream stream) {
+    this(timestamp, "VALORANT", stream);
+  }
+
+  public StreamSample(OffsetDateTime timestamp, String game, LiveStream stream) {
     this.timestamp = timestamp;
+    this.game = game;
     this.platform = stream.platform();
     this.streamId = stream.id();
     this.channelId = stream.channelId();
@@ -41,6 +47,7 @@ public class StreamSample {
 
   public Long getId() { return id; }
   public OffsetDateTime getTimestamp() { return timestamp; }
+  public String getGame() { return game; }
   public String getPlatform() { return platform; }
   public String getStreamId() { return streamId; }
   public String getChannelId() { return channelId; }

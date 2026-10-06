@@ -1,6 +1,7 @@
 package com.valorant.tracker.service.tracker;
 
 import com.valorant.tracker.constant.URLData;
+import com.valorant.tracker.constant.GameConfig;
 import com.valorant.tracker.model.LiveStream;
 import com.valorant.tracker.model.Snapshot;
 import com.valorant.tracker.model.StreamSample;
@@ -49,14 +50,15 @@ public class TrackerService {
   private final Map<String, OffsetDateTime> outageStarted = new ConcurrentHashMap<>();
   private static final Duration STALE_DATA_GRACE = Duration.ofMinutes(3);
   private static final Duration RATE_LIMIT_COOLDOWN = Duration.ofMinutes(3);
-  private final ExecutorService providerExecutor = Executors.newFixedThreadPool(3);
+  private final ExecutorService providerExecutor = Executors.newFixedThreadPool(6);
+  private final ExecutorService gameExecutor = Executors.newFixedThreadPool(2);
 
   public TrackerService(
-      YouTubeSeleniumWorldwideDiscoveryService y,
-      TwitchService t,
-      KickScraperService k,
-      EntityManager e,
-      PlatformTransactionManager transactionManager) {
+          YouTubeSeleniumWorldwideDiscoveryService y,
+          TwitchService t,
+          KickScraperService k,
+          EntityManager e,
+          PlatformTransactionManager transactionManager) {
     yt = y;
     tw = t;
     kick = k;
@@ -75,26 +77,40 @@ public class TrackerService {
    * after a collection finishes and would produce a different cadence.
    */
   @Scheduled(
-      initialDelayString = "${tracker.initial-delay-ms:0}",
-      fixedRateString = "${tracker.interval-ms:120000}")
+          initialDelayString = "${tracker.initial-delay-ms:0}",
+          fixedRateString = "${tracker.interval-ms:120000}")
   public void scheduled() {
-    collectValorantData();
+    collectAllGames();
   }
 
   public synchronized void collectValorantData() {
+    collectGameData(GameConfig.VALORANT);
+  }
+
+  public void collectAllGames() {
+    List<CompletableFuture<Void>> gameFutures = new ArrayList<>();
+
+    for (GameConfig game : GameConfig.values()) {
+      gameFutures.add(CompletableFuture.runAsync(() -> collectGameData(game), gameExecutor));
+    }
+
+    CompletableFuture.allOf(gameFutures.toArray(new CompletableFuture[0])).join();
+  }
+
+  private void collectGameData(GameConfig game) {
     OffsetDateTime timestamp = OffsetDateTime.now(ZoneId.of("Asia/Kolkata"));
 
-    CompletableFuture<ProviderResult> youtubeValorantFetch = CompletableFuture.supplyAsync(
-            () -> fetchProvider("YouTube", () -> yt.fetch(100, "worldwide", URLData.YoutubeURL.VALORANT_TOPIC.getUrl()), timestamp), providerExecutor);
-    CompletableFuture<ProviderResult> twitchValorantFetch = CompletableFuture.supplyAsync(
-            () -> fetchProvider("Twitch", () -> tw.fetch(URLData.TwitchURL.VALORANT.name()), timestamp), providerExecutor);
-    CompletableFuture<ProviderResult> kickValorantFetch = CompletableFuture.supplyAsync(
-            () -> fetchProvider("Kick", () -> kick.fetch(URLData.KickURL.VALORANT.getUrl(), true), timestamp), providerExecutor);
+    CompletableFuture<ProviderResult> youtubeFetch = CompletableFuture.supplyAsync(
+        () -> fetchProvider("YouTube", () -> yt.fetch(100, "worldwide", game.getYoutubeUrl()), timestamp), providerExecutor);
+    CompletableFuture<ProviderResult> twitchFetch = CompletableFuture.supplyAsync(
+        () -> fetchProvider("Twitch", () -> tw.fetch(game.getId()), timestamp), providerExecutor);
+    CompletableFuture<ProviderResult> kickFetch = CompletableFuture.supplyAsync(
+        () -> fetchProvider("Kick", () -> kick.fetch(game.getKickUrl(), true), timestamp), providerExecutor);
 
-    CompletableFuture.allOf(youtubeValorantFetch, twitchValorantFetch, kickValorantFetch).join();
-    ProviderResult youtube = youtubeValorantFetch.join();
-    ProviderResult twitch = twitchValorantFetch.join();
-    ProviderResult kickResult = kickValorantFetch.join();
+    CompletableFuture.allOf(youtubeFetch, twitchFetch, kickFetch).join();
+    ProviderResult youtube = youtubeFetch.join();
+    ProviderResult twitch = twitchFetch.join();
+    ProviderResult kickResult = kickFetch.join();
 
     List<LiveStream> streams = new ArrayList<>();
     streams.addAll(youtube.streams());
@@ -105,47 +121,32 @@ public class TrackerService {
     long twitchViewers = sum(streams, "Twitch");
     long kickViewers = sum(streams, "Kick");
 
-    transactions.executeWithoutResult(
-        status -> {
-          em.persist(
-              new Snapshot(
-                  timestamp,
-                  youtubeViewers,
-                  twitchViewers,
-                  kickViewers,
-                  count(streams, "YouTube"),
-                  count(streams, "Twitch"),
-                  count(streams, "Kick"),
-                  youtube.success(),
-                  twitch.success(),
-                  kickResult.success()));
-          streams.forEach(stream -> em.persist(new StreamSample(timestamp, stream)));
-        });
+    transactions.executeWithoutResult(status -> {
+      em.persist(new Snapshot(timestamp, game.getId(), youtubeViewers, twitchViewers, kickViewers,
+          count(streams, "YouTube"), count(streams, "Twitch"), count(streams, "Kick"),
+          youtube.success(), twitch.success(), kickResult.success()));
+      streams.forEach(stream -> em.persist(new StreamSample(timestamp, game.getId(), stream)));
+    });
 
     lastRun = timestamp;
-    logger.info(
-        "{} | YouTube {} ({}) | Twitch {} ({}) | Kick {} ({}) | TOTAL {}",
-        timestamp,
-        youtubeViewers,
-        healthLabel(youtube.success()),
-        twitchViewers,
-        healthLabel(twitch.success()),
-        kickViewers,
-        healthLabel(kickResult.success()),
+    logger.info("{} | {} | YouTube {} ({}) | Twitch {} ({}) | Kick {} ({}) | TOTAL {}",
+        timestamp, game.getId(), youtubeViewers, healthLabel(youtube.success()), twitchViewers,
+        healthLabel(twitch.success()), kickViewers, healthLabel(kickResult.success()),
         youtubeViewers + twitchViewers + kickViewers);
   }
 
   @PreDestroy
-  void shutdownProviderExecutor() {
+  void shutdownExecutors() {
     providerExecutor.shutdown();
+    gameExecutor.shutdown();
   }
 
   private ProviderResult fetchProvider(
-      String platform, Supplier<List<LiveStream>> fetch, OffsetDateTime timestamp) {
+          String platform, Supplier<List<LiveStream>> fetch, OffsetDateTime timestamp) {
     OffsetDateTime blockedUntil = retryAfter.get(platform);
     if (blockedUntil != null && timestamp.isBefore(blockedUntil)) {
       logger.warn("{} fetch is rate-limited; skipping request until {} and preserving last successful data",
-          platform, blockedUntil);
+              platform, blockedUntil);
       return staleOrEmpty(platform, timestamp, "429 cooldown until " + blockedUntil);
     }
     if (blockedUntil != null) {
