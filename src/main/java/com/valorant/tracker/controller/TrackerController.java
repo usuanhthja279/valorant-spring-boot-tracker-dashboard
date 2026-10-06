@@ -3,6 +3,7 @@ package com.valorant.tracker.controller;
 import com.valorant.tracker.constant.GameConfig;
 import com.valorant.tracker.model.Snapshot;
 import com.valorant.tracker.model.StreamSample;
+import com.valorant.tracker.service.misc.DynamicGameScheduler;
 import com.valorant.tracker.service.tracker.TrackerService;
 import jakarta.persistence.EntityManager;
 import org.springframework.http.HttpStatus;
@@ -19,10 +20,12 @@ public class TrackerController {
 
   private final EntityManager entityManager;
   private final TrackerService tracker;
+  private final DynamicGameScheduler dynamicGameScheduler;
 
-  public TrackerController(EntityManager entityManager, TrackerService tracker) {
+  public TrackerController(EntityManager entityManager, TrackerService tracker, DynamicGameScheduler dynamicGameScheduler) {
     this.entityManager = entityManager;
     this.tracker = tracker;
+    this.dynamicGameScheduler = dynamicGameScheduler;
   }
 
   @GetMapping("/status")
@@ -88,51 +91,85 @@ public class TrackerController {
 
       String gameId = game.getId();
 
-      List<StreamSample> samples = entityManager.createQuery(
-                      "select s from StreamSample s " +
-                              "where lower(s.game) = lower(:game) " +
-                              "and s.timestamp = (" +
-                              "select max(x.timestamp) from StreamSample x " +
-                              "where lower(x.game) = lower(:game)" +
-                              ")",
-                      StreamSample.class)
-              .setParameter("game", gameId)
-              .getResultList();
+      boolean scheduledActive = isSchedulerActive(game);
 
       Map<String, Object> item = new LinkedHashMap<>();
 
       item.put("id", gameId);
       item.put("name", game.getDisplayName());
 
-      item.put("liveStreams", (long) samples.size());
+      // True = Liquipedia says an S/A-tier esports match
+      // is currently active.
+      item.put("active", scheduledActive);
 
-      item.put("totalViewers",
-              samples.stream()
-                      .mapToLong(StreamSample::getViewers)
-                      .sum());
+      // Never expose stale database data as CURRENT
+      // data when the esports game is not scheduled.
+      if (!scheduledActive) {
 
-      item.put("youtubeStreams",
-              samples.stream()
-                      .filter(s -> "YouTube".equalsIgnoreCase(s.getPlatform()))
-                      .count());
+        item.put("liveStreams", 0L);
+        item.put("totalViewers", 0L);
+        item.put("youtubeStreams", 0L);
+        item.put("twitchStreams", 0L);
+        item.put("kickStreams", 0L);
 
-      item.put("twitchStreams",
-              samples.stream()
-                      .filter(s -> "Twitch".equalsIgnoreCase(s.getPlatform()))
-                      .count());
+      } else {
 
-      item.put("kickStreams",
-              samples.stream()
-                      .filter(s -> "Kick".equalsIgnoreCase(s.getPlatform()))
-                      .count());
+        List<StreamSample> samples = entityManager.createQuery(
+                        "select s from StreamSample s " +
+                                "where lower(s.game) = lower(:game) " +
+                                "and s.timestamp = (" +
+                                "select max(x.timestamp) from StreamSample x " +
+                                "where lower(x.game) = lower(:game)" +
+                                ")",
+                        StreamSample.class)
+                .setParameter("game", gameId)
+                .getResultList();
 
-      samples.stream()
-              .max(Comparator.comparingLong(StreamSample::getViewers))
-              .ifPresent(top -> {
-                item.put("topChannel", top.getChannel());
-                item.put("topViewers", top.getViewers());
-                item.put("topPlatform", top.getPlatform());
-              });
+        item.put("liveStreams", (long) samples.size());
+
+        item.put(
+                "totalViewers",
+                samples.stream()
+                        .mapToLong(StreamSample::getViewers)
+                        .sum()
+        );
+
+        item.put(
+                "youtubeStreams",
+                samples.stream()
+                        .filter(s ->
+                                "YouTube".equalsIgnoreCase(
+                                        s.getPlatform()))
+                        .count()
+        );
+
+        item.put(
+                "twitchStreams",
+                samples.stream()
+                        .filter(s ->
+                                "Twitch".equalsIgnoreCase(
+                                        s.getPlatform()))
+                        .count()
+        );
+
+        item.put(
+                "kickStreams",
+                samples.stream()
+                        .filter(s ->
+                                "Kick".equalsIgnoreCase(
+                                        s.getPlatform()))
+                        .count()
+        );
+
+        samples.stream()
+                .max(Comparator.comparingLong(
+                        StreamSample::getViewers))
+                .ifPresent(top -> {
+                  item.put("topChannel", top.getChannel());
+                  item.put("topViewers", top.getViewers());
+                  item.put("topPlatform", top.getPlatform());
+                });
+      }
 
       result.add(item);
     }
@@ -412,6 +449,50 @@ public class TrackerController {
       status.add(item);
     }
     return status;
+  }
+
+  /**
+   * Map the application's GameConfig value to the exact game name used by
+   * DynamicGameScheduler/Liquipedia.
+   *
+   * GameConfig may use short/internal IDs (for example CS2/LOL/DOTA2),
+   * while the scheduler stores display-style esports names.
+   */
+  private boolean isSchedulerActive(GameConfig game) {
+    String id = game.getId();
+    String displayName = game.getDisplayName();
+
+    // Prefer the display name because it matches the scheduler's managed names.
+    if (dynamicGameScheduler.isGameActive(displayName)) {
+      return true;
+    }
+
+    // Explicit aliases for internal GameConfig IDs.
+    return switch (id.trim().toUpperCase(Locale.ROOT)) {
+      case "CS2", "COUNTER-STRIKE", "COUNTER STRIKE" ->
+              dynamicGameScheduler.isGameActive("COUNTER-STRIKE 2");
+      case "LOL", "LEAGUE-OF-LEGENDS", "LEAGUE OF LEGENDS" ->
+              dynamicGameScheduler.isGameActive("LEAGUE OF LEGENDS");
+      case "DOTA2", "DOTA-2", "DOTA 2" ->
+              dynamicGameScheduler.isGameActive("DOTA 2");
+      case "R6", "RAINBOW-SIX", "RAINBOW SIX SIEGE" ->
+              dynamicGameScheduler.isGameActive("RAINBOW SIX SIEGE");
+      case "RL", "ROCKET-LEAGUE", "ROCKET LEAGUE" ->
+              dynamicGameScheduler.isGameActive("ROCKET LEAGUE");
+      case "APEX", "APEX-LEGENDS", "APEX LEGENDS" ->
+              dynamicGameScheduler.isGameActive("APEX LEGENDS");
+      case "OW2", "OVERWATCH-2", "OVERWATCH 2" ->
+              dynamicGameScheduler.isGameActive("OVERWATCH 2");
+      case "EAFC", "EA-SPORTS-FC", "EA SPORTS FC" ->
+              dynamicGameScheduler.isGameActive("EA SPORTS FC");
+      case "COD", "CALL-OF-DUTY", "CALL OF DUTY" ->
+              dynamicGameScheduler.isGameActive("CALL OF DUTY");
+      case "MLBB", "MOBILE-LEGENDS", "MOBILE LEGENDS" ->
+              dynamicGameScheduler.isGameActive("MOBILE LEGENDS");
+      case "FREE-FIRE", "FREE FIRE" ->
+              dynamicGameScheduler.isGameActive("FREE FIRE");
+      default -> false;
+    };
   }
 
   private String channelIdentity(String platform, String channelId, String channel) {

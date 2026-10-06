@@ -134,12 +134,12 @@ public class TwitchService {
   JsonNode gameJson = mapper.readTree(gameResponse);
   if (gameJson.has("error")) {
    logger.error("Twitch game API error:\n{}", gameJson.toPrettyString());
-   throw new RuntimeException("Failed to retrieve Twitch VALORANT game ID");
+   throw new RuntimeException("Failed to retrieve Twitch for game: " + gameCategory + " game ID");
   }
 
   String gameId = gameJson.path("data").path(0).path("id").asText(null);
   if (gameId == null || gameId.isBlank()) {
-   throw new RuntimeException("Twitch VALORANT game ID was not found");
+   throw new RuntimeException("Twitch " + gameCategory + " game ID was not found");
   }
 
   gameIds.put(gameCategory, gameId);

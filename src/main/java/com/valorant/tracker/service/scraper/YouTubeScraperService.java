@@ -85,7 +85,8 @@ public class YouTubeScraperService {
       List<LiveStream> individualVideos = new ArrayList<>();
       RuntimeException lastSearchError = null;
       int successfulSearches = 0;
-      for (String searchUrl : searchUrls) {
+      logger.info("Starting YouTube scrape for pageUrl={} with validateWithApi={}", pageUrl, validateWithApi);
+      for (String searchUrl : List.of(pageUrl)) {
         try {
           logger.info("YouTube streams: requesting live results from {}", searchUrl);
           String html =

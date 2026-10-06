@@ -17,6 +17,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.openqa.selenium.By;
+import org.openqa.selenium.chromium.ChromiumDriver;
+import org.openqa.selenium.logging.LogType;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -93,6 +95,10 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
       if (headless) {
         options.addArguments("--headless=new");
       }
+      // Capture Chrome network events so we can parse YouTube's internal
+      // /youtubei/v1/browse response directly after Worldwide is selected.
+      options.setCapability("goog:loggingPrefs", Map.of("performance", "ALL"));
+
       options.addArguments(
               "--disable-gpu",
               "--no-sandbox",
@@ -107,6 +113,7 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
                       + "Safari/537.36");
 
       driver = new org.openqa.selenium.chrome.ChromeDriver(options);
+      enableNetworkCapture(driver);
       driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(45));
       driver.get(pageUrl);
 
@@ -141,6 +148,9 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
        * ---------------------------------------------------------
        */
       Map<String, Object> worldwideDiagnostics = new LinkedHashMap<>();
+      // Clear pre-existing network events BEFORE the Worldwide click so the
+      // browse response triggered by that click is retained for capture.
+      drainPerformanceLogs(driver);
       worldwideClicked = clickWorldwideIfPresent(driver, worldwideDiagnostics);
       out.put("worldwideSelectionDiagnostics", worldwideDiagnostics);
 
@@ -157,14 +167,17 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
        * ---------------------------------------------------------
        */
 
-      boolean gridRefreshed = false;
+      boolean networkDataFound = false;
+      List<LiveStream> networkStreams = List.of();
 
       if (worldwideClicked) {
-        gridRefreshed = waitForWorldwideGridRefresh(driver, initialRegionVideoIds, 20);
-        diagnostics.put("worldwideGridRefreshed", gridRefreshed);
-
-      } else {
-        diagnostics.put("worldwideGridRefreshed", false);
+        // The network response is the source of truth. It contains the
+        // structured gridVideoRenderer objects that YouTube itself uses
+        // to populate the Worldwide grid.
+        NetworkCaptureResult networkResult = waitForWorldwideNetworkResponse(driver, max, 20, diagnostics);
+        networkDataFound = networkResult.found();
+        networkStreams = networkResult.streams();
+        diagnostics.put("worldwideNetworkResponseFound", networkDataFound);
       }
 
       diagnostics.put("postSelectionRegionLabel", currentDropdownLabel(driver));
@@ -186,11 +199,8 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
         return out;
       }
 
-      if (!gridRefreshed) {
-        warnings.add("Worldwide was selected, but the "
-                        + "video grid did not refresh within "
-                        + "the expected time. Refusing to mix "
-                        + "old My-region cards with Worldwide data.");
+      if (!networkDataFound) {
+        warnings.add("Worldwide was selected, but no Worldwide /youtubei/v1/browse response containing live grid data was captured within the expected time.");
 
         out.put("ok", false);
         out.put("isolatedTestOnly", true);
@@ -213,76 +223,14 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
        * ---------------------------------------------------------
        */
 
+      // Parse the structured Worldwide network response instead of scraping
+      // the rendered DOM. This avoids waiting for the visual grid to stabilize.
       Map<String, LiveStream> streamById = new LinkedHashMap<>();
-      int unchangedRounds = 0;
-      int previousCount = 0;
-
-      while (streamById.size() < max && scrolls < 12 && unchangedRounds < 3) {
-        List<WebElement> anchors = findVideoAnchors(driver);
-        cardsSeen = Math.max(cardsSeen, anchors.size());
-        for (WebElement anchor : anchors) {
-          String href = safeAttribute(anchor, "href");
-          Matcher matcher = VIDEO_ID.matcher(href);
-          if (!matcher.find()) continue;
-          String id = matcher.group(1);
-
-          /*
-           * Deduplicate by video ID.
-           */
-          if (streamById.containsKey(id)) continue;
-          String title = firstNonBlank(safeAttribute(anchor, "title"),
-                          safeAttribute(anchor, "aria-label"),
-                          safeText(anchor));
-
-          WebElement card = nearestCard(anchor, driver);
-          String cardText = safeText(card);
-
-          String channel = findChannelName(card);
-
-          long viewers = parseViewers(cardText);
-
-          LiveStream stream = new LiveStream(
-                          "YouTube",
-                          id,
-                          "",
-                          channel,
-                          title,
-                          Math.max(0, viewers),
-                          "https://www.youtube.com/watch?v=" + id);
-
-          streamById.put(id, stream);
-          if (streamById.size() >= max) {
-            break;
-          }
-        }
-
-        if (streamById.size() == previousCount) {
-          unchangedRounds++;
-        } else {
-          unchangedRounds = 0;
-        }
-
-        previousCount = streamById.size();
-
-        if (streamById.size() >= max) {
-          break;
-        }
-
-        /*
-         * Scroll after collecting the current batch.
-         */
-        ((JavascriptExecutor) driver)
-                .executeScript(
-                        """
-                        window.scrollTo(
-                            0,
-                            document.documentElement.scrollHeight
-                        );
-                        """);
-
-        Thread.sleep(850L);
-        scrolls++;
+      for (LiveStream stream : networkStreams) {
+        if (streamById.size() >= max) break;
+        streamById.putIfAbsent(stream.id(), stream);
       }
+      cardsSeen = networkStreams.size();
 
       streams = new ArrayList<>(streamById.values());
 
@@ -296,7 +244,7 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
        * ---------------------------------------------------------
        */
       streams.sort(Comparator.comparingLong(
-              LiveStream::viewers)
+                      LiveStream::viewers)
               .reversed());
 
       /*
@@ -326,7 +274,7 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
          * counts may differ from the initial DOM values.
          */
         streams.sort(Comparator.comparingLong(
-                LiveStream::viewers)
+                        LiveStream::viewers)
                 .reversed());
 
         if (streams.size() > max) {
@@ -336,8 +284,8 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
 
       if (streams.isEmpty()) {
         warnings.add("No Worldwide video cards were parsed. "
-                        + "Check the configured page URL, "
-                        + "consent screen, or YouTube DOM changes.");
+                + "Check the configured page URL, "
+                + "consent screen, or YouTube DOM changes.");
       }
 
       /*
@@ -350,8 +298,9 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
       diagnostics.put("worldwideSelectorClicked", worldwideClicked);
       diagnostics.put("cardsSeen", cardsSeen);
       diagnostics.put("uniqueVideoIds", streams.size());
-      diagnostics.put("scrollsPerformed", scrolls);
-      diagnostics.put("unchangedRounds", unchangedRounds);
+      diagnostics.put("scrollsPerformed", 0);
+      diagnostics.put("unchangedRounds", 0);
+      diagnostics.put("collectionSource", "YouTube /youtubei/v1/browse network response");
       diagnostics.put("apiValidationAttempted", apiValidationAttempted);
       diagnostics.put("apiValidationNote",
               apiValidationAttempted
@@ -379,16 +328,16 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
       diagnostics.put("worldwideSelectorClicked", worldwideClicked);
       out.put("diagnostics", diagnostics);
       out.put("error", e.getMessage() == null
-                      ? e.getClass().getSimpleName()
-                      : e.getMessage());
+              ? e.getClass().getSimpleName()
+              : e.getMessage());
       out.put("warnings", warnings);
       out.put("streams", streams);
     } finally {
 
       if (driver != null) {
         try {
-            driver.quit();
-          } catch (Exception ignored) {
+          driver.quit();
+        } catch (Exception ignored) {
         }
       }
 
@@ -405,11 +354,13 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
       }
 
       log.info(
-              "YouTube Selenium scraping completed | ok={} | streams={} | viewers={} | elapsedMs={}",
+              "YouTube Selenium scraping completed | ok={} | streams={} | viewers={} | elapsedMs={} | error={} | warnings={}",
               Boolean.TRUE.equals(out.get("ok")),
               resultCount,
               totalViewers,
-              elapsedMs);
+              elapsedMs,
+              out.get("error"),
+              out.get("warnings"));
 
       if (resultStreams instanceof List<?> list) {
         int limit = Math.min(20, list.size());
@@ -461,6 +412,196 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
 
     return List.copyOf(streams);
   }
+
+  private void enableNetworkCapture(WebDriver driver) {
+    try {
+      if (driver instanceof ChromiumDriver chromium) {
+        chromium.executeCdpCommand("Network.enable", Map.of());
+      }
+    } catch (Exception e) {
+      log.debug("Could not enable Chrome Network domain: {}", e.getMessage());
+    }
+  }
+
+  private void drainPerformanceLogs(WebDriver driver) {
+    try {
+      driver.manage().logs().get(LogType.PERFORMANCE);
+    } catch (Exception e) {
+      log.debug("Could not drain Chrome performance logs: {}", e.getMessage());
+    }
+  }
+
+  private NetworkCaptureResult waitForWorldwideNetworkResponse(
+          WebDriver driver,
+          int max,
+          int seconds,
+          Map<String, Object> diagnostics) {
+
+    long deadline = System.nanoTime() + Duration.ofSeconds(seconds).toNanos();
+    int browseResponses = 0;
+    int browseBodiesRead = 0;
+    int rendererResponses = 0;
+
+    while (System.nanoTime() < deadline) {
+      try {
+        var entries = driver.manage().logs().get(LogType.PERFORMANCE);
+        for (var entry : entries) {
+          JsonNode message = mapper.readTree(entry.getMessage());
+          JsonNode params = message.path("message").path("params");
+          if (!"Network.responseReceived".equals(message.path("message").path("method").asText())) {
+            continue;
+          }
+
+          JsonNode response = params.path("response");
+          String url = response.path("url").asText("");
+          if (!url.contains("/youtubei/v1/browse")) {
+            continue;
+          }
+
+          browseResponses++;
+          String requestId = params.path("requestId").asText("");
+          if (requestId.isBlank()) continue;
+
+          Map<String, Object> bodyArgs = Map.of("requestId", requestId);
+          Map<String, Object> bodyResult;
+          try {
+            if (!(driver instanceof ChromiumDriver chromium)) continue;
+            bodyResult = chromium.executeCdpCommand("Network.getResponseBody", bodyArgs);
+          } catch (Exception bodyError) {
+            // The response may not be complete yet; a later performance event can be retried.
+            continue;
+          }
+
+          browseBodiesRead++;
+          String body = String.valueOf(bodyResult.getOrDefault("body", ""));
+          if (body.isBlank()) continue;
+
+          JsonNode root;
+          try {
+            root = mapper.readTree(body);
+          } catch (Exception parseError) {
+            continue;
+          }
+
+          List<LiveStream> parsed = parseWorldwideBrowseResponse(root, max);
+          if (!parsed.isEmpty()) {
+            rendererResponses++;
+            diagnostics.put("worldwideBrowseResponseUrl", url);
+            diagnostics.put("worldwideBrowseResponsesSeen", browseResponses);
+            diagnostics.put("worldwideBrowseBodiesRead", browseBodiesRead);
+            diagnostics.put("worldwideGridVideoRendererResponses", rendererResponses);
+            diagnostics.put("worldwideStreamsFromNetwork", parsed.size());
+            return new NetworkCaptureResult(true, parsed);
+          }
+        }
+        Thread.sleep(200L);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        break;
+      } catch (Exception e) {
+        log.debug("Waiting for Worldwide YouTube network response: {}", e.getMessage());
+        try {
+          Thread.sleep(250L);
+        } catch (InterruptedException interrupted) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+    }
+
+    diagnostics.put("worldwideBrowseResponsesSeen", browseResponses);
+    diagnostics.put("worldwideBrowseBodiesRead", browseBodiesRead);
+    diagnostics.put("worldwideGridVideoRendererResponses", rendererResponses);
+    diagnostics.put("worldwideNetworkWaitSeconds", seconds);
+    return new NetworkCaptureResult(false, List.of());
+  }
+
+  private List<LiveStream> parseWorldwideBrowseResponse(JsonNode root, int max) {
+    Map<String, LiveStream> byId = new LinkedHashMap<>();
+    collectGridVideoRenderers(root, byId, max);
+    return new ArrayList<>(byId.values());
+  }
+
+  private void collectGridVideoRenderers(
+          JsonNode node,
+          Map<String, LiveStream> byId,
+          int max) {
+
+    if (node == null || node.isMissingNode() || node.isNull() || byId.size() >= max) return;
+
+    if (node.isObject()) {
+      JsonNode renderer = node.get("gridVideoRenderer");
+      if (renderer != null && renderer.isObject()) {
+        LiveStream stream = parseGridVideoRenderer(renderer);
+        if (stream != null && stream.id() != null && !stream.id().isBlank()) {
+          byId.putIfAbsent(stream.id(), stream);
+        }
+      }
+
+      node.fields().forEachRemaining(entry -> {
+        if (byId.size() < max) collectGridVideoRenderers(entry.getValue(), byId, max);
+      });
+    } else if (node.isArray()) {
+      for (JsonNode child : node) {
+        if (byId.size() >= max) break;
+        collectGridVideoRenderers(child, byId, max);
+      }
+    }
+  }
+
+  private LiveStream parseGridVideoRenderer(JsonNode video) {
+    String id = video.path("videoId").asText("");
+    if (id.isBlank()) return null;
+
+    String title = firstRunText(video.path("title"));
+    String channel = firstRunText(video.path("shortBylineText"));
+    String channelId = video.path("shortBylineText")
+            .path("runs").path(0)
+            .path("navigationEndpoint")
+            .path("browseEndpoint")
+            .path("browseId").asText("");
+
+    String viewersText = firstRunText(video.path("viewCountText"));
+    long viewers = parseViewers(viewersText);
+
+    boolean live = false;
+    for (JsonNode badge : video.path("badges")) {
+      if ("LIVE".equalsIgnoreCase(
+              badge.path("metadataBadgeRenderer").path("label").asText(""))) {
+        live = true;
+        break;
+      }
+    }
+    if (!live) return null;
+
+    return new LiveStream(
+            "YouTube",
+            id,
+            channelId,
+            channel,
+            title,
+            Math.max(0, viewers),
+            "https://www.youtube.com/watch?v=" + id);
+  }
+
+  private String firstRunText(JsonNode node) {
+    if (node == null || node.isMissingNode() || node.isNull()) {
+      return "";
+    }
+
+    JsonNode runs = node.path("runs");
+    if (runs.isArray() && runs.size() > 0) {
+      StringBuilder text = new StringBuilder();
+      for (JsonNode run : runs) {
+        text.append(run.path("text").asText(""));
+      }
+      return text.toString().trim();
+    }
+
+    return node.path("simpleText").asText("").trim();
+  }
+
+  private record NetworkCaptureResult(boolean found, List<LiveStream> streams) {}
 
   /**
    * Capture IDs currently present in the DOM.
@@ -623,16 +764,16 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
       String ids = batch.stream().map(LiveStream::id).reduce((a, b) -> a + "," + b).orElse("");
       try {
         String body = http.get().uri(uriBuilder ->
-                                        uriBuilder.scheme("https")
-                                                .host("www.googleapis.com")
-                                                .path("/youtube/v3/videos")
-                                                .queryParam("part", "snippet,liveStreamingDetails,status")
-                                                .queryParam("id", ids)
-                                                .queryParam("key", apiKey)
-                                                .build())
-                        .retrieve()
-                        .bodyToMono(String.class)
-                        .block(Duration.ofSeconds(20));
+                        uriBuilder.scheme("https")
+                                .host("www.googleapis.com")
+                                .path("/youtube/v3/videos")
+                                .queryParam("part", "snippet,liveStreamingDetails,status")
+                                .queryParam("id", ids)
+                                .queryParam("key", apiKey)
+                                .build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(Duration.ofSeconds(20));
 
         JsonNode root = mapper.readTree(body == null ? "{}" : body);
         Map<String, JsonNode> apiById = new LinkedHashMap<>();
@@ -656,16 +797,16 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
                           .asLong(stream.viewers());
 
           String title = item.path("snippet")
-                          .path("title")
-                          .asText(stream.title());
+                  .path("title")
+                  .asText(stream.title());
 
           String channel = item.path("snippet")
-                          .path("channelTitle")
-                          .asText(stream.channelTitle());
+                  .path("channelTitle")
+                  .asText(stream.channelTitle());
 
           String channelId = item.path("snippet")
-                          .path("channelId")
-                          .asText("");
+                  .path("channelId")
+                  .asText("");
 
           validated.add(
                   new LiveStream(
@@ -1143,102 +1284,57 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
     }
   }
 
-  private String safeText(
-          WebElement el) {
-
+  private String safeText(WebElement el) {
     try {
-
-      String value =
-              el.getText();
-
-      return value == null
-              ? ""
-              : value.trim();
-
+      String value = el.getText();
+      return value == null ? "" : value.trim();
     } catch (Exception e) {
-
       return "";
     }
   }
 
-  private String firstNonBlank(
-          String... values) {
+  private String firstNonBlank(String... values) {
 
-    for (String value :
-            values) {
-
-      if (value != null
-              && !value.isBlank()) {
-
+    for (String value : values) {
+      if (value != null && !value.isBlank()) {
         return value;
       }
     }
-
     return "";
   }
 
-  private long parseViewers(
-          String text) {
+  private long parseViewers(String text) {
 
-    Matcher matcher =
-            VIEWERS.matcher(
-                    text == null
-                            ? ""
-                            : text);
-
+    Matcher matcher = VIEWERS.matcher(text == null ? "" : text);
     if (!matcher.find()) {
       return 0;
     }
 
     try {
-
-      double number =
-              Double.parseDouble(
-                      matcher
-                              .group(1)
-                              .replace(",", ""));
-
+      double number = Double.parseDouble(matcher.group(1).replace(",", ""));
       double multiplier =
-              switch (
-                      matcher
-                              .group(2)
-                              .toUpperCase(
-                                      Locale.ROOT)) {
-
+              switch (matcher.group(2).toUpperCase(Locale.ROOT)) {
                 case "K" -> 1_000d;
                 case "M" -> 1_000_000d;
                 case "B" -> 1_000_000_000d;
                 default -> 1d;
               };
-
-      return Math.round(
-              number * multiplier);
-
+      return Math.round(number * multiplier);
     } catch (Exception e) {
-
       return 0;
     }
   }
 
-  private void validateYoutubeUrl(
-          String value) {
-
-    URI uri =
-            URI.create(value);
-
-    String host =
-            uri.getHost();
+  private void validateYoutubeUrl(String value) {
+    URI uri = URI.create(value);
+    String host = uri.getHost();
 
     if (host == null
-            || !(host.equalsIgnoreCase(
-            "youtube.com")
-            || host.endsWith(
-            ".youtube.com")
-            || host.equalsIgnoreCase(
-            "www.youtube.com"))) {
+            || !(host.equalsIgnoreCase("youtube.com")
+            || host.endsWith(".youtube.com")
+            || host.equalsIgnoreCase("www.youtube.com"))) {
 
-      throw new IllegalArgumentException(
-              "pageUrl must be a youtube.com URL");
+      throw new IllegalArgumentException("pageUrl must be a youtube.com URL");
     }
   }
 }
