@@ -3,6 +3,10 @@ package com.valorant.tracker.service.misc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.transaction.annotation.Transactional;
+import com.valorant.tracker.model.EsportsMatchRecord;
+import com.valorant.tracker.repository.EsportsMatchRecordRepository;
+import java.time.OffsetDateTime;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +21,7 @@ public class DynamicGameScheduler {
     private static final Logger log = LoggerFactory.getLogger(DynamicGameScheduler.class);
 
     private final LiquipediaEsportsScheduleScraper scraper;
+    private final EsportsMatchRecordRepository matchRepository;
 
     /**
      * Games for which we want dynamic esports scheduling.
@@ -49,9 +54,11 @@ public class DynamicGameScheduler {
             new ConcurrentHashMap<>();
 
     public DynamicGameScheduler(
-            LiquipediaEsportsScheduleScraper scraper) {
+            LiquipediaEsportsScheduleScraper scraper,
+            EsportsMatchRecordRepository matchRepository) {
 
         this.scraper = scraper;
+        this.matchRepository = matchRepository;
     }
 
     /**
@@ -67,13 +74,20 @@ public class DynamicGameScheduler {
      * Check Liquipedia every 5 minutes.
      */
     @Scheduled(fixedRateString = "${tracker.esports.schedule-check-ms:300000}")
+    @Transactional
     public void refreshSchedule() {
         log.info("Refreshing esports game schedule...");
         for (String game : ESPORTS_GAMES) {
             try {
-                List<LiquipediaEsportsScheduleScraper.EsportsMatch> matches =
+                List<LiquipediaEsportsScheduleScraper.EsportsMatch> scheduledMatches =
                         scraper.getUpcomingAndLive(game).stream()
                                 .filter(match -> match.startTime() != null)
+                                .toList();
+
+                persistMatchCatalog(game, scheduledMatches);
+
+                List<LiquipediaEsportsScheduleScraper.EsportsMatch> matches =
+                        scheduledMatches.stream()
                                 .filter(match -> match.isActive(java.time.Instant.now()))
                                 .sorted(java.util.Comparator.comparing(
                                         LiquipediaEsportsScheduleScraper.EsportsMatch::startTime))
@@ -105,6 +119,23 @@ public class DynamicGameScheduler {
         }
 
         log.info("Currently active esports games: {}", activeGames);
+    }
+
+    private void persistMatchCatalog(String game, List<LiquipediaEsportsScheduleScraper.EsportsMatch> matches) {
+        OffsetDateTime seenAt = OffsetDateTime.now(java.time.ZoneOffset.UTC);
+        for (var match : matches) {
+            if (match.matchId() == null || match.matchId().isBlank()) continue;
+            EsportsMatchRecord record = matchRepository.findById(match.matchId()).orElse(null);
+            if (record == null) {
+                record = new EsportsMatchRecord(match.matchId(), game, match.tournament(), match.tier(),
+                        match.team1(), match.team2(), match.startTime(), match.endTime(), match.status(),
+                        match.tournamentUrl(), match.matchUrl(), seenAt);
+            } else {
+                record.update(game, match.tournament(), match.tier(), match.team1(), match.team2(),
+                        match.startTime(), match.endTime(), match.status(), match.tournamentUrl(), match.matchUrl(), seenAt);
+            }
+            matchRepository.save(record);
+        }
     }
 
     /**

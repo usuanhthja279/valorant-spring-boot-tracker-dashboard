@@ -26,7 +26,7 @@ header{padding:16px 22px;border-bottom:1px solid #222832;background:#0c121a;disp
 .search-result-platform{color:#aab6c5;font-size:12px;white-space:nowrap}
 .search-result-viewers{color:#dbe6f2;font-size:12px;white-space:nowrap}.search-result-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap}.search-result-status.live{color:#37d67a}.search-result-status.offline{color:#a0a9b6}.search-result-status .presence-dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:currentColor}
 .search-empty{padding:14px;color:#9aa7b7;font-size:13px}
-.search-footer{padding:9px 14px;border-top:1px solid #202a35;color:#8e99a8;font-size:11px}
+.search-footer{padding:9px 14px;border-top:1px solid #202a35;color:#8e99a8;font-size:11px}.match-search-result{grid-template-columns:minmax(0,1fr) auto auto}.match-search-result .search-result-name{display:flex;flex-direction:column;gap:3px}.match-search-result .match-search-meta{font-size:11px;color:#8e99a8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.match-search-result .match-search-status{font-size:11px;font-weight:800;white-space:nowrap}.match-search-status.live{color:#37d67a}.match-search-status.history{color:#9aa7b8}.match-search-result .match-search-date{font-size:11px;color:#aab6c5;white-space:nowrap}
 h1{margin:0;font-size:25px}.sub{color:#8e99a8;font-size:13px;margin-top:5px}
 .status{display:flex;gap:8px;align-items:center;color:#8e99a8;font-size:13px}
 .dot{width:9px;height:9px;border-radius:50%;background:#37d67a;display:inline-block}
@@ -113,6 +113,8 @@ header,main{min-width:0;width:100%;max-width:100%}
 }
 
 .match-panel{margin:18px 0;padding:20px;background:#111821;border:1px solid #202b36;border-radius:16px}.match-panel h2{margin:0}.match-meta{color:#91a0b1;font-size:13px;margin-top:6px}.match-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px}.match-stream{background:#0c1219;border:1px solid #263341;border-radius:10px;padding:12px}.match-stream .viewers{font-size:20px;font-weight:700}.match-empty{color:#91a0b1;padding:12px 0}.match-link{color:#eef2f7;text-decoration:none}.match-link:hover{text-decoration:underline}
+
+.active-match-section{padding:0;overflow:hidden}.active-match-header{width:100%;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px;background:transparent;border:0;color:#eef2f7;text-align:left;cursor:pointer}.active-match-header strong{display:block;font-size:22px}.active-match-header .match-meta{display:block;margin-top:5px}.active-match-header-right{display:flex;align-items:center;gap:12px}.collapse-chevron{font-size:13px;color:#91a0b1;transition:transform .2s}.active-match-section.expanded .collapse-chevron{transform:rotate(180deg)}.active-match-section.expanded .active-match-header{border-bottom:1px solid #202b36}.active-match-row{display:flex;gap:12px;overflow-x:auto;padding:16px 20px 18px;scrollbar-width:thin}.active-match-card{flex:0 0 190px;min-height:112px;padding:15px;border:1px solid #2a3745;border-radius:12px;background:#0c1219;color:#eef2f7;text-align:left;cursor:pointer;transition:border-color .15s,transform .15s,background .15s}.active-match-card:hover{transform:translateY(-1px);border-color:#4b6074}.active-match-card.selected{border-color:#7c8fa3;background:#111a24;box-shadow:0 0 0 1px #7c8fa333}.active-match-card .match-teams{font-size:18px;font-weight:800;line-height:1.2}.active-match-card .match-vs{color:#91a0b1;font-size:11px;margin:3px 0}.active-match-card .match-tournament{margin-top:10px;color:#91a0b1;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.active-match-card .match-time{margin-top:7px;color:#b7c3d0;font-size:11px}.active-match-detail{margin:0 20px 20px;padding:18px;border:1px solid #2a3745;border-radius:14px;background:#0c1219}.active-match-detail[hidden]{display:none}.active-match-detail-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.active-match-detail h3{margin:0;font-size:23px}.match-detail-sub{color:#91a0b1;font-size:12px;margin-top:6px}.match-detail-actions{display:flex;gap:8px;flex-wrap:wrap}.match-detail-actions a{padding:8px 11px;border:1px solid #2b3948;border-radius:8px;background:#151d27;color:#eef2f7;text-decoration:none;font-size:12px}.match-detail-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}.match-metric{padding:12px;border:1px solid #263341;border-radius:10px;background:#111821}.match-metric .label{display:block}.match-metric .value{font-size:22px;font-weight:800;margin-top:5px}.match-streams-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:14px}.match-stream-mini{padding:11px;border:1px solid #263341;border-radius:10px;background:#0f171f}.match-stream-mini .platform{font-size:11px;color:#91a0b1}.match-stream-mini .channel{font-weight:700;margin-top:4px}.match-stream-mini .viewers{font-size:16px;font-weight:800;margin-top:5px}.match-stream-mini .title{font-size:12px;color:#c1cbd7;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.match-detail-empty{color:#91a0b1;padding:14px 0}.match-detail-section-title{margin:18px 0 8px;font-size:14px}@media(max-width:700px){.match-detail-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.active-match-header{padding:16px}.active-match-row{padding:14px 16px}.active-match-detail{margin:0 16px 16px}}
 </style>
 </head>
 <body>
@@ -120,10 +122,10 @@ header,main{min-width:0;width:100%;max-width:100%}
 <div class="header-brand"><a href="/" style="color:#9aa7b8;text-decoration:none;font-size:12px">← All games</a><h1 id="gamePageTitle">Live Game Tracker</h1><div class="sub">YouTube · Twitch · Kick · minute-by-minute viewership</div></div>
 <form class="header-search" onsubmit="openChannelStats(event)">
   <div class="search-field">
-    <input id="channelLookup" type="search" placeholder="Search channel stats (name, platform, ID)" aria-label="Search channel stats" autocomplete="off" aria-autocomplete="list" aria-controls="channelSuggestions" aria-expanded="false">
+    <input id="channelLookup" type="search" placeholder="Search live & historical matches (team, 9z vs BB, tournament)" aria-label="Search live and historical matches" autocomplete="off" aria-autocomplete="list" aria-controls="channelSuggestions" aria-expanded="false">
     <div id="channelSuggestions" class="search-suggestions" role="listbox" aria-label="Matching channels"></div>
   </div>
-  <button type="submit">View stats</button>
+  <button type="submit">Search</button>
 </form>
 <div class="header-right"><div class="header-actions"><a class="header-link" href="/stream-comparison.html">Compare streams <span aria-hidden="true">↗</span></a><button class="header-action" type="button" id="alertsToggle" aria-expanded="false" aria-controls="alertsPanel" onclick="togglePeakAlerts()">Alerts <span id="alertCount" class="alert-count"></span></button></div><div class="status"><span class="dot"></span><span id="status">Connecting…</span></div></div>
 </header>
@@ -146,12 +148,15 @@ header,main{min-width:0;width:100%;max-width:100%}
 </section>
 
 
-<section class="match-panel" id="activeMatchesPanel" hidden aria-label="Active esports matches">
-  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
-    <div><h2>Active esports matches</h2><div class="match-meta" id="activeMatchesMeta">Loading matches…</div></div>
-    <div class="hot" id="activeMatchesStatus">● LIVE MATCHES</div>
+<section class="match-panel active-match-section" id="activeMatchesPanel" hidden aria-label="Active esports matches">
+  <button class="active-match-header" type="button" id="activeMatchesToggle" aria-expanded="false" aria-controls="activeMatchesBody" onclick="toggleActiveMatches()">
+    <span><strong>⚔ Active esports matches</strong><span class="match-meta" id="activeMatchesMeta">Loading matches…</span></span>
+    <span class="active-match-header-right"><span class="hot" id="activeMatchesStatus">● LIVE MATCHES</span><span class="collapse-chevron" id="activeMatchesChevron">▼</span></span>
+  </button>
+  <div id="activeMatchesBody" hidden>
+    <div class="active-match-row" id="activeMatchesList" role="list"></div>
+    <div id="activeMatchDetail" class="active-match-detail" hidden></div>
   </div>
-  <div id="activeMatchesList"></div>
 </section>
 
 <section class="panel streams-panel" id="streamsPanel" aria-label="Live streams by platform" hidden>
@@ -287,6 +292,7 @@ let peakAlerts=[];
 let allChannelNames=[];
 let channelCatalogLoaded=false;
 let searchMatches=[];
+let universalResults=[];
 let activeSuggestionIndex=-1;
 let searchDebounceTimer=null;
 let currentPage=0;
@@ -731,88 +737,85 @@ async function showChannelHistory(channel,platform){
   try{const rows=await getJson('/api/channels/history?game='+encodeURIComponent(selectedGame)+'&'+params.toString());const pts=rows||[];document.getElementById('channelHistoryHint').textContent=pts.length?`${fmt(pts.length)} samples in selected range`:'No channel samples found for this range';document.getElementById('channelHistoryMetrics').style.display=pts.length?'grid':'none';if(!pts.length){if(channelHistoryChart){channelHistoryChart.destroy();channelHistoryChart=null;}return;}const viewers=pts.map(p=>Number(p.viewers||0)),peakIndex=viewers.indexOf(Math.max(...viewers));document.getElementById('channelPeak').textContent=fmt(viewers[peakIndex]);document.getElementById('channelPeakTime').textContent='at '+new Date(pts[peakIndex].timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});document.getElementById('channelAverage').textContent=fmt(Math.round(viewers.reduce((a,b)=>a+b,0)/viewers.length));document.getElementById('channelSamples').textContent=fmt(pts.length);document.getElementById('channelFirstLast').textContent=`${fmt(viewers[0])} → ${fmt(viewers[viewers.length-1])}`;const change=viewers[0]===0?null:Math.round((viewers[viewers.length-1]-viewers[0])/viewers[0]*100);document.getElementById('channelChange').textContent=change===null?'Change unavailable':`${change>=0?'+':''}${change}%`;if(channelHistoryChart)channelHistoryChart.destroy();channelHistoryChart=new Chart(document.getElementById('channelHistoryChart'),{type:'line',data:{labels:pts.map(p=>new Date(p.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})),datasets:[{label:'Viewers',data:viewers,borderColor:platformColor(platform),backgroundColor:platformColor(platform)+'18',fill:true,tension:.25,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#91a0b1',maxTicksLimit:10},grid:{color:'#202b36'}},y:{beginAtZero:true,ticks:{color:'#91a0b1'},grid:{color:'#202b36'}}}}});}catch(e){document.getElementById('channelHistoryHint').textContent='Unable to load this channel history';console.error(e);}
 }
 
+let activeMatchItems=[];
+let selectedActiveMatchId=null;
+
+function toggleActiveMatches(){
+  const panel=document.getElementById('activeMatchesPanel');
+  const body=document.getElementById('activeMatchesBody');
+  const toggle=document.getElementById('activeMatchesToggle');
+  if(!panel||!body||!toggle)return;
+  const expanded=panel.classList.toggle('expanded');
+  body.hidden=!expanded;
+  toggle.setAttribute('aria-expanded',String(expanded));
+  // Do not auto-select the first match; let the user choose a match.
+  if(!expanded){ selectedActiveMatchId=null; renderActiveMatchRow(); const detail=document.getElementById('activeMatchDetail'); if(detail){detail.hidden=true; detail.innerHTML='';} }
+}
+
+function renderActiveMatchRow(){
+  const list=document.getElementById('activeMatchesList');
+  if(!list)return;
+  list.innerHTML=activeMatchItems.map(m=>{
+    const selected=m.matchId===selectedActiveMatchId;
+    const time=m.startTime?new Date(m.startTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—';
+    return `<button type="button" class="active-match-card${selected?' selected':''}" role="listitem" onclick="selectActiveMatch('${escapeJs(m.matchId||'')}')">
+      <div class="hot" style="font-size:11px">● LIVE</div>
+      <div class="match-teams">${escapeHtml(m.team1||'TBD')} <span class="match-vs">vs</span> ${escapeHtml(m.team2||'TBD')}</div>
+      <div class="match-tournament">${escapeHtml(m.tournament||'Esports match')}</div>
+      <div class="match-time">Started ${time}</div>
+    </button>`;
+  }).join('');
+}
+
+async function selectActiveMatch(matchId){
+  selectedActiveMatchId=matchId;
+  renderActiveMatchRow();
+  const match=activeMatchItems.find(m=>m.matchId===matchId);
+  const detail=document.getElementById('activeMatchDetail');
+  if(!match||!detail)return;
+  detail.hidden=false;
+  detail.innerHTML='<div class="match-detail-empty">Loading match data…</div>';
+  try{
+    const data=await getJson('/api/esports/matches/'+encodeURIComponent(matchId)+'?game='+encodeURIComponent(selectedGame));
+    const latest=data?.summary?.latest||{};
+    const m=data.match||match;
+    detail.innerHTML=`<div class="active-match-detail-top">
+      <div><h3>${escapeHtml(m.team1||'TBD')} vs ${escapeHtml(m.team2||'TBD')}</h3><div class="match-detail-sub">${escapeHtml(m.tournament||'Esports match')} · ${escapeHtml(m.tier||'S/A')} · ${escapeHtml(m.matchId||matchId)}</div><div class="match-detail-sub">${m.startTime?new Date(m.startTime).toLocaleString():'—'} → ${m.endTime?new Date(m.endTime).toLocaleString():'—'}</div></div>
+      <div class="match-detail-actions"><a href="/match.html?matchId=${encodeURIComponent(m.matchId)}&game=${encodeURIComponent(selectedGame)}">View Match Details →</a>${m.matchUrl?`<a href="${escapeHtml(m.matchUrl)}" target="_blank" rel="noopener">Liquipedia Match ↗</a>`:''}</div>
+    </div>
+    <div class="match-detail-metrics">
+      <div class="match-metric"><span class="label">YouTube</span><div class="value">${fmt(latest.youtube)}</div></div>
+      <div class="match-metric"><span class="label">Twitch</span><div class="value">${fmt(latest.twitch)}</div></div>
+      <div class="match-metric"><span class="label">Kick</span><div class="value">${fmt(latest.kick)}</div></div>
+      <div class="match-metric"><span class="label">Combined</span><div class="value">${fmt(latest.combined)}</div></div>
+    </div>
+    <div class="match-detail-empty" style="padding-top:14px">Open the dedicated match page for the full timeline, historical analytics and matched-stream table.</div>`;
+  }catch(e){detail.innerHTML='<div class="match-detail-empty">Unable to load match data.</div>';console.error(e);}
+}
+
 async function loadActiveMatches(){
   const panel=document.getElementById('activeMatchesPanel');
-  const list=document.getElementById('activeMatchesList');
   const meta=document.getElementById('activeMatchesMeta');
-
-  // Prefer the dedicated endpoint. If the running backend is an older build,
-  // fall back to /api/games because that endpoint already exposes activeMatches.
   let matches=[];
-  let source='active-matches';
   try{
     const state=await getJson('/api/esports/active-matches?game='+encodeURIComponent(selectedGame));
     matches=Array.isArray(state?.matches)?state.matches:[];
-  }catch(e){
-    source='games-fallback';
-    console.warn('Active-matches endpoint unavailable; falling back to /api/games',e);
-  }
-
+  }catch(e){console.warn('Active-matches endpoint unavailable',e);}
   if(!matches.length){
     try{
       const games=await getJson('/api/games');
-      const game=(games||[]).find(g=>
-        String(g.id||'').toUpperCase()===selectedGame ||
-        String(g.name||'').toUpperCase()===selectedGame ||
-        (selectedGame==='COUNTER-STRIKE' && String(g.name||'').toUpperCase()==='COUNTER-STRIKE 2')
-      );
-      if(game && Array.isArray(game.activeMatches) && game.activeMatches.length){
-        matches=game.activeMatches;
-        source='games-fallback';
-      }else if(game && game.activeMatch){
-        matches=[game.activeMatch];
-        source='games-fallback';
-      }
-    }catch(e){
-      console.error('Unable to load active matches',e);
-    }
+      const game=(games||[]).find(g=>String(g.id||'').toUpperCase()===selectedGame||String(g.name||'').toUpperCase()===selectedGame||(selectedGame==='COUNTER-STRIKE'&&String(g.name||'').toUpperCase()==='COUNTER-STRIKE 2'));
+      if(game?.activeMatches?.length)matches=game.activeMatches;else if(game?.activeMatch)matches=[game.activeMatch];
+    }catch(e){console.error('Unable to load active matches',e);}
   }
-
-  if(!matches.length){
-    panel.hidden=true;
-    list.innerHTML='';
-    return;
-  }
-
+  activeMatchItems=matches;
+  if(!matches.length){panel.hidden=true;document.getElementById('activeMatchesBody').hidden=true;selectedActiveMatchId=null;return;}
   panel.hidden=false;
-  meta.textContent=`${matches.length} active S/A-tier match${matches.length===1?'':'es'}${source==='games-fallback'?' · detected from game status':''}`;
-
-  const cards=await Promise.all(matches.map(async m=>{
-    let rows=[];
-    try{
-      rows=await getJson('/api/match-streams?matchId='+encodeURIComponent(m.matchId)+'&game='+encodeURIComponent(selectedGame));
-    }catch(e){
-      console.warn('Unable to load match streams',m.matchId,e);
-    }
-
-    const latest=rows.length ? rows[0].timestamp : null;
-    const current=latest ? rows.filter(x=>x.timestamp===latest) : [];
-    const streams=current.slice(0,12).map(x=>{
-      const title=escapeHtml(x.title||x.channel||'Live stream');
-      const channel=escapeHtml(x.channel||'Unknown channel');
-      const body=x.url ? `<a class="match-link" href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${title}</a>` : title;
-      return `<div class="match-stream"><div class="label">${escapeHtml(x.platform||'')}</div><div class="viewers">${fmt(x.viewers)} viewers</div><div class="label">${channel}</div><div style="margin-top:7px;font-size:13px">${body}</div></div>`;
-    }).join('');
-
-    const start=m.startTime?new Date(m.startTime).toLocaleString():'—';
-    const end=m.endTime?new Date(m.endTime).toLocaleString():'—';
-
-    return `<article class="match-panel" style="margin:14px 0 0;padding:16px;background:#0c1219">
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
-        <div>
-          <h3 style="margin:0">${escapeHtml(m.team1||'TBD')} vs ${escapeHtml(m.team2||'TBD')}</h3>
-          <div class="match-meta">${escapeHtml(m.tournament||'Esports match')} · ${escapeHtml(m.tier||'S/A')} · ${escapeHtml(m.matchId||'')}</div>
-          <div class="match-meta">${start} → ${end}</div>
-        </div>
-        <div class="hot">● LIVE</div>
-      </div>
-      ${streams ? `<div class="match-grid">${streams}</div>` : '<div class="match-empty">No streams have been confidently matched to this match yet.</div>'}
-    </article>`;
-  }));
-
-  list.innerHTML=cards.join('');
+  meta.textContent=`${matches.length} active S/A-tier match${matches.length===1?'':'es'}`;
+  if(!matches.some(m=>m.matchId===selectedActiveMatchId))selectedActiveMatchId=null;
+  renderActiveMatchRow();
+  if(panel.classList.contains('expanded') && !selectedActiveMatchId)selectActiveMatch(matches[0].matchId);
 }
-
 async function loadStreams(){
   const scope=document.getElementById('scope').value;
   const body=document.getElementById('streams');
@@ -988,49 +991,104 @@ async function updateChannelOptions(streams){
   if(input && input.value.trim()) renderChannelSuggestions(input.value.trim());
 }
 
-function renderChannelSuggestions(rawQuery){
+async function renderChannelSuggestions(rawQuery){
   const box=document.getElementById('channelSuggestions');
   const input=document.getElementById('channelLookup');
   const query=String(rawQuery||'').trim();
   if(!box||!input) return;
   activeSuggestionIndex=-1;
   searchMatches=[];
+  universalResults=[];
   if(!query){
     box.classList.remove('visible');
     box.innerHTML='';
     input.setAttribute('aria-expanded','false');
     return;
   }
+
   const q=query.toLocaleLowerCase();
-  const scored=allChannelNames.map(item=>{
+  const scoredChannels=allChannelNames.map(item=>{
     const name=item.channel.toLocaleLowerCase();
     const platform=item.platform.toLocaleLowerCase();
     const id=String(item.identity||'').toLocaleLowerCase();
-    let score=name===q?0:name.startsWith(q)?1:name.includes(q)?2:platform.includes(q)||id.includes(q)?3:99;
+    const score=name===q?0:name.startsWith(q)?1:name.includes(q)?2:platform.includes(q)||id.includes(q)?3:99;
     return {item,score};
-  }).filter(x=>x.score<99).sort((a,b)=>a.score-b.score || b.item.viewers-a.item.viewers || a.item.channel.localeCompare(b.item.channel));
-  searchMatches=scored.slice(0,8).map(x=>x.item);
+  }).filter(x=>x.score<99)
+    .sort((a,b)=>a.score-b.score || Number(b.item.viewers||0)-Number(a.item.viewers||0) || a.item.channel.localeCompare(b.item.channel));
+
+  searchMatches=scoredChannels.slice(0,6).map(x=>x.item);
+
+  let matches=[];
+  try{
+    matches=await getJson('/api/esports/matches/search?game='+encodeURIComponent(selectedGame)+'&q='+encodeURIComponent(query)+'&limit=8');
+    if(!Array.isArray(matches)) matches=[];
+  }catch(error){
+    console.error('Unable to search esports matches',error);
+  }
+
   const escapeRegex=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const regex=new RegExp(escapeRegex(query),'ig');
   const highlight=name=>escapeHtml(name).replace(regex,m=>`<mark>${m}</mark>`);
-  if(!searchMatches.length){
-    box.innerHTML=`<div class="suggestion-heading">Channels</div><div class="search-empty">No matching channels found for “${escapeHtml(query)}”.</div>`;
-  }else{
-    box.innerHTML=`<div class="suggestion-heading">Channels (${searchMatches.length}${scored.length>8?'+':''} results)</div>`+
-      searchMatches.map((item,i)=>`<button type="button" class="search-result" role="option" aria-selected="false" data-index="${i}" onclick="selectChannelSuggestion(${i})"><span class="search-result-name">${highlight(item.channel)}</span><span class="search-result-platform">${escapeHtml(item.platform)}</span><span class="search-result-status ${item.live?'live':'offline'}"><i class="presence-dot"></i>${item.live?'LIVE':'OFFLINE'}</span><span class="search-result-viewers">${item.live?`${fmt(item.viewers)} viewers`:'Last seen '+(item.lastSeen?new Date(item.lastSeen).toLocaleDateString([], {month:'short',day:'numeric'}):'in history')}</span></button>`).join('')+
-      `<div class="search-footer">Select a channel · Enter searches the best match · Esc closes</div>`;
+
+  const matchItems=matches.slice(0,8).map(match=>{
+    universalResults.push({kind:'match',match});
+    const index=universalResults.length-1;
+    const teams=`${match.team1||'TBD'} vs ${match.team2||'TBD'}`;
+    const date=match.startTime?new Date(match.startTime).toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'}):'';
+    return `<button type="button" class="search-result match-search-result" role="option" aria-selected="false" data-index="${index}" onclick="selectUniversalSuggestion(${index})"><span class="search-result-name"><strong>${highlight(teams)}</strong><span class="match-search-meta">${escapeHtml(match.tournament||'')} · ${escapeHtml(match.game||selectedGame)}</span></span><span class="match-search-status ${match.active?'live':'history'}">${match.active?'LIVE':'HISTORY'}</span><span class="match-search-date">${escapeHtml(date)}</span></button>`;
+  }).join('');
+
+  const channelItems=searchMatches.map(item=>{
+    universalResults.push({kind:'channel',item});
+    const index=universalResults.length-1;
+    return `<button type="button" class="search-result" role="option" aria-selected="false" data-index="${index}" onclick="selectUniversalSuggestion(${index})"><span class="search-result-name">${highlight(item.channel)}</span><span class="search-result-platform">${escapeHtml(item.platform)}</span><span class="search-result-status ${item.live?'live':'offline'}"><i class="presence-dot"></i>${item.live?'LIVE':'OFFLINE'}</span><span class="search-result-viewers">${item.live?`${fmt(item.viewers)} viewers`:'Historical'}</span></button>`;
+  }).join('');
+
+  let html='';
+  if(matchItems){
+    html+=`<div class="suggestion-heading">Matches${matches.length>8?' (8+)':` (${matches.length})`}</div>`;
+    html+=matchItems||'<div class="search-empty">No live or historical matches found.</div>';
   }
+  if(channelItems){
+    html+=`<div class="suggestion-heading">Channels</div>${channelItems}`;
+  }
+
+  if(!html) html='<div class="search-empty">No live or historical matches or channels found for “'+escapeHtml(query)+'”.</div>';
+  else html+=`<div class="search-footer">Searches live + historical matches by team/tournament. Channel results are also shown.</div>`;
+
+  box.innerHTML=html;
   box.classList.add('visible');
   input.setAttribute('aria-expanded','true');
+}
+
+function selectUniversalSuggestion(index){
+  const result=universalResults[index];
+  if(!result) return;
+  const input=document.getElementById('channelLookup');
+  const box=document.getElementById('channelSuggestions');
+  box.classList.remove('visible');
+  input.setAttribute('aria-expanded','false');
+
+  if(result.kind==='match'){
+    const match=result.match;
+    input.value=`${match.team1||'TBD'} vs ${match.team2||'TBD'}`;
+    location.href='/match.html?'+new URLSearchParams({
+      matchId:match.matchId,
+      game:match.game||selectedGame
+    }).toString();
+    return;
+  }
+
+  const item=result.item;
+  input.value=item.channel;
+  location.href='/channel.html?name='+encodeURIComponent(item.channel)+'&platform='+encodeURIComponent(item.platform)+'&game='+encodeURIComponent(selectedGame);
 }
 
 function selectChannelSuggestion(index){
   const item=searchMatches[index];
   if(!item) return;
-  document.getElementById('channelLookup').value=item.channel;
-  document.getElementById('channelSuggestions').classList.remove('visible');
-  document.getElementById('channelLookup').setAttribute('aria-expanded','false');
-  location.href='/channel.html?name='+encodeURIComponent(item.channel)+'&platform='+encodeURIComponent(item.platform)+'&game='+encodeURIComponent(selectedGame);
+  const universalIndex=universalResults.findIndex(x=>x.kind==='channel' && x.item===item);
+  selectUniversalSuggestion(universalIndex);
 }
 
 function setActiveSuggestion(nextIndex){
@@ -1050,17 +1108,40 @@ async function openChannelStats(event){
   const input=document.getElementById('channelLookup');
   const query=input.value.trim();
   if(!query){input.focus();return;}
+
+  try{
+    const matches=await getJson('/api/esports/matches/search?game='+encodeURIComponent(selectedGame)+'&q='+encodeURIComponent(query)+'&limit=8');
+    if(Array.isArray(matches) && matches.length===1){
+      const match=matches[0];
+      location.href='/match.html?'+new URLSearchParams({
+        matchId:match.matchId,
+        game:match.game||selectedGame
+      }).toString();
+      return;
+    }
+    if(Array.isArray(matches) && matches.length>0){
+      renderChannelSuggestions(query);
+      return;
+    }
+  }catch(error){
+    console.error('Match search failed',error);
+  }
+
   if(!allChannelNames.length){
-    document.getElementById('status').textContent='Channel list is still loading';
+    document.getElementById('status').textContent='Search data is still loading';
+    renderChannelSuggestions(query);
     return;
   }
+
   const normalized=query.toLocaleLowerCase();
   const exact=allChannelNames.filter(item=>item.channel.toLocaleLowerCase()===normalized);
-  if(exact.length>=1){location.href='/channel.html?name='+encodeURIComponent(exact[0].channel)+'&platform='+encodeURIComponent(exact[0].platform)+'&game='+encodeURIComponent(selectedGame);return;}
-  const matches=allChannelNames.filter(item=>item.channel.toLocaleLowerCase().includes(normalized));
-  if(matches.length===1){location.href='/channel.html?name='+encodeURIComponent(matches[0].channel)+'&platform='+encodeURIComponent(matches[0].platform)+'&game='+encodeURIComponent(selectedGame);return;}
+  if(exact.length===1){
+    location.href='/channel.html?name='+encodeURIComponent(exact[0].channel)+'&platform='+encodeURIComponent(exact[0].platform)+'&game='+encodeURIComponent(selectedGame);
+    return;
+  }
+
   renderChannelSuggestions(query);
-  if(matches.length===0) document.getElementById('status').textContent='No matching channel in recorded history';
+  if(!exact.length) document.getElementById('status').textContent='No matching live or historical match/channel';
 }
 
 function initializeChannelSearch(){
@@ -1075,7 +1156,7 @@ function initializeChannelSearch(){
     if(event.key==='ArrowDown' && box.classList.contains('visible')){event.preventDefault();setActiveSuggestion(activeSuggestionIndex+1);}
     else if(event.key==='ArrowUp' && box.classList.contains('visible')){event.preventDefault();setActiveSuggestion(activeSuggestionIndex-1);}
     else if(event.key==='Escape'){box.classList.remove('visible');input.setAttribute('aria-expanded','false');}
-    else if(event.key==='Enter' && box.classList.contains('visible') && activeSuggestionIndex>=0){event.preventDefault();selectChannelSuggestion(activeSuggestionIndex);}
+    else if(event.key==='Enter' && box.classList.contains('visible') && activeSuggestionIndex>=0){event.preventDefault();selectUniversalSuggestion(activeSuggestionIndex);}
   });
   document.addEventListener('click',event=>{
     if(!event.target.closest('.header-search')){box.classList.remove('visible');input.setAttribute('aria-expanded','false');}
