@@ -1,23 +1,22 @@
 package com.valorant.tracker.service.misc;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
-import org.springframework.http.HttpHeaders;
-import org.springframework.web.reactive.function.client.WebClient;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 @Service
 public class LiquipediaEsportsScheduleScraper {
@@ -503,13 +502,20 @@ public class LiquipediaEsportsScheduleScraper {
                             ? "UPCOMING"
                             : "LIVE_OR_RECENT";
 
+            String matchId = buildMatchId(
+                    game, tournament, team1, team2, start, matchUrl);
+
+            OffsetDateTime end = start.plusHours(4);
+
             return new EsportsMatch(
+                    matchId,
                     game,
                     tournament,
                     tier,
                     team1,
                     team2,
                     start,
+                    end,
                     status,
                     tournamentUrl,
                     matchUrl);
@@ -518,6 +524,36 @@ public class LiquipediaEsportsScheduleScraper {
 
             return null;
         }
+    }
+
+
+    private String buildMatchId(
+            String game,
+            String tournament,
+            String team1,
+            String team2,
+            OffsetDateTime start,
+            String matchUrl) {
+
+        if (matchUrl != null && !matchUrl.isBlank()) {
+            return matchUrl;
+        }
+
+        String key = String.join("|",
+                normalizeGame(game),
+                normalizeIdentity(tournament),
+                normalizeIdentity(team1),
+                normalizeIdentity(team2),
+                start.toInstant().toString());
+
+        return "match:" + Integer.toUnsignedString(key.hashCode(), 36);
+    }
+
+    private String normalizeIdentity(String value) {
+        return value == null
+                ? ""
+                : value.trim().toLowerCase(Locale.ROOT)
+                        .replaceAll("\\s+", " ");
     }
 
     private String fetch(String url) {
@@ -641,12 +677,14 @@ public class LiquipediaEsportsScheduleScraper {
     }
 
     public record EsportsMatch(
+            String matchId,
             String game,
             String tournament,
             String tier,
             String team1,
             String team2,
             OffsetDateTime startTime,
+            OffsetDateTime endTime,
             String status,
             String tournamentUrl,
             String matchUrl) {

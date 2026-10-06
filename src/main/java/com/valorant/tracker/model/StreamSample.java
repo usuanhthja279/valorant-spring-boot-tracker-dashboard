@@ -16,7 +16,9 @@ import java.time.OffsetDateTime;
     @Index(name = "idx_stream_samples_channel_time", columnList = "channel,timestamp"),
     @Index(name = "idx_stream_samples_channel_time_id", columnList = "channel,timestamp,id"),
     @Index(name = "idx_stream_samples_platform_time", columnList = "platform,timestamp"),
-    @Index(name = "idx_stream_samples_stream_time", columnList = "stream_id,timestamp")
+    @Index(name = "idx_stream_samples_stream_time", columnList = "stream_id,timestamp"),
+    @Index(name = "idx_stream_samples_match_time", columnList = "match_id,timestamp"),
+    @Index(name = "idx_stream_samples_game_match_time", columnList = "game,match_id,timestamp")
 })
 public class StreamSample {
   @Id @GeneratedValue(strategy = GenerationType.IDENTITY) Long id;
@@ -26,6 +28,7 @@ public class StreamSample {
   @Column(length = 1000) String title;
   long viewers;
   @Column(length = 1000) String url;
+  @Column(name = "match_id", length = 300) String matchId;
 
   protected StreamSample() {}
 
@@ -34,6 +37,10 @@ public class StreamSample {
   }
 
   public StreamSample(OffsetDateTime timestamp, String game, LiveStream stream) {
+    this(timestamp, game, stream, null);
+  }
+
+  public StreamSample(OffsetDateTime timestamp, String game, LiveStream stream, String matchId) {
     this.timestamp = timestamp;
     this.game = game;
     this.platform = stream.platform();
@@ -43,6 +50,7 @@ public class StreamSample {
     this.title = stream.title();
     this.viewers = stream.viewers();
     this.url = stream.url();
+    this.matchId = matchId;
   }
 
   public Long getId() { return id; }
@@ -55,4 +63,5 @@ public class StreamSample {
   public String getTitle() { return title; }
   public long getViewers() { return viewers; }
   public String getUrl() { return url; }
+  public String getMatchId() { return matchId; }
 }
