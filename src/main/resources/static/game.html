@@ -111,6 +111,8 @@ header,main{min-width:0;width:100%;max-width:100%}
   .panel{padding:11px}
   .table-wrap,.streams-table{max-width:100%;overflow-x:auto}
 }
+
+.match-panel{margin:18px 0;padding:20px;background:#111821;border:1px solid #202b36;border-radius:16px}.match-panel h2{margin:0}.match-meta{color:#91a0b1;font-size:13px;margin-top:6px}.match-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px}.match-stream{background:#0c1219;border:1px solid #263341;border-radius:10px;padding:12px}.match-stream .viewers{font-size:20px;font-weight:700}.match-empty{color:#91a0b1;padding:12px 0}.match-link{color:#eef2f7;text-decoration:none}.match-link:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -141,6 +143,15 @@ header,main{min-width:0;width:100%;max-width:100%}
   <div class="alerts-heading"><h2>Peak alerts</h2><div class="alert-controls"><label for="peakAlertThreshold">Viewer threshold</label><input id="peakAlertThreshold" type="number" min="1" step="1000" value="10000"><button type="button" onclick="clearPeakAlerts()">Clear</button></div></div>
   <div class="subtle">Alerts appear when a live stream crosses the threshold or sets a new peak during this dashboard session.</div>
   <div class="alert-list" id="peakAlertList"><div class="subtle">Waiting for live stream samples…</div></div>
+</section>
+
+
+<section class="match-panel" id="activeMatchesPanel" hidden aria-label="Active esports matches">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+    <div><h2>Active esports matches</h2><div class="match-meta" id="activeMatchesMeta">Loading matches…</div></div>
+    <div class="hot" id="activeMatchesStatus">● LIVE MATCHES</div>
+  </div>
+  <div id="activeMatchesList"></div>
 </section>
 
 <section class="panel streams-panel" id="streamsPanel" aria-label="Live streams by platform" hidden>
@@ -571,14 +582,36 @@ async function refreshRisingChannels(){
   }
 }
 
+async function getGameLiveState(){
+  const games=await getJson('/api/games');
+  return (games||[]).find(g=>String(g.id||'').toUpperCase()===selectedGame || String(g.name||'').toUpperCase()===selectedGame) || null;
+}
+
+function clearLiveSection(offline=false){
+  ['yt','tw','kick','total'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='—';});
+  ['liveYoutubeSpark','liveTwitchSpark','liveKickSpark','liveCombinedSpark'].forEach(id=>{const el=document.getElementById(id);if(el){const chart=Chart.getChart(el);if(chart)chart.destroy();}});
+  liveCardSparklines.forEach(c=>c.destroy());
+  liveCardSparklines=[];
+  ['freshnessYoutube','freshnessTwitch','freshnessKick'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=offline?'Game offline · historical data only':'Checking freshness…';el.className='live-card-freshness freshness-unknown';}});
+  const combined=document.querySelector('#liveCombinedIcon')?.parentElement?.querySelector('.live-card-freshness');
+  if(combined) combined.textContent=offline?'Game offline · historical data only':'Click to browse all platforms';
+  const panel=document.getElementById('streamsPanel');
+  if(offline && panel && !panel.hidden) closeStreamsPanel();
+}
+
 async function refresh(){
   try{
-    // Summary cards always use the newest snapshot; chart history is fetched separately
-    // from the database for the selected range so older data isn't limited to 500 rows.
-    const [latestData, chartData] = await Promise.all([
+    // Summary cards use CURRENT streaming data only while the esports game is
+    // scheduled as active. Historical charts are always loaded independently.
+    const [gameState, latestData, chartData] = await Promise.all([
+      getGameLiveState(),
       getJson('/api/snapshots?game='+encodeURIComponent(selectedGame)),
       fetchSnapshotsForSelectedRange()
     ]);
+    const gameLive=!!gameState?.active;
+    if(!gameLive){
+      clearLiveSection(true);
+    }
     if(!latestData.length){
       document.getElementById('status').textContent='Waiting for first collection';
       return;
@@ -586,12 +619,16 @@ async function refresh(){
 
     latestData.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
     const latest=latestData[latestData.length-1];
-    const displayProviderValue = (available, viewers) => available === false ? 'Unavailable' : fmt(viewers);
-    document.getElementById('yt').textContent=displayProviderValue(latest.youtubeAvailable, latest.youtubeViewers);
-    document.getElementById('tw').textContent=displayProviderValue(latest.twitchAvailable, latest.twitchViewers);
-    document.getElementById('kick').textContent=displayProviderValue(latest.kickAvailable, latest.kickViewers);
-    document.getElementById('total').textContent=fmt(latest.combinedViewers);
-    document.getElementById('last').textContent='Latest: '+new Date(latest.timestamp).toLocaleString();
+    if(gameLive){
+      const displayProviderValue = (viewers) => fmt(viewers);
+      document.getElementById('yt').textContent=displayProviderValue(gameState.youtubeViewers);
+      document.getElementById('tw').textContent=displayProviderValue(gameState.twitchViewers);
+      document.getElementById('kick').textContent=displayProviderValue(gameState.kickViewers);
+      document.getElementById('total').textContent=fmt(gameState.totalViewers);
+      document.getElementById('last').textContent='Latest: '+new Date(latest.timestamp).toLocaleString();
+    } else {
+      document.getElementById('last').textContent='Offline · live stream data hidden';
+    }
     const snapshotInfoEl = document.getElementById('snapshotInfo');
     if(snapshotInfoEl) snapshotInfoEl.textContent = 'Latest snapshot: '+fmt(latestData.length ? latestData.length : 0);
 
@@ -694,12 +731,104 @@ async function showChannelHistory(channel,platform){
   try{const rows=await getJson('/api/channels/history?game='+encodeURIComponent(selectedGame)+'&'+params.toString());const pts=rows||[];document.getElementById('channelHistoryHint').textContent=pts.length?`${fmt(pts.length)} samples in selected range`:'No channel samples found for this range';document.getElementById('channelHistoryMetrics').style.display=pts.length?'grid':'none';if(!pts.length){if(channelHistoryChart){channelHistoryChart.destroy();channelHistoryChart=null;}return;}const viewers=pts.map(p=>Number(p.viewers||0)),peakIndex=viewers.indexOf(Math.max(...viewers));document.getElementById('channelPeak').textContent=fmt(viewers[peakIndex]);document.getElementById('channelPeakTime').textContent='at '+new Date(pts[peakIndex].timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});document.getElementById('channelAverage').textContent=fmt(Math.round(viewers.reduce((a,b)=>a+b,0)/viewers.length));document.getElementById('channelSamples').textContent=fmt(pts.length);document.getElementById('channelFirstLast').textContent=`${fmt(viewers[0])} → ${fmt(viewers[viewers.length-1])}`;const change=viewers[0]===0?null:Math.round((viewers[viewers.length-1]-viewers[0])/viewers[0]*100);document.getElementById('channelChange').textContent=change===null?'Change unavailable':`${change>=0?'+':''}${change}%`;if(channelHistoryChart)channelHistoryChart.destroy();channelHistoryChart=new Chart(document.getElementById('channelHistoryChart'),{type:'line',data:{labels:pts.map(p=>new Date(p.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})),datasets:[{label:'Viewers',data:viewers,borderColor:platformColor(platform),backgroundColor:platformColor(platform)+'18',fill:true,tension:.25,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#91a0b1',maxTicksLimit:10},grid:{color:'#202b36'}},y:{beginAtZero:true,ticks:{color:'#91a0b1'},grid:{color:'#202b36'}}}}});}catch(e){document.getElementById('channelHistoryHint').textContent='Unable to load this channel history';console.error(e);}
 }
 
+async function loadActiveMatches(){
+  const panel=document.getElementById('activeMatchesPanel');
+  const list=document.getElementById('activeMatchesList');
+  const meta=document.getElementById('activeMatchesMeta');
+
+  // Prefer the dedicated endpoint. If the running backend is an older build,
+  // fall back to /api/games because that endpoint already exposes activeMatches.
+  let matches=[];
+  let source='active-matches';
+  try{
+    const state=await getJson('/api/esports/active-matches?game='+encodeURIComponent(selectedGame));
+    matches=Array.isArray(state?.matches)?state.matches:[];
+  }catch(e){
+    source='games-fallback';
+    console.warn('Active-matches endpoint unavailable; falling back to /api/games',e);
+  }
+
+  if(!matches.length){
+    try{
+      const games=await getJson('/api/games');
+      const game=(games||[]).find(g=>
+        String(g.id||'').toUpperCase()===selectedGame ||
+        String(g.name||'').toUpperCase()===selectedGame ||
+        (selectedGame==='COUNTER-STRIKE' && String(g.name||'').toUpperCase()==='COUNTER-STRIKE 2')
+      );
+      if(game && Array.isArray(game.activeMatches) && game.activeMatches.length){
+        matches=game.activeMatches;
+        source='games-fallback';
+      }else if(game && game.activeMatch){
+        matches=[game.activeMatch];
+        source='games-fallback';
+      }
+    }catch(e){
+      console.error('Unable to load active matches',e);
+    }
+  }
+
+  if(!matches.length){
+    panel.hidden=true;
+    list.innerHTML='';
+    return;
+  }
+
+  panel.hidden=false;
+  meta.textContent=`${matches.length} active S/A-tier match${matches.length===1?'':'es'}${source==='games-fallback'?' · detected from game status':''}`;
+
+  const cards=await Promise.all(matches.map(async m=>{
+    let rows=[];
+    try{
+      rows=await getJson('/api/match-streams?matchId='+encodeURIComponent(m.matchId)+'&game='+encodeURIComponent(selectedGame));
+    }catch(e){
+      console.warn('Unable to load match streams',m.matchId,e);
+    }
+
+    const latest=rows.length ? rows[0].timestamp : null;
+    const current=latest ? rows.filter(x=>x.timestamp===latest) : [];
+    const streams=current.slice(0,12).map(x=>{
+      const title=escapeHtml(x.title||x.channel||'Live stream');
+      const channel=escapeHtml(x.channel||'Unknown channel');
+      const body=x.url ? `<a class="match-link" href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${title}</a>` : title;
+      return `<div class="match-stream"><div class="label">${escapeHtml(x.platform||'')}</div><div class="viewers">${fmt(x.viewers)} viewers</div><div class="label">${channel}</div><div style="margin-top:7px;font-size:13px">${body}</div></div>`;
+    }).join('');
+
+    const start=m.startTime?new Date(m.startTime).toLocaleString():'—';
+    const end=m.endTime?new Date(m.endTime).toLocaleString():'—';
+
+    return `<article class="match-panel" style="margin:14px 0 0;padding:16px;background:#0c1219">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0">${escapeHtml(m.team1||'TBD')} vs ${escapeHtml(m.team2||'TBD')}</h3>
+          <div class="match-meta">${escapeHtml(m.tournament||'Esports match')} · ${escapeHtml(m.tier||'S/A')} · ${escapeHtml(m.matchId||'')}</div>
+          <div class="match-meta">${start} → ${end}</div>
+        </div>
+        <div class="hot">● LIVE</div>
+      </div>
+      ${streams ? `<div class="match-grid">${streams}</div>` : '<div class="match-empty">No streams have been confidently matched to this match yet.</div>'}
+    </article>`;
+  }));
+
+  list.innerHTML=cards.join('');
+}
+
 async function loadStreams(){
   const scope=document.getElementById('scope').value;
   const body=document.getElementById('streams');
   document.getElementById('streamsTitle').textContent=
     scope==='Overall'?'All live streams':`All ${scope} live streams`;
   try{
+    const gameState=await getGameLiveState();
+    if(!gameState?.active){
+      allStreams=[];
+      currentPage=0;
+      body.innerHTML='<tr><td colspan="5">Game offline — no live stream data. Historical data is available below.</td></tr>';
+      document.getElementById('pageInfo').textContent='Offline';
+      document.getElementById('previousPage').disabled=true;
+      document.getElementById('nextPage').disabled=true;
+      return;
+    }
     allStreams=await getJson('/api/streams?game='+encodeURIComponent(selectedGame)+'&platform='+encodeURIComponent(scope));
     if(scope==='Overall') observePeakAlerts(allStreams);
     if(scope==='Overall') updateChannelOptions(allStreams);
@@ -994,11 +1123,11 @@ const today = new Date();
 const selDateEl = document.getElementById('selectedDate');
 if(selDateEl){ selDateEl.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; }
 
-loadStreams(); refreshProviderFreshness();
+loadStreams(); loadActiveMatches(); refreshProviderFreshness();
 getJson('/api/streams?game='+encodeURIComponent(selectedGame)+'&platform=Overall').then(updateChannelOptions).catch(console.error);
 setInterval(()=>getJson('/api/streams?game='+encodeURIComponent(selectedGame)+'&platform=Overall').then(updateChannelOptions).catch(console.error),60000);
 setInterval(()=>{ if(currentRange === '30m' || currentRange === '1h') refresh(); else refreshLiveSummary(); },60000);
-setInterval(loadStreams,60000);
+setInterval(loadStreams,60000); setInterval(loadActiveMatches,60000);
 setInterval(refreshProviderFreshness,30000);
 setInterval(()=>{ if(analyticsPanelVisible) refreshRisingChannels(); },60000);
 setInterval(()=>getJson('/api/streams?game='+encodeURIComponent(selectedGame)+'&platform=Overall').then(updateChannelOptions).catch(console.error),60000);

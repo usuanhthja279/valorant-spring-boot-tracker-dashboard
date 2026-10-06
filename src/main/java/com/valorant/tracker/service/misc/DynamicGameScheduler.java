@@ -3,9 +3,11 @@ package com.valorant.tracker.service.misc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -42,10 +44,23 @@ public class DynamicGameScheduler {
     private final Set<String> activeGames =
             ConcurrentHashMap.newKeySet();
 
+    /** All currently active Liquipedia matches per game. Multiple matches may overlap. */
+    private final ConcurrentHashMap<String, List<LiquipediaEsportsScheduleScraper.EsportsMatch>> activeMatches =
+            new ConcurrentHashMap<>();
+
     public DynamicGameScheduler(
             LiquipediaEsportsScheduleScraper scraper) {
 
         this.scraper = scraper;
+    }
+
+    /**
+     * Populate the scheduler immediately at application startup so an active
+     * match does not wait for the first 5-minute scheduled refresh.
+     */
+    @PostConstruct
+    public void initializeSchedule() {
+        refreshSchedule();
     }
 
     /**
@@ -56,14 +71,33 @@ public class DynamicGameScheduler {
         log.info("Refreshing esports game schedule...");
         for (String game : ESPORTS_GAMES) {
             try {
-                boolean active = scraper.hasActiveMatch(game);
+                List<LiquipediaEsportsScheduleScraper.EsportsMatch> matches =
+                        scraper.getUpcomingAndLive(game).stream()
+                                .filter(match -> match.startTime() != null)
+                                .filter(match -> match.isActive(java.time.Instant.now()))
+                                .sorted(java.util.Comparator.comparing(
+                                        LiquipediaEsportsScheduleScraper.EsportsMatch::startTime))
+                                .toList();
+
+                boolean active = !matches.isEmpty();
                 boolean wasActive = activeGames.contains(game);
-                if (active && !wasActive) {
+
+                if (active) {
                     activeGames.add(game);
-                    log.info("ESPORTS GAME STARTED: {}", game);
-                } else if (!active && wasActive) {
+                    activeMatches.put(game, List.copyOf(matches));
+                    if (!wasActive) {
+                        log.info("ESPORTS GAME STARTED: {} | {} active matches", game, matches.size());
+                    }
+                    for (var match : matches) {
+                        log.debug("ACTIVE MATCH: {} | {} vs {} | {}",
+                                match.matchId(), match.team1(), match.team2(), match.tournament());
+                    }
+                } else if (wasActive) {
                     activeGames.remove(game);
+                    activeMatches.remove(game);
                     log.info("ESPORTS GAME STOPPED: {}", game);
+                } else {
+                    activeMatches.remove(game);
                 }
             } catch (Exception e) {
                 log.warn("Failed to check esports schedule for game={}: {}", game, e.getMessage());
@@ -84,6 +118,19 @@ public class DynamicGameScheduler {
         }
 
         return activeGames.contains(normalizeGame(game));
+    }
+
+    /** Returns all active Liquipedia matches for a game. */
+    public List<LiquipediaEsportsScheduleScraper.EsportsMatch> getActiveMatches(String game) {
+        if (game == null) {
+            return List.of();
+        }
+        return activeMatches.getOrDefault(normalizeGame(game), List.of());
+    }
+
+    /** Backward-compatible convenience method returning the first active match. */
+    public Optional<LiquipediaEsportsScheduleScraper.EsportsMatch> getActiveMatch(String game) {
+        return getActiveMatches(game).stream().findFirst();
     }
 
     public boolean isManagedGame(String game) {

@@ -6,6 +6,8 @@ import com.valorant.tracker.model.Snapshot;
 import com.valorant.tracker.model.StreamSample;
 import com.valorant.tracker.service.api.TwitchService;
 import com.valorant.tracker.service.misc.DynamicGameScheduler;
+import com.valorant.tracker.service.misc.MatchStreamMatcher;
+import com.valorant.tracker.service.misc.LiquipediaEsportsScheduleScraper;
 import com.valorant.tracker.service.scraper.YouTubeScraperService;
 import com.valorant.tracker.service.selenium.YouTubeSeleniumWorldwideDiscoveryService;
 import com.valorant.tracker.service.scraper.KickScraperService;
@@ -41,6 +43,7 @@ public class TrackerService {
   final TwitchService tw;
   final KickScraperService kick;
   final DynamicGameScheduler dynamicGameScheduler;
+  final MatchStreamMatcher matchStreamMatcher;
   final EntityManager em;
   final TransactionTemplate transactions;
 
@@ -67,13 +70,14 @@ public class TrackerService {
           YouTubeSeleniumWorldwideDiscoveryService y, YouTubeScraperService yt12,
           TwitchService t,
           KickScraperService k, DynamicGameScheduler dynamicGameScheduler,
-          EntityManager e,
+          MatchStreamMatcher matchStreamMatcher, EntityManager e,
           PlatformTransactionManager transactionManager) {
     yt = y;
     yt1 = yt12;
     tw = t;
     kick = k;
       this.dynamicGameScheduler = dynamicGameScheduler;
+      this.matchStreamMatcher = matchStreamMatcher;
       em = e;
     transactions = new TransactionTemplate(transactionManager);
     providerHealth.put("YouTube", ProviderHealth.initial());
@@ -158,11 +162,37 @@ public class TrackerService {
     long twitchViewers = sum(streams, "Twitch");
     long kickViewers = sum(streams, "Kick");
 
+    List<LiquipediaEsportsScheduleScraper.EsportsMatch> activeMatches =
+            dynamicGameScheduler.getActiveMatches(game.getDisplayName());
+
     transactions.executeWithoutResult(status -> {
       em.persist(new Snapshot(timestamp, game.getId(), youtubeViewers, twitchViewers, kickViewers,
               count(streams, "YouTube"), count(streams, "Twitch"), count(streams, "Kick"),
               youtube.success(), twitch.success(), kickResult.success()));
-      streams.forEach(stream -> em.persist(new StreamSample(timestamp, game.getId(), stream)));
+
+      streams.forEach(stream -> {
+        String matchId = null;
+        MatchStreamMatcher.MatchMatchResult bestMatch = MatchStreamMatcher.MatchMatchResult.noMatch();
+
+        // A game can have several simultaneous matches. Associate the stream
+        // with the highest-confidence active match rather than the first match.
+        for (LiquipediaEsportsScheduleScraper.EsportsMatch activeMatch : activeMatches) {
+          MatchStreamMatcher.MatchMatchResult candidate =
+                  matchStreamMatcher.match(stream, activeMatch, game.getDisplayName());
+          if (candidate.matched() && candidate.score() > bestMatch.score()) {
+            bestMatch = candidate;
+          }
+        }
+
+        if (bestMatch.matched()) {
+          matchId = bestMatch.matchId();
+          logger.debug("{} | matched stream {} to match {} score={} reasons={}",
+                  game.getId(), stream.channelTitle(), matchId,
+                  bestMatch.score(), bestMatch.reasons());
+        }
+
+        em.persist(new StreamSample(timestamp, game.getId(), stream, matchId));
+      });
     });
 
     lastRun = timestamp;

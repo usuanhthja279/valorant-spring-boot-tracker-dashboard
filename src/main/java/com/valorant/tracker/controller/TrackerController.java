@@ -4,6 +4,7 @@ import com.valorant.tracker.constant.GameConfig;
 import com.valorant.tracker.model.Snapshot;
 import com.valorant.tracker.model.StreamSample;
 import com.valorant.tracker.service.misc.DynamicGameScheduler;
+import com.valorant.tracker.service.misc.LiquipediaEsportsScheduleScraper;
 import com.valorant.tracker.service.tracker.TrackerService;
 import jakarta.persistence.EntityManager;
 import org.springframework.http.HttpStatus;
@@ -101,6 +102,13 @@ public class TrackerController {
       // True = Liquipedia says an S/A-tier esports match
       // is currently active.
       item.put("active", scheduledActive);
+      List<LiquipediaEsportsScheduleScraper.EsportsMatch> activeMatches =
+              dynamicGameScheduler.getActiveMatches(game.getDisplayName());
+      item.put("activeMatches", activeMatches);
+      if (!activeMatches.isEmpty()) {
+        // Keep the singular field for existing clients while exposing the complete list.
+        item.put("activeMatch", activeMatches.get(0));
+      }
 
       // Never expose stale database data as CURRENT
       // data when the esports game is not scheduled.
@@ -111,18 +119,30 @@ public class TrackerController {
         item.put("youtubeStreams", 0L);
         item.put("twitchStreams", 0L);
         item.put("kickStreams", 0L);
+        item.put("youtubeViewers", 0L);
+        item.put("twitchViewers", 0L);
+        item.put("kickViewers", 0L);
 
       } else {
+
+        OffsetDateTime liveFrom = activeMatches.stream()
+                .map(LiquipediaEsportsScheduleScraper.EsportsMatch::startTime)
+                .filter(Objects::nonNull)
+                .min(Comparator.naturalOrder())
+                .orElse(OffsetDateTime.now().minusMinutes(1));
 
         List<StreamSample> samples = entityManager.createQuery(
                         "select s from StreamSample s " +
                                 "where lower(s.game) = lower(:game) " +
+                                "and s.timestamp >= :liveFrom " +
                                 "and s.timestamp = (" +
                                 "select max(x.timestamp) from StreamSample x " +
-                                "where lower(x.game) = lower(:game)" +
+                                "where lower(x.game) = lower(:game) " +
+                                "and x.timestamp >= :liveFrom" +
                                 ")",
                         StreamSample.class)
                 .setParameter("game", gameId)
+                .setParameter("liveFrom", liveFrom)
                 .getResultList();
 
         item.put("liveStreams", (long) samples.size());
@@ -161,6 +181,16 @@ public class TrackerController {
                         .count()
         );
 
+        item.put("youtubeViewers", samples.stream()
+                .filter(s -> "YouTube".equalsIgnoreCase(s.getPlatform()))
+                .mapToLong(StreamSample::getViewers).sum());
+        item.put("twitchViewers", samples.stream()
+                .filter(s -> "Twitch".equalsIgnoreCase(s.getPlatform()))
+                .mapToLong(StreamSample::getViewers).sum());
+        item.put("kickViewers", samples.stream()
+                .filter(s -> "Kick".equalsIgnoreCase(s.getPlatform()))
+                .mapToLong(StreamSample::getViewers).sum());
+
         samples.stream()
                 .max(Comparator.comparingLong(
                         StreamSample::getViewers))
@@ -168,6 +198,7 @@ public class TrackerController {
                   item.put("topChannel", top.getChannel());
                   item.put("topViewers", top.getViewers());
                   item.put("topPlatform", top.getPlatform());
+                  item.put("topMatchId", top.getMatchId());
                 });
       }
 
@@ -191,11 +222,29 @@ public class TrackerController {
 
     GameConfig config = GameConfig.from(game);
 
+    // Live-stream endpoints must never expose the last historical sample when
+    // the esports scheduler says the game is currently offline. Historical
+    // data remains available through /api/snapshots, /api/snapshots/range,
+    // /api/channels/history, and the analytics endpoints.
+    if (!isSchedulerActive(config)) {
+      return List.of();
+    }
+
+    List<LiquipediaEsportsScheduleScraper.EsportsMatch> activeMatches =
+            dynamicGameScheduler.getActiveMatches(config.getDisplayName());
+    OffsetDateTime liveFrom = activeMatches.stream()
+            .map(LiquipediaEsportsScheduleScraper.EsportsMatch::startTime)
+            .filter(Objects::nonNull)
+            .min(Comparator.naturalOrder())
+            .orElse(OffsetDateTime.now().minusMinutes(1));
+
     OffsetDateTime latestTimestamp = entityManager.createQuery(
                     "select max(s.timestamp) from StreamSample s " +
-                            "where (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT'))",
+                            "where (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) " +
+                            "and s.timestamp >= :liveFrom",
                     OffsetDateTime.class)
             .setParameter("game", config.getId())
+            .setParameter("liveFrom", liveFrom)
             .getSingleResult();
 
     if (latestTimestamp == null) {
@@ -318,6 +367,7 @@ public class TrackerController {
 
       item.put("id", stream.getId());
       item.put("streamId", stream.getStreamId());
+      item.put("matchId", stream.getMatchId());
       item.put("platform", stream.getPlatform());
 
       item.put("channelId", stream.getChannelId());
@@ -337,6 +387,68 @@ public class TrackerController {
       response.add(item);
     }
 
+    return response;
+  }
+
+  /** Returns all currently active Liquipedia matches for a game. */
+  @GetMapping("/esports/active-matches")
+  public Map<String, Object> activeMatches(
+          @RequestParam(defaultValue = "VALORANT") String game) {
+    GameConfig config = GameConfig.from(game);
+    List<LiquipediaEsportsScheduleScraper.EsportsMatch> matches =
+            dynamicGameScheduler.getActiveMatches(config.getDisplayName());
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("active", !matches.isEmpty());
+    result.put("matches", matches);
+    return result;
+  }
+
+  /** Backward-compatible endpoint returning the first active match, if one exists. */
+  @GetMapping("/esports/active-match")
+  public Map<String, Object> activeMatch(
+          @RequestParam(defaultValue = "VALORANT") String game) {
+    GameConfig config = GameConfig.from(game);
+    return dynamicGameScheduler.getActiveMatch(config.getDisplayName())
+            .map(match -> {
+              Map<String, Object> result = new LinkedHashMap<>();
+              result.put("active", true);
+              result.put("match", match);
+              return result;
+            })
+            .orElseGet(() -> Map.of("active", false, "matches", List.of()));
+  }
+
+  /** Returns persisted stream samples associated with one esports match. */
+  @GetMapping("/match-streams")
+  public List<Map<String, Object>> matchStreams(
+          @RequestParam String matchId,
+          @RequestParam(defaultValue = "VALORANT") String game) {
+    GameConfig config = GameConfig.from(game);
+    List<StreamSample> samples = entityManager.createQuery(
+                    "select s from StreamSample s " +
+                            "where s.matchId = :matchId " +
+                            "and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) " +
+                            "order by s.timestamp desc, s.viewers desc, s.id desc",
+                    StreamSample.class)
+            .setParameter("matchId", matchId)
+            .setParameter("game", config.getId())
+            .setMaxResults(1000)
+            .getResultList();
+    List<Map<String, Object>> response = new ArrayList<>();
+    for (StreamSample sample : samples) {
+      Map<String, Object> item = new LinkedHashMap<>();
+      item.put("id", sample.getId());
+      item.put("matchId", sample.getMatchId());
+      item.put("platform", sample.getPlatform());
+      item.put("streamId", sample.getStreamId());
+      item.put("channelId", sample.getChannelId());
+      item.put("channel", sample.getChannel());
+      item.put("title", sample.getTitle());
+      item.put("viewers", sample.getViewers());
+      item.put("url", sample.getUrl());
+      item.put("timestamp", sample.getTimestamp());
+      response.add(item);
+    }
     return response;
   }
 
@@ -527,7 +639,7 @@ public class TrackerController {
     if (platform != null && !platform.isBlank()) typedQuery.setParameter("platform", platform.trim());
     if (from != null) typedQuery.setParameter("from", from).setParameter("to", to);
     List<StreamSample> history = new ArrayList<>(typedQuery.setMaxResults(safeLimit).getResultList());
-    java.util.Collections.reverse(history);
+    Collections.reverse(history);
     return history;
   }
 
