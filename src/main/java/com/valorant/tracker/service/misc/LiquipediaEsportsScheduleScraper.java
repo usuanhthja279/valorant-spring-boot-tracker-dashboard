@@ -131,6 +131,24 @@ public class LiquipediaEsportsScheduleScraper {
         return scraped;
     }
 
+    /**
+     * Returns today's matches for the dashboard. Live matches are included even
+     * when they started earlier today; upcoming matches are included through
+     * the end of the current UTC calendar day.
+     */
+    public List<EsportsMatch> getMatchesToday(String game) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        var today = now.toLocalDate();
+
+        return getUpcomingAndLive(game).stream()
+                .filter(match -> match.startTime() != null)
+                .filter(match -> match.startTime().toLocalDate().equals(today))
+                .sorted(Comparator
+                        .comparing(EsportsMatch::isFinished).thenComparing(
+                                EsportsMatch::startTime))
+                .toList();
+    }
+
     public boolean hasActiveMatch(String game) {
 
         Instant now = Instant.now();
@@ -495,17 +513,25 @@ public class LiquipediaEsportsScheduleScraper {
                                 matchLink.absUrl("href"));
             }
 
-            String status =
-                    start.isAfter(
-                            OffsetDateTime.now(
-                                    ZoneOffset.UTC))
-                            ? "UPCOMING"
-                            : "LIVE_OR_RECENT";
+            MatchScore score = extractMatchScore(row, team1, team2);
+            boolean finished = score.finished();
+
+            String status;
+            if (start.isAfter(OffsetDateTime.now(ZoneOffset.UTC))) {
+                status = "UPCOMING";
+            } else if (finished) {
+                status = "COMPLETED";
+            } else {
+                status = "LIVE_OR_RECENT";
+            }
 
             String matchId = buildMatchId(
                     game, tournament, team1, team2, start, matchUrl);
 
-            OffsetDateTime end = start.plusHours(4);
+            // Do not invent a 4-hour end time. If Liquipedia does not expose
+            // one, the scheduler uses its safety fallback only until the
+            // source reports the match completed.
+            OffsetDateTime end = null;
 
             return new EsportsMatch(
                     matchId,
@@ -518,7 +544,11 @@ public class LiquipediaEsportsScheduleScraper {
                     end,
                     status,
                     tournamentUrl,
-                    matchUrl);
+                    matchUrl,
+                    score.team1Score(),
+                    score.team2Score(),
+                    score.bestOf(),
+                    finished);
 
         } catch (Exception ignored) {
 
@@ -526,6 +556,66 @@ public class LiquipediaEsportsScheduleScraper {
         }
     }
 
+
+    /**
+     * Extracts the series score from the match row when Liquipedia exposes it.
+     * The CSS varies slightly between game wikis, so several score selectors
+     * are accepted. A finished marker is also recognized from the row/status
+     * text. Scores are series scores (e.g. 2-1 for a completed Bo3).
+     */
+    private MatchScore extractMatchScore(Element row, String team1, String team2) {
+        List<Integer> scores = new ArrayList<>();
+        for (String selector : List.of(
+                ".match-info-header-opponent .score",
+                ".match-info-header-opponent-score",
+                ".match-info-header-opponent .match-info-header-opponent-score",
+                ".match-info-score",
+                ".score")) {
+            for (Element element : row.select(selector)) {
+                String text = element.text().trim();
+                if (text.matches("\\d+")) {
+                    try {
+                        scores.add(Integer.parseInt(text));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+            if (scores.size() >= 2) break;
+        }
+
+        String rowText = row.text().replace('\u00A0', ' ').trim();
+        String lower = rowText.toLowerCase(Locale.ROOT);
+
+        boolean finished = row.classNames().stream()
+                .map(String::toLowerCase)
+                .anyMatch(v -> v.contains("finished") || v.contains("completed"));
+
+        finished = finished
+                || lower.contains("finished")
+                || lower.contains("completed")
+                || lower.contains("final");
+
+        Integer score1 = scores.size() > 0 ? scores.get(0) : null;
+        Integer score2 = scores.size() > 1 ? scores.get(1) : null;
+
+        // A numeric series score is enough to expose the result when both
+        // sides are known. We deliberately do not infer a winner from it.
+        if (score1 != null && score2 != null) {
+            String boText = rowText.toUpperCase(Locale.ROOT);
+            Integer bestOf = null;
+            var bo = java.util.regex.Pattern.compile("\\bBO\\s*([1357])\\b").matcher(boText);
+            if (bo.find()) {
+                bestOf = Integer.parseInt(bo.group(1));
+            }
+            if (!finished && bestOf != null) {
+                int target = (bestOf / 2) + 1;
+                finished = score1 >= target || score2 >= target;
+            }
+            return new MatchScore(score1, score2, bestOf, finished);
+        }
+
+        return new MatchScore(null, null, null, finished);
+    }
 
     private String buildMatchId(
             String game,
@@ -694,32 +784,39 @@ public class LiquipediaEsportsScheduleScraper {
             OffsetDateTime endTime,
             String status,
             String tournamentUrl,
-            String matchUrl) {
+            String matchUrl,
+            Integer team1Score,
+            Integer team2Score,
+            Integer bestOf,
+            boolean finished) {
+
+        public boolean isFinished() {
+            return finished || "COMPLETED".equalsIgnoreCase(status);
+        }
 
         public boolean isActive(Instant now) {
-
-            if (startTime == null || now == null) {
+            if (startTime == null || now == null || isFinished()) {
                 return false;
             }
 
             Instant start = startTime.toInstant();
-
-            /*
-             * Activate collection readiness 5 minutes before scheduled kickoff.
-             * This gives providers time to expose the broadcast before the
-             * match officially starts.
-             *
-             * Prefer Liquipedia's parsed endTime when available. Some pages
-             * do not expose an end time, so retain the previous 4-hour
-             * kickoff-based fallback in that case.
-             */
             Instant activeFrom = start.minus(Duration.ofMinutes(5));
+
+            // A real end time is authoritative. When Liquipedia has no end
+            // time, this is only a safety ceiling; the score/finished flag
+            // above is what normally ends the match much earlier.
             Instant activeUntil = endTime != null
                     ? endTime.toInstant()
                     : start.plus(Duration.ofHours(4));
 
-            return !activeFrom.isAfter(now)
-                    && activeUntil.isAfter(now);
+            return !activeFrom.isAfter(now) && activeUntil.isAfter(now);
         }
+    }
+
+    private record MatchScore(
+            Integer team1Score,
+            Integer team2Score,
+            Integer bestOf,
+            boolean finished) {
     }
 }

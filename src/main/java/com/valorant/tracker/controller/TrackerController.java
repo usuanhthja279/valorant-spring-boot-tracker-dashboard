@@ -24,12 +24,17 @@ public class TrackerController {
   private final EntityManager entityManager;
   private final TrackerService tracker;
   private final DynamicGameScheduler dynamicGameScheduler;
+  private final LiquipediaEsportsScheduleScraper scheduleScraper;
   private final EsportsMatchRecordRepository matchRepository;
 
-  public TrackerController(EntityManager entityManager, TrackerService tracker, DynamicGameScheduler dynamicGameScheduler, EsportsMatchRecordRepository matchRepository) {
+  public TrackerController(EntityManager entityManager, TrackerService tracker,
+                           DynamicGameScheduler dynamicGameScheduler,
+                           LiquipediaEsportsScheduleScraper scheduleScraper,
+                           EsportsMatchRecordRepository matchRepository) {
     this.entityManager = entityManager;
     this.tracker = tracker;
     this.dynamicGameScheduler = dynamicGameScheduler;
+    this.scheduleScraper = scheduleScraper;
     this.matchRepository = matchRepository;
   }
 
@@ -469,6 +474,59 @@ public class TrackerController {
     return response;
   }
 
+  /**
+   * Today's esports matches. Live matches are marked active and are sorted
+   * before upcoming matches so the game dashboard always gives live matches
+   * top priority.
+   */
+  @GetMapping("/esports/matches/today")
+  public Map<String, Object> esportsMatchesToday(
+          @RequestParam(defaultValue = "VALORANT") String game) {
+    GameConfig config = GameConfig.from(game);
+    List<LiquipediaEsportsScheduleScraper.EsportsMatch> matches =
+            scheduleScraper.getMatchesToday(config.getDisplayName());
+
+    List<Map<String, Object>> response = new ArrayList<>();
+    Set<String> activeIds = dynamicGameScheduler.getActiveMatches(config.getDisplayName())
+            .stream()
+            .map(LiquipediaEsportsScheduleScraper.EsportsMatch::matchId)
+            .collect(java.util.stream.Collectors.toSet());
+
+    for (var match : matches) {
+      Map<String, Object> item = new LinkedHashMap<>();
+      item.put("matchId", match.matchId());
+      item.put("game", match.game());
+      item.put("tournament", match.tournament());
+      item.put("tier", match.tier());
+      item.put("team1", match.team1());
+      item.put("team2", match.team2());
+      item.put("startTime", match.startTime());
+      item.put("endTime", match.endTime());
+      boolean live = activeIds.contains(match.matchId()) && !match.isFinished();
+      item.put("status", live ? "LIVE" : (match.isFinished() ? "COMPLETED" : "UPCOMING"));
+      item.put("active", live);
+      item.put("score1", match.team1Score());
+      item.put("score2", match.team2Score());
+      item.put("bestOf", match.bestOf());
+      item.put("finished", match.isFinished());
+      item.put("matchUrl", match.matchUrl());
+      item.put("tournamentUrl", match.tournamentUrl());
+      response.add(item);
+    }
+
+    response.sort(Comparator
+            .comparing((Map<String, Object> item) -> Boolean.TRUE.equals(item.get("active")))
+            .reversed()
+            .thenComparing(item -> String.valueOf(item.get("startTime"))));
+
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("game", config.getDisplayName());
+    result.put("matches", response);
+    result.put("liveCount", response.stream().filter(x -> Boolean.TRUE.equals(x.get("active"))).count());
+    result.put("upcomingCount", response.stream().filter(x -> "UPCOMING".equals(x.get("status"))).count());
+    return result;
+  }
+
   /** Returns all currently active Liquipedia matches for a game. */
   @GetMapping("/esports/active-matches")
   public Map<String, Object> activeMatches(
@@ -783,7 +841,7 @@ public class TrackerController {
     }
     latestByStream.values().stream()
             .sorted(Comparator.comparingLong(StreamSample::getViewers).reversed())
-            .limit(100)
+            .limit(1000)
             .forEach(sample -> {
               Map<String, Object> row = new LinkedHashMap<>();
               row.put("platform", sample.getPlatform());
@@ -795,10 +853,49 @@ public class TrackerController {
               streamRows.add(row);
             });
 
+    Map<String, Object> matchResponse = new LinkedHashMap<>();
+    matchResponse.put("matchId", match.getMatchId());
+    matchResponse.put("game", match.getGame());
+    matchResponse.put("tournament", match.getTournament());
+    matchResponse.put("tier", match.getTier());
+    matchResponse.put("team1", match.getTeam1());
+    matchResponse.put("team2", match.getTeam2());
+    matchResponse.put("startTime", match.getStartTime());
+    matchResponse.put("endTime", match.getEndTime());
+    matchResponse.put("status", match.getStatus());
+    matchResponse.put("matchUrl", match.getMatchUrl());
+    matchResponse.put("tournamentUrl", match.getTournamentUrl());
+
+    // Prefer the fresh schedule object when it is still present. It contains
+    // score/finished data scraped from the current Liquipedia match row.
+    scheduleScraper.getUpcomingAndLive(match.getGame()).stream()
+            .filter(m -> matchId.equals(m.matchId()))
+            .findFirst()
+            .ifPresent(m -> {
+              matchResponse.put("score1", m.team1Score());
+              matchResponse.put("score2", m.team2Score());
+              matchResponse.put("bestOf", m.bestOf());
+              matchResponse.put("finished", m.isFinished());
+              if (m.endTime() != null) matchResponse.put("endTime", m.endTime());
+              if (m.status() != null) matchResponse.put("status", m.status());
+            });
+
+    boolean matchActive = dynamicGameScheduler.getActiveMatches(match.getGame()).stream()
+            .anyMatch(m -> matchId.equals(m.matchId()));
+
+    OffsetDateTime liveCutoff = OffsetDateTime.now(java.time.ZoneOffset.UTC).minusMinutes(5);
+    for (Map<String, Object> row : streamRows) {
+      Object ts = row.get("timestamp");
+      boolean recent = false;
+      if (ts instanceof OffsetDateTime odt) {
+        recent = !odt.isBefore(liveCutoff);
+      }
+      row.put("live", matchActive && recent);
+    }
+
     Map<String, Object> response = new LinkedHashMap<>();
-    response.put("match", match);
-    response.put("active", dynamicGameScheduler.getActiveMatches(match.getGame()).stream()
-            .anyMatch(m -> matchId.equals(m.matchId())));
+    response.put("match", matchResponse);
+    response.put("active", matchActive);
     response.put("summary", summary);
     response.put("timeline", timeline);
     response.put("streams", streamRows);

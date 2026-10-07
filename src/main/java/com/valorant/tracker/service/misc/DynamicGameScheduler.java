@@ -75,11 +75,11 @@ public class DynamicGameScheduler {
     }
 
     /**
-     * Check Liquipedia every 5 minutes. The scheduler also initializes at
+     * Check Liquipedia every 2 minutes. The scheduler also initializes at
      * startup, so the first collection window is not delayed until the next
      * scheduled refresh.
      */
-    @Scheduled(fixedRateString = "${tracker.esports.schedule-check-ms:300000}")
+    @Scheduled(fixedRateString = "${tracker.esports.schedule-check-ms:120000}")
     @Transactional
     public void refreshSchedule() {
         log.info("Refreshing esports game schedule...");
