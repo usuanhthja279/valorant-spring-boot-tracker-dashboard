@@ -72,7 +72,7 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
     this.headless = headless;
   }
 
-  public Map<String, Object> discover(int requestedMax, String requestedUrl, String region, boolean validateWithApi) {
+  public Map<String, Object> discover(int requestedMax, String requestedUrl, String region, String game, boolean validateWithApi) {
 
     int max = Math.clamp(requestedMax, 1, 1000);
     String pageUrl = requestedUrl == null || requestedUrl.isBlank() ? defaultPageUrl : requestedUrl.trim();
@@ -83,7 +83,7 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
     List<String> warnings = new ArrayList<>();
     Instant started = Instant.now();
 
-    log.info("YouTube Selenium scraping started | requestedMax={} | url={}", max, pageUrl);
+    log.info("YouTube Selenium scraping started for {} | requestedMax={} | url={}", game, max, pageUrl);
 
     WebDriver driver = null;
     int scrolls = 0;
@@ -315,7 +315,7 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
       out.put("warnings", warnings);
       out.put("streams", streams);
     } catch (Exception e) {
-      log.warn("Selenium YouTube discovery failed: {}", e.toString());
+      log.warn("Selenium YouTube discovery failed for {}: {}", game, e.toString());
 
       out.put("ok", false);
       out.put("isolatedTestOnly", true);
@@ -353,8 +353,8 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
         }
       }
 
-      log.info(
-              "YouTube Selenium scraping completed | ok={} | streams={} | viewers={} | elapsedMs={} | error={} | warnings={}",
+      log.info("YouTube Selenium scraping completed for {} | ok={} | streams={} | viewers={} | elapsedMs={} | error={} | warnings={}",
+              game,
               Boolean.TRUE.equals(out.get("ok")),
               resultCount,
               totalViewers,
@@ -364,12 +364,11 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
 
       if (resultStreams instanceof List<?> list) {
         int limit = Math.min(20, list.size());
-        log.info("YouTube Selenium Top 20:");
+        log.info("YouTube Selenium Top 20 for {}: ", game);
         for (int index = 0; index < limit; index++) {
           Object item = list.get(index);
           if (item instanceof LiveStream stream) {
-            log.info(
-                    "{}. {} -> {} viewers | {}",
+            log.info("{}. {} -> {} viewers | {}",
                     index + 1,
                     stream.channelTitle(),
                     stream.viewers(),
@@ -385,13 +384,13 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
    * Convenience method for SeleniumTrackerService.
    */
   public List<LiveStream> fetch() {
-    return fetch(100, "worldwide", defaultPageUrl);
+    return fetch(100, "worldwide", "VALORANT", defaultPageUrl);
   }
 
   /** Fetch up to the requested number of Worldwide live videos for the aggregate tracker. */
-  public List<LiveStream> fetch(int maxStreams, String region, String pageUrl) {
+  public List<LiveStream> fetch(int maxStreams, String region, String game, String pageUrl) {
 
-    Map<String, Object> result = discover(maxStreams, pageUrl, region, true);
+    Map<String, Object> result = discover(maxStreams, pageUrl, region, game, true);
     Object value = result.get("streams");
 
     if (!(value instanceof List<?> list)) {

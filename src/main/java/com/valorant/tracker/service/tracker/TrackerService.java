@@ -50,12 +50,16 @@ public class TrackerService {
   private volatile OffsetDateTime lastRun;
   @Value("${tracker.interval-ms:120000}")
   private long intervalMs;
+  /** Backward-compatible aggregate health keyed by platform. */
   private final Map<String, ProviderHealth> providerHealth = new ConcurrentHashMap<>();
+  /** Exact provider health keyed by game + platform. */
+  private final Map<String, ProviderHealth> gameProviderHealth = new ConcurrentHashMap<>();
+  /** Last successful provider data, isolated by game + platform. */
   private final Map<String, CachedProviderData> lastSuccessfulData = new ConcurrentHashMap<>();
-  private final Map<String, OffsetDateTime> retryAfter = new ConcurrentHashMap<>();
-  private final Map<String, OffsetDateTime> outageStarted = new ConcurrentHashMap<>();
-  private static final Duration STALE_DATA_GRACE = Duration.ofMinutes(3);
-  private static final Duration RATE_LIMIT_COOLDOWN = Duration.ofMinutes(3);
+  /** Consecutive failed/no-data collection runs, isolated by game + platform. */
+  private final Map<String, Integer> consecutiveFailures = new ConcurrentHashMap<>();
+  /** Number of failed runs for which the previous successful result may be reused. */
+  private static final int MAX_CACHED_FAILURE_RUNS = 2;
   private final ExecutorService providerExecutor = Executors.newFixedThreadPool(6);
   private final ExecutorService gameExecutor = Executors.newFixedThreadPool(2);
 
@@ -103,18 +107,12 @@ public class TrackerService {
     collectGameData(GameConfig.VALORANT);
   }
 
-  public void collectAllGames() {
+  public synchronized void collectAllGames() {
 
     List<CompletableFuture<Void>> gameFutures = new ArrayList<>();
 
     for (GameConfig game : GameConfig.values()) {
       String gameId = game.getId();
-
-      /*
-       * Only esports games are dynamically controlled.
-       * GTA V / Minecraft and other non-esports games
-       * continue to run normally.
-       */
       if (dynamicGameScheduler.isManagedGame(gameId) && !dynamicGameScheduler.isGameActive(gameId)) {
         logger.info("{} | esports schedule inactive - skipping collection", gameId);
         continue;
@@ -135,18 +133,18 @@ public class TrackerService {
     OffsetDateTime timestamp = OffsetDateTime.now(ZoneId.of("Asia/Kolkata"));
 
     CompletableFuture<ProviderResult> youtubeFetch = CompletableFuture.supplyAsync(
-            () -> fetchProvider("YouTube", () -> {
+            () -> fetchProvider(game.getId(), "YouTube", () -> {
               logger.debug("{} YouTube Selenium slot acquired", game.getId());
               try {
-                return  yt.fetch(50, "worldwide", game.getYoutubeTopicUrl());
+                return  yt.fetch(50, "worldwide", game.getDisplayName(), game.getYoutubeTopicUrl());
               } finally {
                 logger.debug("{} YouTube Selenium slot released", game.getId());
               }
             }, timestamp), seleniumExecutor);
     CompletableFuture<ProviderResult> twitchFetch = CompletableFuture.supplyAsync(
-            () -> fetchProvider("Twitch", () -> tw.fetch(game.getId()), timestamp), providerExecutor);
+            () -> fetchProvider(game.getId(), "Twitch", () -> tw.fetch(game.getDisplayName(), game.getId()), timestamp), providerExecutor);
     CompletableFuture<ProviderResult> kickFetch = CompletableFuture.supplyAsync(
-            () -> fetchProvider("Kick", () -> kick.fetch(game.getKickUrl(), true), timestamp), providerExecutor);
+            () -> fetchProvider(game.getId(), "Kick", () -> kick.fetch(game.getDisplayName(), game.getKickUrl(), true), timestamp), providerExecutor);
 
     CompletableFuture.allOf(youtubeFetch, twitchFetch, kickFetch).join();
     ProviderResult youtube = youtubeFetch.join();
@@ -209,96 +207,93 @@ public class TrackerService {
     seleniumExecutor.shutdown();
   }
 
+  /**
+   * Fetch one provider for one game. Cache/failure state is deliberately keyed by
+   * BOTH game and platform so a failed provider for game B can never reuse the
+   * successful result from game A.
+   *
+   * Fallback policy is run-based, not time-based:
+   *   run 1 success -> cache result
+   *   run 2 failure/no data -> reuse run 1
+   *   run 3 failure/no data -> reuse run 1
+   *   run 4 failure/no data -> return no data + failure reason
+   *
+   * A later successful run resets the failure counter and becomes the new cache.
+   */
   private ProviderResult fetchProvider(
-          String platform, Supplier<List<LiveStream>> fetch, OffsetDateTime timestamp) {
-    OffsetDateTime blockedUntil = retryAfter.get(platform);
-    if (blockedUntil != null && timestamp.isBefore(blockedUntil)) {
-      logger.warn("{} fetch is rate-limited; skipping request until {} and preserving last successful data",
-              platform, blockedUntil);
-      return staleOrEmpty(platform, timestamp, "429 cooldown until " + blockedUntil);
-    }
-    if (blockedUntil != null) {
-      retryAfter.remove(platform, blockedUntil);
-    }
+          String game, String platform, Supplier<List<LiveStream>> fetch, OffsetDateTime timestamp) {
+    final String stateKey = providerStateKey(game, platform);
 
     try {
       List<LiveStream> result = fetch.get();
       if (result == null) {
-        throw new IllegalStateException(platform + " service returned a null response");
+        throw new IllegalStateException(platform + " service returned a null response for game " + game);
       }
 
       List<LiveStream> unique = deduplicate(platform, result);
 
-      // A sudden empty result after a previously non-empty successful fetch can be
-      // a transient provider/API/search failure rather than a real drop to zero.
-      // Treat it as an outage signal and retain the last good data for the same
-      // three-minute grace period used for exceptions and HTTP 429 cooldowns.
-      CachedProviderData previousData = lastSuccessfulData.get(platform);
-      if (unique.isEmpty()
-              && previousData != null
-              && !previousData.streams().isEmpty()) {
+      // For an actively collected game, an empty provider response is treated as
+      // no-data/failure. It must follow the same run-based fallback sequence as
+      // exceptions. This is scoped to this exact game + platform.
+      if (unique.isEmpty()) {
         throw new IllegalStateException(
-                platform + " returned zero streams after previously returning live streams; "
-                        + "treating empty result as transient and preserving last successful data");
+                platform + " returned no data for game " + game);
       }
 
       long viewers = unique.stream().mapToLong(LiveStream::viewers).sum();
-      lastSuccessfulData.put(platform, new CachedProviderData(timestamp, unique));
-      retryAfter.remove(platform);
-      outageStarted.remove(platform);
-      providerHealth.put(
-              platform,
-              new ProviderHealth("UP", timestamp, null, unique.size(), viewers));
-      logger.info("{} collection succeeded: {} unique streams, {} viewers",
-              platform, unique.size(), viewers);
+      lastSuccessfulData.put(stateKey, new CachedProviderData(timestamp, unique));
+      consecutiveFailures.remove(stateKey);
+      ProviderHealth healthy = new ProviderHealth("UP", timestamp, null, unique.size(), viewers);
+      gameProviderHealth.put(stateKey, healthy);
+      providerHealth.put(platform, healthy);
+      logger.info("{} | {} collection succeeded: {} unique streams, {} viewers",
+              game, platform, unique.size(), viewers);
       return new ProviderResult(unique, true);
     } catch (Exception e) {
-      if (isRateLimited(e)) {
-        OffsetDateTime until = timestamp.plus(RATE_LIMIT_COOLDOWN);
-        retryAfter.put(platform, until);
-        logger.warn("{} returned HTTP 429; pausing requests for 3 minutes until {}",
-                platform, until);
-      }
-      return staleOrEmpty(platform, timestamp, conciseError(e));
+      String error = conciseError(e);
+      return staleOrEmpty(game, platform, timestamp, error);
     }
   }
 
-  private ProviderResult staleOrEmpty(String platform, OffsetDateTime timestamp, String error) {
-    CachedProviderData cached = lastSuccessfulData.get(platform);
-    ProviderHealth previous = providerHealth.getOrDefault(platform, ProviderHealth.initial());
+  private ProviderResult staleOrEmpty(
+          String game, String platform, OffsetDateTime timestamp, String error) {
+    final String stateKey = providerStateKey(game, platform);
+    CachedProviderData cached = lastSuccessfulData.get(stateKey);
+    ProviderHealth previous = gameProviderHealth.getOrDefault(stateKey, ProviderHealth.initial());
+
+    int failures = consecutiveFailures.merge(stateKey, 1, Integer::sum);
     List<LiveStream> retained = List.of();
-    OffsetDateTime outageAt = outageStarted.computeIfAbsent(platform, ignored -> timestamp);
-    boolean withinGrace = Duration.between(outageAt, timestamp).compareTo(STALE_DATA_GRACE) <= 0;
-    boolean inRateLimitCooldown = retryAfter.get(platform) != null && timestamp.isBefore(retryAfter.get(platform));
-    if (cached != null && (withinGrace || inRateLimitCooldown)) {
+
+    if (cached != null && failures <= MAX_CACHED_FAILURE_RUNS) {
       retained = cached.streams();
-      logger.warn("{} fetch unavailable; retaining {} streams / {} viewers from {} for consistency",
-              platform, retained.size(), retained.stream().mapToLong(LiveStream::viewers).sum(), cached.retrievedAt());
+      logger.warn(
+              "{} | {} fetch failed on run {} of {} (reason: {}). "
+                      + "Using last successful data from {}: {} streams / {} viewers",
+              game, platform, failures, MAX_CACHED_FAILURE_RUNS + 1, error,
+              cached.retrievedAt(), retained.size(),
+              retained.stream().mapToLong(LiveStream::viewers).sum());
     } else {
-      logger.warn("{} fetch unavailable and cached data is older than 3 minutes; using zero streams", platform);
+      logger.error(
+              "{} | {} fetch failed on run {} (reason: {}). "
+                      + "No cached data will be used; returning NO DATA",
+              game, platform, failures, error);
     }
+
     long viewers = retained.stream().mapToLong(LiveStream::viewers).sum();
-    providerHealth.put(platform, new ProviderHealth(
-            "DOWN", previous.lastSuccessAt(), error, retained.size(), viewers));
+    ProviderHealth down = new ProviderHealth(
+            "DOWN", previous.lastSuccessAt(), error, retained.size(), viewers);
+    gameProviderHealth.put(stateKey, down);
+    providerHealth.put(platform, down);
     return new ProviderResult(retained, false);
   }
 
-  private boolean isRateLimited(Exception exception) {
-    Throwable current = exception;
-    while (current != null) {
-      if (current instanceof WebClientResponseException response
-              && response.getStatusCode().value() == 429) {
-        return true;
-      }
-      String message = current.getMessage();
-      if (message != null && (message.contains("429") || message.toLowerCase(java.util.Locale.ROOT).contains("too many requests"))) {
-        return true;
-      }
-      current = current.getCause();
-    }
-    return false;
+  private String providerStateKey(String game, String platform) {
+    return game.trim().toUpperCase(java.util.Locale.ROOT)
+            + "::"
+            + platform.trim().toLowerCase(java.util.Locale.ROOT);
   }
 
+  /** Cached only as the last successful result for one game + platform. */
   private record CachedProviderData(OffsetDateTime retrievedAt, List<LiveStream> streams) {}
 
   private List<LiveStream> deduplicate(String platform, List<LiveStream> streams) {
@@ -361,6 +356,22 @@ public class TrackerService {
 
   public synchronized Map<String, ProviderHealth> getProviderHealth() {
     return Map.copyOf(providerHealth);
+  }
+
+  /**
+   * Exact provider health for one game. This avoids mixing a failed provider
+   * response for one game with another game's successful response.
+   */
+  public synchronized Map<String, ProviderHealth> getProviderHealth(String game) {
+    String prefix = game.trim().toUpperCase(java.util.Locale.ROOT) + "::";
+    Map<String, ProviderHealth> result = new LinkedHashMap<>();
+    gameProviderHealth.forEach((key, value) -> {
+      if (key.startsWith(prefix)) {
+        String platform = key.substring(prefix.length());
+        result.put(platform, value);
+      }
+    });
+    return Map.copyOf(result);
   }
 
   public record ProviderHealth(

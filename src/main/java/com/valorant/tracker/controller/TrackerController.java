@@ -103,9 +103,11 @@ public class TrackerController {
       item.put("id", gameId);
       item.put("name", game.getDisplayName());
 
-      // True = Liquipedia says an S/A-tier esports match
-      // is currently active.
+      // "active" is the scheduler/collection state. It may become true
+      // 5 minutes before kickoff. Keep actual live state separate so the UI
+      // does not label a pre-match collection window as "Live now".
       item.put("active", scheduledActive);
+      item.put("liveNow", false);
       List<LiquipediaEsportsScheduleScraper.EsportsMatch> activeMatches =
               dynamicGameScheduler.getActiveMatches(game.getDisplayName());
       item.put("activeMatches", activeMatches);
@@ -132,6 +134,7 @@ public class TrackerController {
         OffsetDateTime liveFrom = activeMatches.stream()
                 .map(LiquipediaEsportsScheduleScraper.EsportsMatch::startTime)
                 .filter(Objects::nonNull)
+                .map(t -> t.minusMinutes(5))
                 .min(Comparator.naturalOrder())
                 .orElse(OffsetDateTime.now().minusMinutes(1));
 
@@ -194,6 +197,10 @@ public class TrackerController {
         item.put("kickViewers", samples.stream()
                 .filter(s -> "Kick".equalsIgnoreCase(s.getPlatform()))
                 .mapToLong(StreamSample::getViewers).sum());
+
+        // Actual live state is based on current stream data, not merely on
+        // the 5-minute pre-match scheduler window.
+        item.put("liveNow", !samples.isEmpty());
 
         samples.stream()
                 .max(Comparator.comparingLong(
@@ -692,12 +699,23 @@ public class TrackerController {
     EsportsMatchRecord match = matchRepository.findById(matchId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Match not found: " + matchId));
 
-    List<StreamSample> samples = entityManager.createQuery(
-                    "select s from StreamSample s where s.matchId = :matchId " +
-                    "and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) " +
-                    "order by s.timestamp asc, s.id asc", StreamSample.class)
+    // Read both the normalized ID and the legacy Liquipedia-URL ID so
+    // historical StreamSamples collected by older builds are not lost.
+    String legacyMatchId = match.getMatchUrl();
+    String sampleQuery = "select s from StreamSample s where " +
+            "(s.matchId = :matchId " +
+            (legacyMatchId != null && !legacyMatchId.isBlank() ? "or s.matchId = :legacyMatchId " : "") +
+            ") " +
+            "and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) " +
+            "order by s.timestamp asc, s.id asc";
+
+    var sampleTypedQuery = entityManager.createQuery(sampleQuery, StreamSample.class)
             .setParameter("matchId", matchId)
-            .setParameter("game", config.getId())
+            .setParameter("game", config.getId());
+    if (legacyMatchId != null && !legacyMatchId.isBlank()) {
+      sampleTypedQuery.setParameter("legacyMatchId", legacyMatchId);
+    }
+    List<StreamSample> samples = sampleTypedQuery
             .setMaxResults(20000)
             .getResultList();
 

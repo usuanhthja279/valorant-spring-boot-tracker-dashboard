@@ -535,16 +535,23 @@ public class LiquipediaEsportsScheduleScraper {
             OffsetDateTime start,
             String matchUrl) {
 
+        // Always use one internal ID format for every game.
+        // Never expose the Liquipedia URL itself as matchId because the
+        // match-detail API, persisted records and StreamSample.matchId must
+        // all use the same namespace.
+        String key;
         if (matchUrl != null && !matchUrl.isBlank()) {
-            return matchUrl;
+            key = normalizeIdentity(matchUrl);
+        } else {
+            // Some Liquipedia pages (notably some CS2 rows) do not expose a
+            // Match: URL. Use the stable match attributes as the fallback.
+            key = String.join("|",
+                    normalizeGame(game),
+                    normalizeIdentity(tournament),
+                    normalizeIdentity(team1),
+                    normalizeIdentity(team2),
+                    start.toInstant().toString());
         }
-
-        String key = String.join("|",
-                normalizeGame(game),
-                normalizeIdentity(tournament),
-                normalizeIdentity(team1),
-                normalizeIdentity(team2),
-                start.toInstant().toString());
 
         return "match:" + Integer.toUnsignedString(key.hashCode(), 36);
     }
@@ -691,17 +698,28 @@ public class LiquipediaEsportsScheduleScraper {
 
         public boolean isActive(Instant now) {
 
-            Instant start =
-                    startTime.toInstant();
+            if (startTime == null || now == null) {
+                return false;
+            }
+
+            Instant start = startTime.toInstant();
 
             /*
-             * Match is considered active from kickoff
-             * until 4 hours after kickoff.
+             * Activate collection readiness 5 minutes before scheduled kickoff.
+             * This gives providers time to expose the broadcast before the
+             * match officially starts.
+             *
+             * Prefer Liquipedia's parsed endTime when available. Some pages
+             * do not expose an end time, so retain the previous 4-hour
+             * kickoff-based fallback in that case.
              */
-            return !start.isAfter(now)
-                    && start.plus(
-                            Duration.ofHours(4))
-                    .isAfter(now);
+            Instant activeFrom = start.minus(Duration.ofMinutes(5));
+            Instant activeUntil = endTime != null
+                    ? endTime.toInstant()
+                    : start.plus(Duration.ofHours(4));
+
+            return !activeFrom.isAfter(now)
+                    && activeUntil.isAfter(now);
         }
     }
 }

@@ -44,7 +44,11 @@ public class DynamicGameScheduler {
     );
 
     /**
-     * Games currently having an active S/A-tier match.
+     * Games currently within the match collection window.
+     *
+     * The window starts 5 minutes before scheduled kickoff and ends at the
+     * parsed match end time (or the 4-hour fallback when no end time exists).
+     * UI "Live now" must still be based on actual live stream data.
      */
     private final Set<String> activeGames =
             ConcurrentHashMap.newKeySet();
@@ -71,7 +75,9 @@ public class DynamicGameScheduler {
     }
 
     /**
-     * Check Liquipedia every 5 minutes.
+     * Check Liquipedia every 5 minutes. The scheduler also initializes at
+     * startup, so the first collection window is not delayed until the next
+     * scheduled refresh.
      */
     @Scheduled(fixedRateString = "${tracker.esports.schedule-check-ms:300000}")
     @Transactional
@@ -126,6 +132,21 @@ public class DynamicGameScheduler {
         for (var match : matches) {
             if (match.matchId() == null || match.matchId().isBlank()) continue;
             EsportsMatchRecord record = matchRepository.findById(match.matchId()).orElse(null);
+
+            // Older builds used the full Liquipedia match URL as the database
+            // primary key. Migrate that legacy record to the normalized
+            // match:<hash> identity when the same match URL is seen again.
+            if (record == null && match.matchUrl() != null && !match.matchUrl().isBlank()) {
+                List<EsportsMatchRecord> legacy = matchRepository.findByMatchUrl(match.matchUrl());
+                if (!legacy.isEmpty()) {
+                    for (EsportsMatchRecord oldRecord : legacy) {
+                        if (!match.matchId().equals(oldRecord.getMatchId())) {
+                            matchRepository.delete(oldRecord);
+                        }
+                    }
+                }
+            }
+
             if (record == null) {
                 record = new EsportsMatchRecord(match.matchId(), game, match.tournament(), match.tier(),
                         match.team1(), match.team2(), match.startTime(), match.endTime(), match.status(),
@@ -139,8 +160,8 @@ public class DynamicGameScheduler {
     }
 
     /**
-     * Returns true when the game currently has
-     * an active esports match.
+     * Returns true when the game is inside an esports match collection window.
+     * This can be up to 5 minutes before kickoff.
      */
     public boolean isGameActive(String game) {
 

@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface EsportsMatchRecordRepository extends JpaRepository<EsportsMatchRecord, String> {
   List<EsportsMatchRecord> findByGameIgnoreCaseOrderByStartTimeDesc(String game);
+
+  List<EsportsMatchRecord> findByMatchUrl(String matchUrl);
 }
