@@ -806,6 +806,7 @@ public class TrackerController {
     Map<String, Long> platformPeaks = new LinkedHashMap<>();
     Map<String, Set<String>> platformChannels = new LinkedHashMap<>();
     Map<String, Long> latestPlatform = new LinkedHashMap<>();
+    OffsetDateTime latestSampleTimestamp = null;
 
     for (var entry : byTimestamp.entrySet()) {
       Map<String, Long> platformValues = new LinkedHashMap<>();
@@ -819,10 +820,19 @@ public class TrackerController {
       peakCombined = Math.max(peakCombined, combined);
       combinedSum += combined;
       combinedPoints++;
-      latestPlatform.clear();
-      latestPlatform.putAll(platformValues);
       for (var p : platformValues.entrySet()) {
         platformPeaks.merge(p.getKey(), p.getValue(), Math::max);
+      }
+
+      // Keep the latest observation independently for each platform. Do not
+      // overwrite the whole latest map at every timestamp because YouTube,
+      // Twitch and Kick are not necessarily sampled at exactly the same time.
+      OffsetDateTime pointTimestamp = OffsetDateTime.parse(entry.getKey());
+      if (latestSampleTimestamp == null || pointTimestamp.isAfter(latestSampleTimestamp)) {
+        latestSampleTimestamp = pointTimestamp;
+      }
+      for (var p : platformValues.entrySet()) {
+        latestPlatform.put(p.getKey(), p.getValue());
       }
       Map<String, Object> point = new LinkedHashMap<>();
       point.put("timestamp", entry.getKey());
@@ -837,7 +847,15 @@ public class TrackerController {
     latest.put("youtube", latestPlatform.getOrDefault("YouTube", 0L));
     latest.put("twitch", latestPlatform.getOrDefault("Twitch", 0L));
     latest.put("kick", latestPlatform.getOrDefault("Kick", 0L));
-    latest.put("combined", latestPlatform.values().stream().mapToLong(Long::longValue).sum());
+    latest.put("combined", latestPlatform.entrySet().stream()
+            .filter(e -> !e.getKey().equalsIgnoreCase("Unknown"))
+            .mapToLong(Map.Entry::getValue).sum());
+
+    Map<String, Object> peak = new LinkedHashMap<>();
+    peak.put("youtube", platformPeaks.getOrDefault("YouTube", 0L));
+    peak.put("twitch", platformPeaks.getOrDefault("Twitch", 0L));
+    peak.put("kick", platformPeaks.getOrDefault("Kick", 0L));
+    peak.put("combined", peakCombined);
 
     Map<String, Object> summary = new LinkedHashMap<>();
     summary.put("peakCombined", peakCombined);
@@ -845,6 +863,7 @@ public class TrackerController {
     summary.put("samples", samples.size());
     summary.put("timelinePoints", timeline.size());
     summary.put("latest", latest);
+    summary.put("peak", peak);
     summary.put("peakByPlatform", platformPeaks);
     summary.put("channelsByPlatform", platformChannels.entrySet().stream()
             .collect(LinkedHashMap::new, (m, e) -> m.put(e.getKey(), e.getValue().size()), Map::putAll));
