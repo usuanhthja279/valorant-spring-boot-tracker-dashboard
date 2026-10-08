@@ -38,7 +38,7 @@ main{padding:18px 22px 28px;max-width:1800px;margin:auto}
 .top-overview-grid .active-match-section{grid-area:matches;margin:0;min-width:0;width:100%;height:auto;min-height:0;display:flex;flex-direction:column;overflow:visible;box-sizing:border-box;background:transparent;border:0;border-radius:0;padding:0}
 .top-overview-grid .active-match-row{display:flex;flex-direction:column;gap:8px;overflow:visible;padding:8px 10px 10px;min-height:0;flex:1}
 .top-overview-grid .active-match-card{width:100%;min-width:0;flex:0 0 auto;min-height:0;height:84px;padding:10px 12px}
-.top-overview-grid .active-match-section .active-match-header{flex:0 0 auto;padding:0 0 7px;background:transparent;border:0;border-radius:0}.top-overview-grid .active-match-section .active-match-header strong{font-size:16px}.top-overview-grid .active-match-section .active-match-header .match-meta{margin-top:3px}.top-overview-grid .active-match-section #activeMatchesBody{background:#0f1720;border:1px solid #202d39;border-radius:11px;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#425267 transparent}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar{width:7px}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar-track{background:transparent}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar-thumb{background:#425267;border-radius:8px}
+.top-overview-grid .active-match-section .active-match-header{flex:0 0 auto;padding:0 0 7px;background:transparent;border:0;border-radius:0}.top-overview-grid .active-match-section .active-match-header strong{font-size:16px}.top-overview-grid .active-match-section .active-match-header .match-meta{margin-top:3px}.top-overview-grid .active-match-section .match-schedule-controls{flex:0 0 auto}.top-overview-grid .active-match-section .match-schedule-controls input{min-width:0}.top-overview-grid .active-match-section #activeMatchesBody{background:#0f1720;border:1px solid #202d39;border-radius:11px;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#425267 transparent}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar{width:7px}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar-track{background:transparent}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar-thumb{background:#425267;border-radius:8px}
 .match-score{display:flex;align-items:center;gap:7px;margin-top:8px;font-weight:800}.match-score .score-value{font-size:17px}.match-score .score-sep{color:#7f8b99}.match-status-upcoming{color:#fbbf24}.match-status-completed{color:#9aa7b7}.live-viewership{margin-bottom:14px}.live-viewership-heading{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.live-viewership-heading h2{font-size:16px;margin:0}
 .match-score{display:flex;align-items:center;gap:7px;margin-top:8px;font-weight:800}.match-score .score-value{font-size:17px}.match-score .score-sep{color:#7f8b99}.match-status-upcoming{color:#fbbf24}.match-status-completed{color:#9aa7b7}.live-viewership{margin-bottom:14px}.live-viewership-heading{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.live-viewership-heading h2{font-size:16px;margin:0}
 .card{background:linear-gradient(145deg,#111c27,#0e151e);border:1px solid #202d39;border-radius:11px;padding:12px 15px;display:grid;grid-template-columns:auto 1fr;column-gap:9px;align-items:start}.live-viewership .card{cursor:pointer;transition:border-color .15s,transform .15s}.live-viewership .card:hover,.live-viewership .card:focus-visible{border-color:#38bdf8;transform:translateY(-1px);outline:none}.live-viewership .card[aria-expanded="true"]{border-color:#38bdf8;box-shadow:0 0 0 1px #38bdf833}.live-card-icon{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;margin-top:1px}.live-card-main{min-width:0}.live-card-label{display:flex;align-items:center;gap:6px}.live-card-spark-wrap{grid-column:1/-1;position:relative;height:32px;min-height:32px;max-height:32px;overflow:hidden;margin-top:8px}.live-card-spark{display:block!important;position:absolute!important;inset:0;width:100%!important;height:32px!important;max-height:32px!important}
@@ -120,6 +120,7 @@ header,main{min-width:0;width:100%;max-width:100%}
   .table-wrap,.streams-table{max-width:100%;overflow-x:auto}
 }
 
+.match-schedule-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}.match-schedule-controls input{flex:1;min-width:150px;padding:8px 10px}.match-schedule-controls select{padding:8px 10px}.match-filter-count{font-size:11px;color:#8e99a8;white-space:nowrap}.match-status-live{color:#37d67a}.match-status-upcoming{color:#fbbf24}.match-status-completed{color:#9aa7b7}.match-score .winner-score{color:#fff}.active-match-card{touch-action:manipulation;-webkit-tap-highlight-color:transparent}.active-match-card:active{transform:none;background:#16212d}.active-match-detail-panel{scroll-margin-top:12px}
 .match-panel{margin:18px 0;padding:20px;background:#111821;border:1px solid #202b36;border-radius:16px}.match-panel h2{margin:0}.match-meta{color:#91a0b1;font-size:13px;margin-top:6px}.match-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px}.match-stream{background:#0c1219;border:1px solid #263341;border-radius:10px;padding:12px}.match-stream .viewers{font-size:20px;font-weight:700}.match-empty{color:#91a0b1;padding:12px 0}.match-link{color:#eef2f7;text-decoration:none}.match-link:hover{text-decoration:underline}
 
 .active-match-section{padding:0;overflow:hidden}.active-match-header{width:100%;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 20px 14px;background:transparent;border:0;border-bottom:1px solid #202b36;color:#eef2f7;text-align:left}.active-match-header strong{display:block;font-size:20px}.active-match-header .match-meta{display:block;margin-top:5px}.active-match-header-right{display:flex;align-items:center;gap:12px}.active-match-header-rule{display:block;width:42px;height:1px;background:#2b3948;flex:0 0 auto}.active-match-card{min-height:84px;padding:12px;border:1px solid #2a3745;border-radius:12px;background:#0c1219;color:#eef2f7;text-align:left;cursor:pointer;transition:border-color .15s,transform .15s,background .15s}.active-match-card:hover{transform:translateY(-1px);border-color:#4b6074}.active-match-card.selected{border-color:#7c8fa3;background:#111a24;box-shadow:0 0 0 1px #7c8fa333}.active-match-card .match-teams{font-size:18px;font-weight:800;line-height:1.2}.active-match-card .match-vs{color:#91a0b1;font-size:11px;margin:3px 0}.active-match-card .match-tournament{margin-top:6px;color:#91a0b1;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.active-match-card .match-time{margin-top:4px;color:#b7c3d0;font-size:11px}.active-match-detail-panel{margin-top:14px}.active-match-detail{margin:0;padding:20px;border:1px solid #2a3745;border-radius:14px;background:#0c1219}.active-match-detail-panel .active-match-detail{border:0;border-radius:0;background:transparent}.active-match-detail[hidden]{display:none}.active-match-detail-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.active-match-detail h3{margin:0;font-size:23px}.match-detail-sub{color:#91a0b1;font-size:12px;margin-top:6px}.match-detail-actions{display:flex;gap:8px;flex-wrap:wrap}.match-detail-actions a{padding:8px 11px;border:1px solid #2b3948;border-radius:8px;background:#151d27;color:#eef2f7;text-decoration:none;font-size:12px}.match-detail-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}.match-metric{padding:12px;border:1px solid #263341;border-radius:10px;background:#111821}.match-metric .label{display:block}.match-metric .value{font-size:22px;font-weight:800;margin-top:5px}.match-streams-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:14px}.match-stream-mini{padding:11px;border:1px solid #263341;border-radius:10px;background:#0f171f}.match-stream-mini .platform{font-size:11px;color:#91a0b1}.match-stream-mini .channel{font-weight:700;margin-top:4px}.match-stream-mini .viewers{font-size:16px;font-weight:800;margin-top:5px}.match-stream-mini .title{font-size:12px;color:#c1cbd7;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.match-detail-empty{color:#91a0b1;padding:14px 0}.match-detail-section-title{margin:18px 0 8px;font-size:14px}@media(max-width:700px){.top-overview-grid{grid-template-columns:1fr;grid-template-areas:"live" "matches"}.top-overview-grid .live-viewership .cards{grid-template-columns:1fr}.top-overview-grid .active-match-section{max-height:none}.top-overview-grid .active-match-row{padding:10px 12px}.match-detail-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.active-match-header{padding:16px}.active-match-detail{margin:0 16px 16px}}
@@ -149,8 +150,18 @@ header,main{min-width:0;width:100%;max-width:100%}
 </div>
 </section><section class="match-panel active-match-section" id="activeMatchesPanel" hidden aria-label="Esports matches schedule">
   <div class="active-match-header" id="activeMatchesHeader">
-    <span><strong>⚔ Esports matches schedule</strong><span class="match-meta" id="activeMatchesMeta">Loading today’s matches…</span></span>
+    <span><strong>⚔ Esports matches</strong><span class="match-meta" id="activeMatchesMeta">Loading matches…</span></span>
     <span class="active-match-header-rule" aria-hidden="true"></span>
+  </div>
+  <div class="match-schedule-controls" aria-label="Match filters">
+    <input id="matchSearch" type="search" placeholder="Search team, tournament or match…" autocomplete="off" oninput="applyMatchFilters()">
+    <select id="matchStatusFilter" aria-label="Filter matches" onchange="applyMatchFilters()">
+      <option value="all">All</option>
+      <option value="live">Live</option>
+      <option value="upcoming">Upcoming</option>
+      <option value="completed">Completed</option>
+    </select>
+    <span class="match-filter-count" id="matchFilterCount">—</span>
   </div>
   <div id="activeMatchesBody">
     <div class="active-match-row" id="activeMatchesList" role="list"></div>
@@ -749,26 +760,58 @@ let selectedActiveMatchId=null;
 
 function toggleActiveMatches(){}
 
-function renderActiveMatchRow(){
+function formatBestOf(value){
+  const raw=String(value??'').trim();
+  if(!raw)return '';
+  return raw.toLowerCase().startsWith('bo') ? raw : `Bo${raw}`;
+}
+
+function applyMatchFilters(){
+  const query=String(document.getElementById('matchSearch')?.value||'').trim().toLocaleLowerCase();
+  const filter=String(document.getElementById('matchStatusFilter')?.value||'all').toLowerCase();
+  const filtered=activeMatchItems.filter(m=>{
+    const status=String(m.status||'UPCOMING').toUpperCase();
+    const statusOk=filter==='all'||(filter==='live'&&status==='LIVE')||(filter==='upcoming'&&status==='UPCOMING')||(filter==='completed'&&status==='COMPLETED');
+    if(!statusOk)return false;
+    if(!query)return true;
+    const hay=[m.team1,m.team2,m.tournament,m.matchId,m.game,m.tier,m.winner].filter(Boolean).join(' ').toLocaleLowerCase();
+    return hay.includes(query);
+  });
+  renderActiveMatchRow(filtered);
+  const count=document.getElementById('matchFilterCount');
+  if(count)count.textContent=`${filtered.length} match${filtered.length===1?'':'es'}`;
+}
+
+function renderActiveMatchRow(items=activeMatchItems){
   const list=document.getElementById('activeMatchesList');
   if(!list)return;
-  list.innerHTML=activeMatchItems.map(m=>{
+  if(!items.length){
+    list.innerHTML='<div class="match-empty">No matches match the selected filter.</div>';
+    return;
+  }
+  list.innerHTML=items.map(m=>{
     const selected=m.matchId===selectedActiveMatchId;
     const status=String(m.status||'UPCOMING').toUpperCase();
     const live=status==='LIVE';
     const completed=status==='COMPLETED';
-    const time=m.startTime?new Date(m.startTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—';
-    const score=(m.score1!=null&&m.score2!=null)
-      ? `<div class="match-score"><span class="score-value">${escapeHtml(String(m.score1))}</span><span class="score-sep">:</span><span class="score-value">${escapeHtml(String(m.score2))}</span></div>` : '';
-    const label=live?'● LIVE':completed?'● COMPLETED':'● UPCOMING';
-    const labelClass=live?'hot':completed?'match-status-completed':'match-status-upcoming';
-    const timeLabel=live?'Started':completed?'Completed':'Starts';
+    const unknown=status==='UNKNOWN';
+    const dateObj=m.startTime?new Date(m.startTime):null;
+    const time=dateObj?dateObj.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—';
+    const date=dateObj?dateObj.toLocaleDateString([], {day:'2-digit',month:'short',year:'numeric'}):'—';
+    const s1=m.team1Score ?? m.score1;
+    const s2=m.team2Score ?? m.score2;
+    const score=(s1!=null&&s2!=null)
+      ? `<div class="match-score"><span class="score-value ${m.winner===m.team1?'winner-score':''}">${escapeHtml(String(s1))}</span><span class="score-sep">:</span><span class="score-value ${m.winner===m.team2?'winner-score':''}">${escapeHtml(String(s2))}</span></div>` : '';
+    const label=live?'● LIVE':completed?'● COMPLETED':unknown?'● STATUS UNKNOWN':'● UPCOMING';
+    const labelClass=live?'match-status-live':completed?'match-status-completed':unknown?'match-status-upcoming':'match-status-upcoming';
+    const timeLabel=live?'Started':completed?'Completed':unknown?'Time':'Starts';
+    const bo=formatBestOf(m.bestOf);
     return `<button type="button" class="active-match-card${selected?' selected':''}" role="listitem" onclick="selectActiveMatch('${escapeJs(m.matchId||'')}')">
-      <div class="${labelClass}" style="font-size:11px">${label}</div>
+      <div class="${labelClass}" style="font-size:11px;font-weight:800">${label}</div>
       <div class="match-teams">${escapeHtml(m.team1||'TBD')} <span class="match-vs">vs</span> ${escapeHtml(m.team2||'TBD')}</div>
       ${score}
-      <div class="match-tournament">${escapeHtml(m.tournament||'Esports match')}${m.bestOf?` · Bo${escapeHtml(String(m.bestOf))}`:''}</div>
-      <div class="match-time">${timeLabel} ${time}</div>
+      <div class="match-tournament">${escapeHtml(m.tournament||'Esports match')}${bo?` · ${escapeHtml(bo)}`:''}</div>
+      <div class="match-time">${timeLabel} ${date} · ${time}</div>
     </button>`;
   }).join('');
 }
@@ -776,41 +819,49 @@ function renderActiveMatchRow(){
 async function selectActiveMatch(matchId){
   const detail=document.getElementById('activeMatchDetail');
   const detailPanel=document.getElementById('activeMatchDetailPanel');
-
-  // Clicking the already-open match toggles its detail panel closed, just like
-  // clicking an already-selected live-viewership card toggles its expanded state.
   if(selectedActiveMatchId===matchId){
     selectedActiveMatchId=null;
-    if(detailPanel) detailPanel.hidden=true;
-    if(detail) detail.hidden=true;
-    renderActiveMatchRow();
+    if(detailPanel)detailPanel.hidden=true;
+    if(detail)detail.hidden=true;
+    applyMatchFilters();
     return;
   }
-
   selectedActiveMatchId=matchId;
-  renderActiveMatchRow();
   const match=activeMatchItems.find(m=>m.matchId===matchId);
   if(!match||!detail||!detailPanel)return;
+  applyMatchFilters();
   detailPanel.hidden=false;
   detail.hidden=false;
-  detail.innerHTML='<div class="match-detail-empty">Loading match data…</div>';
-  requestAnimationFrame(()=>detailPanel.scrollIntoView({behavior:'smooth',block:'nearest'}));
+  const s1=match.team1Score ?? match.score1;
+  const s2=match.team2Score ?? match.score2;
+  const bo=formatBestOf(match.bestOf);
+  const status=String(match.status||'UPCOMING').toUpperCase();
+  // Render immediately from the schedule payload. Do not wait for the analytics request.
+  detail.innerHTML=`<div class="active-match-detail-top">
+    <div><h3>${escapeHtml(match.team1||'TBD')} vs ${escapeHtml(match.team2||'TBD')}</h3><div class="match-detail-sub">${escapeHtml(match.tournament||'Esports match')} · ${escapeHtml(match.tier||'S/A')}${bo?' · '+escapeHtml(bo):''}</div><div class="match-detail-sub">${status}${match.startTime?' · '+new Date(match.startTime).toLocaleString():''}</div></div>
+    <div class="match-detail-actions"><a href="/match.html?matchId=${encodeURIComponent(match.matchId)}&game=${encodeURIComponent(selectedGame)}">View Match Details →</a>${match.matchUrl?`<a href="${escapeHtml(match.matchUrl)}" target="_blank" rel="noopener">Liquipedia Match ↗</a>`:''}</div>
+  </div>
+  <div class="match-detail-metrics">
+    <div class="match-metric"><span class="label">Score</span><div class="value">${s1!=null&&s2!=null?`${escapeHtml(String(s1))} : ${escapeHtml(String(s2))}`:'— : —'}</div></div>
+    <div class="match-metric"><span class="label">Status</span><div class="value">${escapeHtml(status)}</div></div>
+    <div class="match-metric"><span class="label">YouTube</span><div class="value" id="matchQuickYoutube">—</div></div>
+    <div class="match-metric"><span class="label">Twitch / Kick</span><div class="value" id="matchQuickOther">—</div></div>
+  </div>
+  <div class="match-detail-empty" style="padding-top:14px" id="matchQuickStatus">Loading live viewer summary…</div>`;
   try{
     const data=await getJson('/api/esports/matches/'+encodeURIComponent(matchId)+'?game='+encodeURIComponent(selectedGame));
+    if(selectedActiveMatchId!==matchId)return;
     const latest=data?.summary?.latest||{};
     const m=data.match||match;
-    detail.innerHTML=`<div class="active-match-detail-top">
-      <div><h3>${escapeHtml(m.team1||'TBD')} vs ${escapeHtml(m.team2||'TBD')}</h3><div class="match-detail-sub">${escapeHtml(m.tournament||'Esports match')} · ${escapeHtml(m.tier||'S/A')} · ${escapeHtml(m.matchId||matchId)}</div><div class="match-detail-sub">${m.startTime?new Date(m.startTime).toLocaleString():'—'} → ${m.endTime?new Date(m.endTime).toLocaleString():'—'}</div></div>
-      <div class="match-detail-actions"><a href="/match.html?matchId=${encodeURIComponent(m.matchId)}&game=${encodeURIComponent(selectedGame)}">View Match Details →</a>${m.matchUrl?`<a href="${escapeHtml(m.matchUrl)}" target="_blank" rel="noopener">Liquipedia Match ↗</a>`:''}</div>
-    </div>
-    <div class="match-detail-metrics">
-      <div class="match-metric"><span class="label">YouTube</span><div class="value">${fmt(latest.youtube)}</div></div>
-      <div class="match-metric"><span class="label">Twitch</span><div class="value">${fmt(latest.twitch)}</div></div>
-      <div class="match-metric"><span class="label">Kick</span><div class="value">${fmt(latest.kick)}</div></div>
-      <div class="match-metric"><span class="label">Combined</span><div class="value">${fmt(latest.combined)}</div></div>
-    </div>
-    <div class="match-detail-empty" style="padding-top:14px">Open the dedicated match page for the full timeline, historical analytics and matched-stream table.</div>`;
-  }catch(e){detail.innerHTML='<div class="match-detail-empty">Unable to load match data.</div>';console.error(e);}
+    const yt=Number(latest.youtube||0),tw=Number(latest.twitch||0),kick=Number(latest.kick||0);
+    const y=document.getElementById('matchQuickYoutube'),o=document.getElementById('matchQuickOther'),q=document.getElementById('matchQuickStatus');
+    if(y)y.textContent=fmt(yt);
+    if(o)o.textContent=`${fmt(tw)} / ${fmt(kick)}`;
+    if(q)q.textContent=`Combined ${fmt(latest.combined||0)} · ${fmt(data?.summary?.samples||0)} samples`;
+  }catch(e){
+    const q=document.getElementById('matchQuickStatus');if(q)q.textContent='Match analytics unavailable right now.';
+    console.warn('Match quick summary unavailable',e);
+  }
 }
 
 function syncMatchScheduleHeight(){
@@ -835,34 +886,26 @@ async function loadActiveMatches(){
   const meta=document.getElementById('activeMatchesMeta');
   let matches=[];
   try{
-    const state=await getJson('/api/esports/matches/today?game='+encodeURIComponent(selectedGame));
-    matches=Array.isArray(state?.matches)?state.matches:[];
+    const rows=await getJson('/api/esports/matches?game='+encodeURIComponent(selectedGame)+'&status=all&limit=200');
+    matches=Array.isArray(rows)?rows:[];
   }catch(e){
-    console.warn('Today matches endpoint unavailable',e);
+    console.warn('Match catalog unavailable',e);
     try{
       const state=await getJson('/api/esports/active-matches?game='+encodeURIComponent(selectedGame));
       matches=Array.isArray(state?.matches)?state.matches:[];
     }catch(f){console.warn('Active-matches endpoint unavailable',f);}
   }
   activeMatchItems=matches.sort((a,b)=>{
-    const ar=String(a.status||'UPCOMING').toUpperCase()==='LIVE'?0:1;
-    const br=String(b.status||'UPCOMING').toUpperCase()==='LIVE'?0:1;
-    return ar-br || new Date(a.startTime||0)-new Date(b.startTime||0);
+    const rank=x=>String(x.status||'').toUpperCase()==='LIVE'?0:String(x.status||'').toUpperCase()==='UPCOMING'?1:2;
+    return rank(a)-rank(b)||new Date(a.startTime||0)-new Date(b.startTime||0);
   });
-  if(!activeMatchItems.length){
-    panel.hidden=false;
-    meta.textContent='No live or upcoming matches today';
-    document.getElementById('activeMatchesList').innerHTML='<div class="match-empty">No esports matches scheduled for today.</div>';
-    document.getElementById('activeMatchesBody').hidden=false;
-    selectedActiveMatchId=null;
-    return;
-  }
   panel.hidden=false;
   const liveCount=activeMatchItems.filter(m=>String(m.status||'').toUpperCase()==='LIVE').length;
   const upcomingCount=activeMatchItems.filter(m=>String(m.status||'').toUpperCase()==='UPCOMING').length;
-  meta.textContent=`${liveCount} live · ${upcomingCount} upcoming`;
+  const completedCount=activeMatchItems.filter(m=>String(m.status||'').toUpperCase()==='COMPLETED').length;
+  meta.textContent=`${liveCount} live · ${upcomingCount} upcoming · ${completedCount} completed`;
   if(!activeMatchItems.some(m=>m.matchId===selectedActiveMatchId))selectedActiveMatchId=null;
-  renderActiveMatchRow();
+  applyMatchFilters();
   requestAnimationFrame(syncMatchScheduleHeight);
 }
 

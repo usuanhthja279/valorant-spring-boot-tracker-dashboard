@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Live Game Tracker</title>
     <style>
+        .status-hot{margin-bottom:8px}
+
         :root {
             color-scheme: dark
         }
@@ -162,7 +164,11 @@
             root.innerHTML = games.map(
                 g => `<a class="game" href="/game.html?game=${
                     encodeURIComponent(g.id)
-                }"><div class="hot">${g.liveNow ? '● Live now' : (g.active ? '● Starting soon' : '● Offline')}</div><h2>${esc(g.name)}</h2>${(g.activeMatches && g.activeMatches.length) ? `<div class="label" style="margin:-8px 0 12px;color:#cbd5e1">⚔ ${g.activeMatches.slice(0,2).map(m=>`${esc(m.team1 || 'TBD')} vs ${esc(m.team2 || 'TBD')}`).join(' · ')}${g.activeMatches.length>2?` · +${g.activeMatches.length-2} more`:''}</div>` : ''}<div class="hero">${fmt(g.totalViewers)} <span class="label">viewers</span></div><div class="stats"><div class="stat"><strong>${fmt(g.liveStreams)}</strong><div class="label">live streams</div></div><div class="stat"><strong>${g.topChannel ? esc(g.topChannel) : '—'}</strong><div class="label">top streamer${g.topViewers ? ' · ' + fmt(g.topViewers) : ''}</div></div></div><div class="platforms"><span>YouTube ${fmt(g.youtubeStreams)}</span><span>Twitch ${fmt(g.twitchStreams)}</span><span>Kick ${fmt(g.kickStreams)}</span></div></a>`).join('') || '<div class="sub">No games configured.</div>';
+                }"><div class="hot status-hot">${
+                    g.active === true && Number(g.liveStreams || 0) > 0
+                        ? '● Live now'
+                        : '● Offline'
+                }</div><h2>${esc(g.name)}</h2><div class="hero">${fmt(g.totalViewers)} <span class="label">viewers</span></div><div class="stats"><div class="stat"><strong>${fmt(g.liveStreams)}</strong><div class="label">live streams</div></div><div class="stat"><strong>${g.topChannel ? esc(g.topChannel) : '—'}</strong><div class="label">top streamer${g.topViewers ? ' · ' + fmt(g.topViewers) : ''}</div></div></div><div class="platforms"><span>YouTube ${fmt(g.youtubeStreams)}</span><span>Twitch ${fmt(g.twitchStreams)}</span><span>Kick ${fmt(g.kickStreams)}</span></div></a>`).join('') || '<div class="sub">No games configured.</div>';
             document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
         } catch (e) {
             root.innerHTML = '<div class="sub">Unable to load game data.</div>';

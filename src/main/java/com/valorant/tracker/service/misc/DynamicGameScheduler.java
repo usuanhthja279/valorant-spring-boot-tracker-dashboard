@@ -7,8 +7,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.valorant.tracker.model.EsportsMatchRecord;
 import com.valorant.tracker.repository.EsportsMatchRecordRepository;
 import java.time.OffsetDateTime;
-import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
+import org.springframework.context.event.EventListener;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.core.annotation.Order;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,11 +46,7 @@ public class DynamicGameScheduler {
     );
 
     /**
-     * Games currently within the match collection window.
-     *
-     * The window starts 5 minutes before scheduled kickoff and ends at the
-     * parsed match end time (or the 4-hour fallback when no end time exists).
-     * UI "Live now" must still be based on actual live stream data.
+     * Games currently having an active S/A-tier match.
      */
     private final Set<String> activeGames =
             ConcurrentHashMap.newKeySet();
@@ -69,26 +67,42 @@ public class DynamicGameScheduler {
      * Populate the scheduler immediately at application startup so an active
      * match does not wait for the first 5-minute scheduled refresh.
      */
-    @PostConstruct
+    /**
+     * Run after Hibernate and the idempotent schema repair are ready.
+     * This avoids the startup race where the scheduler queried
+     * esports_matches before newly-added score/status columns existed.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    @Order(100)
     public void initializeSchedule() {
         refreshSchedule();
     }
 
     /**
-     * Check Liquipedia every 2 minutes. The scheduler also initializes at
-     * startup, so the first collection window is not delayed until the next
-     * scheduled refresh.
+     * Check Liquipedia every 5 minutes.
      */
-    @Scheduled(fixedRateString = "${tracker.esports.schedule-check-ms:120000}")
+    @Scheduled(fixedRateString = "${tracker.esports.schedule-check-ms:300000}")
     @Transactional
-    public void refreshSchedule() {
+    public synchronized void refreshSchedule() {
         log.info("Refreshing esports game schedule...");
         for (String game : ESPORTS_GAMES) {
             try {
-                List<LiquipediaEsportsScheduleScraper.EsportsMatch> scheduledMatches =
+                List<LiquipediaEsportsScheduleScraper.EsportsMatch> scrapedMatches =
                         scraper.getUpcomingAndLive(game).stream()
                                 .filter(match -> match.startTime() != null)
                                 .toList();
+
+                // One Liquipedia row must produce one persistence operation.
+                // This also protects against duplicate DOM rows from a single scrape.
+                List<LiquipediaEsportsScheduleScraper.EsportsMatch> scheduledMatches =
+                        new java.util.ArrayList<>(
+                                scrapedMatches.stream()
+                                        .collect(java.util.stream.Collectors.toMap(
+                                                LiquipediaEsportsScheduleScraper.EsportsMatch::matchId,
+                                                match -> match,
+                                                (first, second) -> second,
+                                                java.util.LinkedHashMap::new))
+                                        .values());
 
                 persistMatchCatalog(game, scheduledMatches);
 
@@ -149,10 +163,12 @@ public class DynamicGameScheduler {
 
             if (record == null) {
                 record = new EsportsMatchRecord(match.matchId(), game, match.tournament(), match.tier(),
-                        match.team1(), match.team2(), match.startTime(), match.endTime(), match.status(),
-                        match.tournamentUrl(), match.matchUrl(), seenAt);
+                        match.team1(), match.team2(), match.team1Score(), match.team2Score(),
+                        match.bestOf(), match.winner(), match.finished(), match.startTime(), match.endTime(),
+                        match.status(), match.tournamentUrl(), match.matchUrl(), seenAt);
             } else {
                 record.update(game, match.tournament(), match.tier(), match.team1(), match.team2(),
+                        match.team1Score(), match.team2Score(), match.bestOf(), match.winner(), match.finished(),
                         match.startTime(), match.endTime(), match.status(), match.tournamentUrl(), match.matchUrl(), seenAt);
             }
             matchRepository.save(record);
@@ -160,8 +176,8 @@ public class DynamicGameScheduler {
     }
 
     /**
-     * Returns true when the game is inside an esports match collection window.
-     * This can be up to 5 minutes before kickoff.
+     * Returns true when the game currently has
+     * an active esports match.
      */
     public boolean isGameActive(String game) {
 
@@ -237,7 +253,6 @@ public class DynamicGameScheduler {
      * Useful for testing from a controller.
      */
     public void refreshNow() {
-
         refreshSchedule();
     }
 }

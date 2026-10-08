@@ -19,6 +19,11 @@ public class EsportsMatchRecord {
   @Column(length = 20) private String tier;
   @Column(length = 300) private String team1;
   @Column(length = 300) private String team2;
+  @Column(name = "team1score") private Integer team1Score;
+  @Column(name = "team2score") private Integer team2Score;
+  @Column(name = "best_of", length = 20) private String bestOf;
+  @Column(length = 300) private String winner;
+  @Column(nullable = false) private boolean finished;
   private OffsetDateTime startTime;
   private OffsetDateTime endTime;
   @Column(length = 40) private String status;
@@ -30,22 +35,30 @@ public class EsportsMatchRecord {
   protected EsportsMatchRecord() {}
 
   public EsportsMatchRecord(String matchId, String game, String tournament, String tier,
-                            String team1, String team2, OffsetDateTime startTime,
-                            OffsetDateTime endTime, String status, String tournamentUrl,
-                            String matchUrl, OffsetDateTime seenAt) {
+                            String team1, String team2, Integer team1Score, Integer team2Score,
+                            String bestOf, String winner, boolean finished,
+                            OffsetDateTime startTime, OffsetDateTime endTime, String status,
+                            String tournamentUrl, String matchUrl, OffsetDateTime seenAt) {
     this.matchId = matchId;
-    update(game, tournament, tier, team1, team2, startTime, endTime, status, tournamentUrl, matchUrl, seenAt);
+    update(game, tournament, tier, team1, team2, team1Score, team2Score, bestOf, winner,
+        finished, startTime, endTime, status, tournamentUrl, matchUrl, seenAt);
     this.firstSeen = seenAt;
   }
 
   public void update(String game, String tournament, String tier, String team1, String team2,
-                     OffsetDateTime startTime, OffsetDateTime endTime, String status,
+                     Integer team1Score, Integer team2Score, String bestOf, String winner,
+                     boolean finished, OffsetDateTime startTime, OffsetDateTime endTime, String status,
                      String tournamentUrl, String matchUrl, OffsetDateTime seenAt) {
     this.game = game;
     this.tournament = tournament;
     this.tier = tier;
     this.team1 = team1;
     this.team2 = team2;
+    this.team1Score = team1Score;
+    this.team2Score = team2Score;
+    this.bestOf = bestOf;
+    this.winner = winner;
+    this.finished = finished;
     this.startTime = startTime;
     this.endTime = endTime;
     this.status = status;
@@ -60,6 +73,11 @@ public class EsportsMatchRecord {
   public String getTier() { return tier; }
   public String getTeam1() { return team1; }
   public String getTeam2() { return team2; }
+  public Integer getTeam1Score() { return team1Score; }
+  public Integer getTeam2Score() { return team2Score; }
+  public String getBestOf() { return bestOf; }
+  public String getWinner() { return winner; }
+  public boolean isFinished() { return finished; }
   public OffsetDateTime getStartTime() { return startTime; }
   public OffsetDateTime getEndTime() { return endTime; }
   public String getStatus() { return status; }

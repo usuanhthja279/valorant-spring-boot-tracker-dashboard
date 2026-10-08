@@ -5,114 +5,19 @@
 <title>Esports Match</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#0b0e13;color:#eef2f7;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}a{color:#dbeafe}.page{max-width:1450px;margin:auto;padding:28px 24px 60px}.back{color:#91a0b1;text-decoration:none;font-size:13px}.hero{margin-top:18px;padding:24px;border:1px solid #202b36;border-radius:16px;background:#111821}.hero-top{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:nowrap}.hero-status{flex:0 0 auto;min-width:92px;text-align:center}.hero h1{font-size:34px;margin:0 0 7px}.sub{color:#91a0b1;font-size:13px}.pill{padding:9px 13px;border:1px solid #294052;border-radius:999px;font-size:12px}.live{color:#52df9c}.score-panel{margin-top:14px;padding:16px 18px;border:1px solid #263341;border-radius:12px;background:#0c1219;display:flex;align-items:center;justify-content:space-between;gap:18px}.score-label{font-size:11px;color:#91a0b1;text-transform:uppercase;letter-spacing:.08em}.score-teams{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:18px;flex:1}.score-team{font-size:18px;font-weight:800}.score-team:last-child{text-align:right}.series-score{font-size:30px;font-weight:900;letter-spacing:.06em}.score-note{font-size:12px;color:#91a0b1}.streams-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.stream-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.stream-filter{border:1px solid #2b3441;border-radius:9px;padding:9px 13px;background:#151b24;color:#dbeafe;cursor:pointer;font:inherit}.stream-filter.active{border-color:#36b9ff;background:#172637}.stream-search{min-width:240px;padding:9px 12px;background:#0c1219;border:1px solid #2b3441;border-radius:9px;color:#eef2f7}.stream-search:focus{outline:none;border-color:#36b9ff}.stream-pagination{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:12px}.stream-pagination button{border:1px solid #2b3441;border-radius:8px;padding:7px 11px;background:#151b24;color:#dbeafe;cursor:pointer}.stream-pagination button:disabled{opacity:.45;cursor:not-allowed}.stream-count{color:#91a0b1;font-size:12px;margin-right:auto}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}.metric{padding:15px;border:1px solid #263341;border-radius:11px;background:#0c1219}.metric .label{color:#91a0b1;font-size:12px}.metric .value{font-size:25px;font-weight:800;margin-top:6px}.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:16px}.panel{padding:18px;border:1px solid #202b36;border-radius:14px;background:#111821}.panel h2{font-size:18px;margin:0 0 12px}.chart-wrap{height:330px}.platform-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.platform{padding:13px;border:1px solid #263341;border-radius:10px;background:#0c1219}.platform strong{font-size:20px}.stream-table-wrap{overflow-x:auto}.stream-table{width:100%;min-width:760px;border-collapse:collapse}.stream-table th,.stream-table td{padding:11px 10px;border-bottom:1px solid #202b36;text-align:left;vertical-align:top}.stream-table th{font-size:11px;color:#91a0b1;text-transform:uppercase;letter-spacing:.04em}.stream-table td.viewers{text-align:right;font-weight:800;white-space:nowrap}.stream-table .platform-cell{white-space:nowrap}.stream-table .channel-link{font-weight:800;text-decoration:none;color:#dbeafe}.stream-table .channel-link:hover{color:#36b9ff;text-decoration:underline}.stream-table .stream-link{font-size:12px}.stream-table .title-cell{color:#c1cbd7;line-height:1.4}.stream-table tr:hover{background:#0e161f}.info{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.info div{padding:12px;border:1px solid #263341;border-radius:10px}.info span{display:block;color:#91a0b1;font-size:11px;margin-bottom:4px}.empty{color:#91a0b1;padding:15px 0}@media(max-width:900px){.hero-top{align-items:flex-start;flex-wrap:wrap}.hero-status{margin-left:auto}.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:550px){.page{padding:18px 12px}.hero h1{font-size:26px}.metrics,.platform-grid,.info{grid-template-columns:1fr}.score-panel{align-items:flex-start;flex-direction:column}.score-teams{width:100%;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}.stream-search{min-width:0;width:100%}.chart-wrap{height:250px}}
+*{box-sizing:border-box}body{margin:0;background:#0b0e13;color:#eef2f7;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}a{color:#dbeafe}.page{max-width:1450px;margin:auto;padding:28px 24px 60px}.back{color:#91a0b1;text-decoration:none;font-size:13px}.hero{margin-top:18px;padding:24px;border:1px solid #202b36;border-radius:16px;background:#111821}.hero-top{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}.hero h1{font-size:34px;margin:0 0 7px}.sub{color:#91a0b1;font-size:13px}.pill{padding:7px 10px;border:1px solid #294052;border-radius:999px;font-size:12px}.live{color:#52df9c}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}.metric{padding:15px;border:1px solid #263341;border-radius:11px;background:#0c1219}.metric .label{color:#91a0b1;font-size:12px}.metric .value{font-size:25px;font-weight:800;margin-top:6px}.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:16px}.panel{padding:18px;border:1px solid #202b36;border-radius:14px;background:#111821}.panel h2{font-size:18px;margin:0 0 12px}.chart-wrap{height:330px}.platform-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.platform{padding:13px;border:1px solid #263341;border-radius:10px;background:#0c1219}.platform strong{font-size:20px}.stream-table-wrap{overflow-x:auto}.stream-table{width:100%;min-width:760px;border-collapse:collapse}.stream-table th,.stream-table td{padding:11px 10px;border-bottom:1px solid #202b36;text-align:left;vertical-align:top}.stream-table th{font-size:11px;color:#91a0b1;text-transform:uppercase;letter-spacing:.04em}.stream-table td.viewers{text-align:right;font-weight:800;white-space:nowrap}.stream-table .platform-cell{white-space:nowrap}.stream-table .channel-link{font-weight:800;text-decoration:none;color:#dbeafe}.stream-table .channel-link:hover{color:#36b9ff;text-decoration:underline}.stream-table .stream-link{font-size:12px}.stream-table .title-cell{color:#c1cbd7;line-height:1.4}.stream-table tr:hover{background:#0e161f}.info{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.scorebox{margin-top:18px;padding:18px;border:1px solid #263341;border-radius:12px;background:#0c1219;text-align:center}.scoreline{display:flex;align-items:center;justify-content:center;gap:22px;font-size:30px;font-weight:800}.scoreline .team{min-width:160px}.scoreline .score{font-size:38px}.scoremeta{margin-top:7px;color:#91a0b1;font-size:12px}.info div{padding:12px;border:1px solid #263341;border-radius:10px}.info span{display:block;color:#91a0b1;font-size:11px;margin-bottom:4px}.empty{color:#91a0b1;padding:15px 0}@media(max-width:900px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:550px){.page{padding:18px 12px}.hero h1{font-size:26px}.metrics,.platform-grid,.info{grid-template-columns:1fr}.chart-wrap{height:250px}}
 </style>
 </head><body><main class="page">
 <a class="back" href="javascript:history.back()">← Back</a>
-<section class="hero"><div class="hero-top"><div><h1 id="title">Loading match…</h1><div class="sub" id="tournament">—</div><div class="sub" id="time">—</div></div><div id="status" class="pill">Loading</div></div><div class="info"><div><span>Game</span><strong id="game">—</strong></div><div><span>Tier</span><strong id="tier">—</strong></div><div><span>Match ID</span><strong id="matchId">—</strong></div></div></section>
-<section class="score-panel" id="scorePanel" aria-label="Match score">
-  <div>
-    <div class="score-label" id="scoreLabel">Score</div>
-    <div class="score-note" id="scoreNote">Waiting for match result</div>
-  </div>
-  <div class="score-teams">
-    <div class="score-team" id="scoreTeam1">TBD</div>
-    <div class="series-score" id="seriesScore">— : —</div>
-    <div class="score-team" id="scoreTeam2">TBD</div>
-  </div>
-</section>
+<section class="hero"><div class="hero-top"><div><h1 id="title">Loading match…</h1><div class="sub" id="tournament">—</div><div class="sub" id="time">—</div></div><div id="status" class="pill">Loading</div></div><div class="scorebox"><div class="scoreline"><span class="team" id="scoreTeam1">—</span><span class="score" id="score">— : —</span><span class="team" id="scoreTeam2">—</span></div><div class="scoremeta" id="format">—</div></div><div class="info"><div><span>Game</span><strong id="game">—</strong></div><div><span>Tier</span><strong id="tier">—</strong></div><div><span>Match ID</span><strong id="matchId">—</strong></div></div></section>
 <section class="metrics"><div class="metric"><span class="label">Peak combined</span><div class="value" id="peak">—</div></div><div class="metric"><span class="label">Average combined</span><div class="value" id="average">—</div></div><div class="metric"><span class="label">Samples</span><div class="value" id="samples">—</div></div><div class="metric"><span class="label">Matched channels</span><div class="value" id="channels">—</div></div></section>
 <div class="grid"><section class="panel"><h2>Combined & platform viewership</h2><div class="chart-wrap"><canvas id="trend"></canvas></div></section><section class="panel"><h2>Peak by platform</h2><div class="platform-grid" id="platformPeaks"></div><h2 style="margin-top:20px">Latest</h2><div class="platform-grid" id="latest"></div></section></div>
-<section class="panel" style="margin-top:16px">
-  <div class="streams-toolbar">
-    <h2 style="margin:0">Matched streams</h2>
-    <div class="stream-filters" role="tablist" aria-label="Stream filter">
-      <button type="button" class="stream-filter active" id="liveStreamsFilter" role="tab" aria-selected="true">Live Streams</button>
-      <button type="button" class="stream-filter" id="allStreamsFilter" role="tab" aria-selected="false">All Streams</button>
-      <input class="stream-search" id="streamSearch" type="search" placeholder="Search streams, channels or titles" aria-label="Search matched streams">
-    </div>
-  </div>
-  <div id="streams" class="stream-table-wrap"><div class="empty">Loading…</div></div>
-  <div class="stream-pagination" id="streamPagination" hidden>
-    <span class="stream-count" id="streamCount"></span>
-    <button type="button" id="streamPrev">Previous</button>
-    <span class="stream-count" id="streamPage">Page 1</span>
-    <button type="button" id="streamNext">Next</button>
-  </div>
-</section>
+<section class="panel" style="margin-top:16px"><h2>Matched streams</h2><div id="streams" class="stream-table-wrap"><div class="empty">Loading…</div></div></section>
 </main>
 <script>
 const qs=new URLSearchParams(location.search),matchId=qs.get('matchId')||'',game=qs.get('game')||'VALORANT';
 const fmt=n=>Number(n||0).toLocaleString('en-IN');
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-let streamRows=[], streamFilter='live', streamPage=1, streamSearch='';
-const PAGE_SIZE=10;
-let trendChart=null;
-
-function updateScore(m, active){
-  const t1=m.team1||'TBD',t2=m.team2||'TBD';
-  document.getElementById('scoreTeam1').textContent=t1;
-  document.getElementById('scoreTeam2').textContent=t2;
-  const s1=m.score1,s2=m.score2,finished=Boolean(m.finished)||String(m.status||'').toUpperCase()==='COMPLETED';
-  if(s1!=null&&s2!=null){
-    document.getElementById('seriesScore').textContent=`${s1} : ${s2}`;
-    document.getElementById('scoreLabel').textContent=finished?'Final Score':(active?'Live Score':'Score');
-    document.getElementById('scoreNote').textContent=m.bestOf?`Bo${m.bestOf}${finished?' · Completed':''}`:(finished?'Completed':'Current series score');
-  }else{
-    document.getElementById('seriesScore').textContent='— : —';
-    document.getElementById('scoreLabel').textContent=finished?'Final Score':'Score';
-    document.getElementById('scoreNote').textContent=finished?'Completed score not available from the source yet':'Live score not available from the source yet';
-  }
-}
-
-function filteredStreams(){
-  const q=streamSearch.trim().toLocaleLowerCase();
-  return streamRows.filter(x=>{
-    if(streamFilter==='live'&&!x.live)return false;
-    if(q){
-      const hay=[x.platform,x.channel,x.title].map(v=>String(v||'').toLocaleLowerCase()).join(' ');
-      if(!hay.includes(q))return false;
-    }
-    return true;
-  });
-}
-
-function renderStreams(){
-  const rows=filteredStreams();
-  const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
-  streamPage=Math.min(streamPage,totalPages);
-  const start=(streamPage-1)*PAGE_SIZE;
-  const pageRows=rows.slice(start,start+PAGE_SIZE);
-  const box=document.getElementById('streams');
-  const pagination=document.getElementById('streamPagination');
-  document.getElementById('streamCount').textContent=`${rows.length} stream${rows.length===1?'':'s'}`;
-  document.getElementById('streamPage').textContent=`Page ${streamPage} of ${totalPages}`;
-  document.getElementById('streamPrev').disabled=streamPage<=1;
-  document.getElementById('streamNext').disabled=streamPage>=totalPages;
-  pagination.hidden=rows.length===0;
-  if(!pageRows.length){
-    box.innerHTML=`<div class="empty">${streamFilter==='live'?'No live matched streams. Switch to All Streams for historical streams.':'No matched streams found.'}</div>`;
-    return;
-  }
-  box.innerHTML=`<table class="stream-table"><thead><tr><th>Platform</th><th>Channel</th><th>Viewers</th><th>Title</th><th>Stream</th></tr></thead><tbody>${
-    pageRows.map(x=>{
-      const channel=x.channel||'Unknown channel';
-      const channelHref='/channel.html?'+new URLSearchParams({name:channel,platform:x.platform||'',game:game,channelId:x.channelId||''}).toString();
-      const liveBadge=x.live?'<span style="color:#52df9c;font-size:11px;font-weight:800">● LIVE</span> ':'';
-      return `<tr><td class="platform-cell">${esc(x.platform||'Unknown')}</td><td><a class="channel-link" href="${channelHref}">${esc(channel)}</a></td><td class="viewers">${fmt(x.viewers)}</td><td class="title-cell">${liveBadge}${esc(x.title||'Stream')}</td><td>${x.url?`<a class="stream-link" href="${esc(x.url)}" target="_blank" rel="noopener">Open stream ↗</a>`:'—'}</td></tr>`;
-    }).join('')
-  }</tbody></table>`;
-}
-
-function setStreamFilter(filter){
-  streamFilter=filter;streamPage=1;
-  document.getElementById('liveStreamsFilter').classList.toggle('active',filter==='live');
-  document.getElementById('allStreamsFilter').classList.toggle('active',filter==='all');
-  document.getElementById('liveStreamsFilter').setAttribute('aria-selected',String(filter==='live'));
-  document.getElementById('allStreamsFilter').setAttribute('aria-selected',String(filter==='all'));
-  renderStreams();
-}
-
 async function load(){
  if(!matchId){document.getElementById('title').textContent='Match ID missing';return}
  try{
@@ -123,27 +28,23 @@ async function load(){
   document.getElementById('title').textContent=(m.team1||'TBD')+' vs '+(m.team2||'TBD');
   document.getElementById('tournament').textContent=(m.tournament||'Esports match')+' · '+(m.tier||'S/A');
   document.getElementById('time').textContent=(m.startTime?new Date(m.startTime).toLocaleString():'—')+(m.endTime?' → '+new Date(m.endTime).toLocaleString():'');
-  const status=String(m.status||'').toUpperCase(), active=Boolean(d.active)&&!m.finished;
-  document.getElementById('status').textContent=active?'● LIVE':(status==='UPCOMING'?'● UPCOMING':'● COMPLETED');
-  document.getElementById('status').className='pill '+(active?'live':'');
+  const sourceStatus=String(m.status||'').toUpperCase();
+  const live=Boolean(d.active)||sourceStatus==='LIVE';
+  document.getElementById('status').textContent=live?'● LIVE':(sourceStatus==='UPCOMING'?'UPCOMING':'COMPLETED');document.getElementById('status').className='pill '+(live?'live':'');
+  document.getElementById('scoreTeam1').textContent=m.team1||'TBD';
+  document.getElementById('scoreTeam2').textContent=m.team2||'TBD';
+  document.getElementById('score').textContent=(m.team1Score==null?'—':m.team1Score)+' : '+(m.team2Score==null?'—':m.team2Score);
+  document.getElementById('format').textContent=m.bestOf?m.bestOf+(m.winner?' · Winner: '+m.winner:''):(m.winner?'Winner: '+m.winner:'Score not available yet');
   document.getElementById('game').textContent=m.game||game;document.getElementById('tier').textContent=m.tier||'—';document.getElementById('matchId').textContent=m.matchId||matchId;
-  updateScore(m,active);
   document.getElementById('peak').textContent=fmt(s.peakCombined);document.getElementById('average').textContent=fmt(s.averageCombined);document.getElementById('samples').textContent=fmt(s.samples);
   const ch=Object.values(s.channelsByPlatform||{}).reduce((a,b)=>a+Number(b||0),0);document.getElementById('channels').textContent=fmt(ch);
   document.getElementById('platformPeaks').innerHTML=['YouTube','Twitch','Kick'].map(p=>`<div class="platform"><div class="sub">${p}</div><strong>${fmt(peaks[p])}</strong></div>`).join('');
   document.getElementById('latest').innerHTML=['YouTube','Twitch','Kick','Combined'].map(p=>{const k=p.toLowerCase();return `<div class="platform"><div class="sub">${p}</div><strong>${fmt(latest[k])}</strong></div>`}).join('');
-  streamRows=(d.streams||[]).map(x=>({...x,live:Boolean(x.live)}));
-  renderStreams();
+  const rows=d.streams||[];
+  document.getElementById('streams').innerHTML=rows.length?`<table class="stream-table"><thead><tr><th>Platform</th><th>Channel</th><th>Viewers</th><th>Title</th><th>Stream</th></tr></thead><tbody>${rows.map(x=>{const channel=x.channel||'Unknown channel';const channelHref='/channel.html?'+new URLSearchParams({name:channel,platform:x.platform||'',game:game}).toString();return `<tr><td class="platform-cell">${esc(x.platform||'Unknown')}</td><td><a class="channel-link" href="${channelHref}">${esc(channel)}</a></td><td class="viewers">${fmt(x.viewers)}</td><td class="title-cell">${esc(x.title||'Live stream')}</td><td>${x.url?`<a class="stream-link" href="${esc(x.url)}" target="_blank" rel="noopener">Open stream ↗</a>`:'—'}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">No matched stream samples recorded for this match.</div>';
   const points=d.timeline||[],labels=points.map(x=>new Date(x.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
-  if(trendChart)trendChart.destroy();
-  trendChart=new Chart(document.getElementById('trend'),{type:'line',data:{labels,datasets:[{label:'Combined',data:points.map(x=>x.combined),borderWidth:2,tension:.25,fill:true},{label:'YouTube',data:points.map(x=>x.youtube),borderWidth:1.5,tension:.25},{label:'Twitch',data:points.map(x=>x.twitch),borderWidth:1.5,tension:.25},{label:'Kick',data:points.map(x=>x.kick),borderWidth:1.5,tension:.25}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{ticks:{color:'#91a0b1',maxTicksLimit:12},grid:{color:'#202b36'}},y:{beginAtZero:true,ticks:{color:'#91a0b1'},grid:{color:'#202b36'}}},plugins:{legend:{labels:{color:'#dbe4ef'}}}}});
+  new Chart(document.getElementById('trend'),{type:'line',data:{labels,datasets:[{label:'Combined',data:points.map(x=>x.combined),borderWidth:2,tension:.25,fill:true},{label:'YouTube',data:points.map(x=>x.youtube),borderWidth:1.5,tension:.25},{label:'Twitch',data:points.map(x=>x.twitch),borderWidth:1.5,tension:.25},{label:'Kick',data:points.map(x=>x.kick),borderWidth:1.5,tension:.25}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{ticks:{color:'#91a0b1',maxTicksLimit:12},grid:{color:'#202b36'}},y:{beginAtZero:true,ticks:{color:'#91a0b1'},grid:{color:'#202b36'}}},plugins:{legend:{labels:{color:'#dbe4ef'}}}}});
  }catch(e){document.getElementById('title').textContent='Unable to load match';document.getElementById('streams').innerHTML='<div class="empty">'+esc(e.message||'Match unavailable')+'</div>';console.error(e)}
 }
-
-document.getElementById('liveStreamsFilter').addEventListener('click',()=>setStreamFilter('live'));
-document.getElementById('allStreamsFilter').addEventListener('click',()=>setStreamFilter('all'));
-document.getElementById('streamSearch').addEventListener('input',e=>{streamSearch=e.target.value;streamPage=1;renderStreams()});
-document.getElementById('streamPrev').addEventListener('click',()=>{if(streamPage>1){streamPage--;renderStreams()}});
-document.getElementById('streamNext').addEventListener('click',()=>{streamPage++;renderStreams()});
 load();
 </script></body></html>

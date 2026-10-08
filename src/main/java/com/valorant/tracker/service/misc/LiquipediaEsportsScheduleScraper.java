@@ -108,45 +108,28 @@ public class LiquipediaEsportsScheduleScraper {
     }
 
     public List<EsportsMatch> getUpcomingAndLive(String game) {
-
         String normalized = normalizeGame(game);
-
         CacheEntry current = cache.get(normalized);
-
-        if (current != null &&
-                Instant.now().isBefore(current.expiresAt())) {
-
+        if (current != null && Instant.now().isBefore(current.expiresAt())) {
             return current.matches();
         }
 
-        List<EsportsMatch> scraped =
-                scrape(normalized);
+        return refresh(game);
+    }
 
+    /**
+     * Force a fresh Main_Page scrape for manual/API diagnostics.
+     * This bypasses the normal scraper cache and replaces the cached result.
+     */
+    public List<EsportsMatch> refresh(String game) {
+        String normalized = normalizeGame(game);
+        List<EsportsMatch> scraped = scrape(normalized);
         cache.put(
                 normalized,
                 new CacheEntry(
                         Instant.now().plus(cacheDuration),
                         scraped));
-
         return scraped;
-    }
-
-    /**
-     * Returns today's matches for the dashboard. Live matches are included even
-     * when they started earlier today; upcoming matches are included through
-     * the end of the current UTC calendar day.
-     */
-    public List<EsportsMatch> getMatchesToday(String game) {
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        var today = now.toLocalDate();
-
-        return getUpcomingAndLive(game).stream()
-                .filter(match -> match.startTime() != null)
-                .filter(match -> match.startTime().toLocalDate().equals(today))
-                .sorted(Comparator
-                        .comparing(EsportsMatch::isFinished).thenComparing(
-                                EsportsMatch::startTime))
-                .toList();
     }
 
     public boolean hasActiveMatch(String game) {
@@ -182,55 +165,33 @@ public class LiquipediaEsportsScheduleScraper {
      */
     private List<EsportsMatch> scrape(String game) {
 
-        String wiki =
-                WIKIS.get(normalizeGame(game));
+        String wiki = WIKIS.get(normalizeGame(game));
 
         if (wiki == null) {
-
-            log.warn(
-                    "No Liquipedia wiki configured for game={}",
-                    game);
-
+            log.warn("No Liquipedia wiki configured for game={}", game);
             return Collections.emptyList();
         }
 
         try {
-
             /*
              * Fetch Main_Page ONCE.
              */
-            String url =
-                    BASE + wiki + "/Main_Page";
-
+            String url = BASE + wiki + "/Main_Page";
             String html = fetch(url);
-
-            Document document =
-                    Jsoup.parse(html, url);
+            Document document = Jsoup.parse(html, url);
 
             /*
              * Extract tournament -> tier information
              * from the same Main_Page.
              */
-            Map<String, String> tournamentTiers =
-                    extractTournamentTiers(
-                            document,
-                            wiki);
-
-            List<EsportsMatch> result =
-                    new ArrayList<>();
+            Map<String, String> tournamentTiers = extractTournamentTiers(document, wiki);
+            List<EsportsMatch> result = new ArrayList<>();
 
             /*
              * Parse match rows directly from Main_Page.
              */
-            for (Element row :
-                    document.select("div.match-info")) {
-
-                EsportsMatch match =
-                        parseMatch(
-                                game,
-                                row,
-                                tournamentTiers);
-
+            for (Element row : document.select("div.match-info")) {
+                EsportsMatch match = parseMatch(game, row, tournamentTiers);
                 if (match == null) {
                     continue;
                 }
@@ -240,24 +201,11 @@ public class LiquipediaEsportsScheduleScraper {
                 }
             }
 
-            result.sort(
-                    Comparator.comparing(
-                            EsportsMatch::startTime));
-
-            log.info(
-                    "Liquipedia {} schedule: {} eligible matches",
-                    game,
-                    result.size());
-
+            result.sort(Comparator.comparing(EsportsMatch::startTime));
+            log.info("Liquipedia {} schedule: {} eligible matches", game, result.size());
             return List.copyOf(result);
-
         } catch (Exception e) {
-
-            log.warn(
-                    "Liquipedia scrape failed for game={}: {}",
-                    game,
-                    e.getMessage());
-
+            log.warn("Liquipedia scrape failed for game={}: {}", game, e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -401,33 +349,27 @@ public class LiquipediaEsportsScheduleScraper {
     /**
      * Determines which tier system is valid for the game.
      */
-    private boolean isEligibleTier(
-            String game,
-            String tier) {
+    private boolean isEligibleTier(String game, String tier) {
 
         if (tier == null) {
             return false;
         }
 
-        String normalized =
-                normalizeGame(game);
+        String normalized = normalizeGame(game);
 
         /*
          * Dota 2:
          * Tier 1 + Tier 2
          */
         if ("DOTA 2".equals(normalized)) {
-
-            return "T1".equals(tier)
-                    || "T2".equals(tier);
+            return "T1".equals(tier) || "T2".equals(tier);
         }
 
         /*
          * Other esports:
          * S + A
          */
-        return "S".equals(tier)
-                || "A".equals(tier);
+        return "S".equals(tier) || "A".equals(tier);
     }
 
     private EsportsMatch parseMatch(
@@ -436,101 +378,206 @@ public class LiquipediaEsportsScheduleScraper {
             Map<String, String> tournamentTiers) {
 
         try {
+            /*
+             * Do not require .match-info-countdown to exist.
+             * Upcoming rows normally have a timer; completed rows can expose
+             * their final score/winner without the same countdown structure.
+             */
+            Element timer = row.selectFirst(
+                    ".match-info-countdown .timer-object[data-timestamp]");
 
-            Element timer =
-                    row.selectFirst(
-                            ".match-info-countdown " +
-                                    ".timer-object[data-timestamp]");
+            if (timer == null) {
+                timer = row.selectFirst(".timer-object[data-timestamp]");
+            }
+
+            if (timer == null) {
+                timer = row.selectFirst("[data-timestamp]");
+            }
 
             if (timer == null) {
                 return null;
             }
 
-            long epoch =
-                    Long.parseLong(
-                            timer.attr("data-timestamp"));
+            String timestampValue = timer.attr("data-timestamp").trim();
+            if (timestampValue.isBlank()) {
+                return null;
+            }
 
-            OffsetDateTime start =
-                    OffsetDateTime.ofInstant(
-                            Instant.ofEpochSecond(epoch),
-                            ZoneOffset.UTC);
+            long epoch = Long.parseLong(timestampValue);
 
-            Element tournamentAnchor =
-                    row.selectFirst(
-                            ".match-info-tournament-name a[href]");
+            OffsetDateTime start = OffsetDateTime.ofInstant(
+                    Instant.ofEpochSecond(epoch),
+                    ZoneOffset.UTC);
+
+            Element tournamentAnchor = row.selectFirst(
+                    ".match-info-tournament-name a[href]");
 
             if (tournamentAnchor == null) {
                 return null;
             }
 
-            String tournamentUrl =
-                    stripFragment(
-                            tournamentAnchor.absUrl("href"));
+            String tournamentUrl = stripFragment(
+                    tournamentAnchor.absUrl("href"));
 
-            String tournament =
-                    tournamentAnchor.text().trim();
+            String tournament = tournamentAnchor.text().trim();
 
             if (tournament.isBlank()) {
-                tournament =
-                        tournamentAnchor.attr("title");
+                tournament = tournamentAnchor.attr("title").trim();
             }
 
-            String tier =
-                    tournamentTiers.get(tournamentUrl);
+            String tier = tournamentTiers.get(tournamentUrl);
 
-            /*
-             * If the tournament wasn't found in the
-             * tournament list, don't invent a tier.
-             */
             if (tier == null) {
                 return null;
             }
 
-            Elements teams =
-                    row.select(
-                            ".match-info-header-opponent .name");
+            Elements teams = row.select(
+                    ".match-info-header-opponent .name");
 
-            String team1 =
-                    teams.size() > 0
-                            ? teams.get(0).text().trim()
-                            : "TBD";
+            String team1 = teams.size() > 0
+                    ? teams.get(0).text().trim()
+                    : "TBD";
 
-            String team2 =
-                    teams.size() > 1
-                            ? teams.get(1).text().trim()
-                            : "TBD";
+            String team2 = teams.size() > 1
+                    ? teams.get(1).text().trim()
+                    : "TBD";
 
             String matchUrl = "";
 
-            Element matchLink =
-                    row.selectFirst(
-                            ".match-page-button a[href], " +
-                                    "a[href*='/Match:']");
+            Element matchLink = row.selectFirst(
+                    ".match-page-button a[href], " +
+                            "a[href*='/Match:']");
 
             if (matchLink != null) {
-                matchUrl =
-                        stripFragment(
-                                matchLink.absUrl("href"));
+                matchUrl = stripFragment(
+                        matchLink.absUrl("href"));
             }
 
-            MatchScore score = extractMatchScore(row, team1, team2);
-            boolean finished = score.finished();
+            /*
+             * Liquipedia completed rows expose the final score directly as:
+             *
+             * .match-info-header-scoreholder-score
+             *
+             * Parse these nodes from the complete match row rather than relying
+             * on the score-wrapper selector. This handles the current
+             * Counter-Strike Main_Page markup such as:
+             *     <score class="...score">2</score>
+             *     <score class="...score match-info-header-winner">0</score>
+             */
+            Integer team1Score = null;
+            Integer team2Score = null;
+
+            Elements scoreNodes = row.select(
+                    ".match-info-header-scoreholder-score");
+
+            if (scoreNodes.size() >= 2) {
+                team1Score = parseScore(scoreNodes.get(0).text());
+                team2Score = parseScore(scoreNodes.get(1).text());
+            }
+
+            String bestOf = "";
+            Element formatElement = row.selectFirst(
+                    ".match-info-header-scoreholder-lower");
+
+            if (formatElement != null) {
+                bestOf = formatElement.text().trim();
+
+                if (bestOf.startsWith("(")
+                        && bestOf.endsWith(")")) {
+                    bestOf = bestOf.substring(
+                            1,
+                            bestOf.length() - 1).trim();
+                }
+
+                bestOf = normalizeBestOf(bestOf);
+            }
+
+            /*
+             * Liquipedia marks completed rows with data-finished="finished".
+             * Check both the timestamp element and the complete match row.
+             */
+            boolean finished =
+                    "finished".equalsIgnoreCase(
+                            timer.attr("data-finished"))
+                            || "finished".equalsIgnoreCase(
+                            row.attr("data-finished"))
+                            || !row.select(
+                            "[data-finished='finished']").isEmpty();
+
+            String winner = null;
+
+            // Liquipedia marks the winning numeric score with the
+            // match-info-header-winner class. Map that marker back to team1/team2.
+            if (scoreNodes.size() >= 2) {
+                boolean team1Winner =
+                        scoreNodes.get(0).hasClass("match-info-header-winner");
+
+                boolean team2Winner =
+                        scoreNodes.get(1).hasClass("match-info-header-winner");
+
+                if (team1Winner) {
+                    winner = team1;
+                } else if (team2Winner) {
+                    winner = team2;
+                }
+            }
+
+            /*
+             * Liquipedia also marks the winning team container itself.
+             * Use that as a fallback if the score winner marker is absent.
+             */
+            if (winner == null) {
+                Elements opponents = row.select(
+                        ".match-info-header-opponent");
+
+                if (opponents.size() >= 2) {
+                    if (opponents.get(0)
+                            .hasClass("match-info-header-winner")) {
+                        winner = team1;
+                    } else if (opponents.get(1)
+                            .hasClass("match-info-header-winner")) {
+                        winner = team2;
+                    }
+                }
+            }
+
+            /*
+             * A winner marker plus two numeric scores is sufficient to classify
+             * the row as completed even if data-finished is absent.
+             */
+            if (!finished
+                    && winner != null
+                    && team1Score != null
+                    && team2Score != null) {
+                finished = true;
+            }
+
+            OffsetDateTime now =
+                    OffsetDateTime.now(ZoneOffset.UTC);
 
             String status;
-            if (start.isAfter(OffsetDateTime.now(ZoneOffset.UTC))) {
-                status = "UPCOMING";
-            } else if (finished) {
+
+            if (finished) {
                 status = "COMPLETED";
+            } else if (start.isAfter(now)) {
+                status = "UPCOMING";
             } else {
-                status = "LIVE_OR_RECENT";
+                /*
+                 * Do not assume every past-start match is live. Liquipedia can
+                 * occasionally omit data-finished from the main-page row while
+                 * the match page already knows the real phase.
+                 */
+                status = resolvePastMatchStatus(matchUrl);
             }
 
             String matchId = buildMatchId(
-                    game, tournament, team1, team2, start, matchUrl);
+                    game,
+                    tournament,
+                    team1,
+                    team2,
+                    start,
+                    matchUrl);
 
-            // Do not invent a 4-hour end time. If Liquipedia does not expose
-            // one, the scheduler uses its safety fallback only until the
-            // source reports the match completed.
             OffsetDateTime end = null;
 
             return new EsportsMatch(
@@ -540,81 +587,139 @@ public class LiquipediaEsportsScheduleScraper {
                     tier,
                     team1,
                     team2,
+                    team1Score,
+                    team2Score,
+                    bestOf,
+                    winner,
+                    finished,
                     start,
                     end,
                     status,
                     tournamentUrl,
-                    matchUrl,
-                    score.team1Score(),
-                    score.team2Score(),
-                    score.bestOf(),
-                    finished);
+                    matchUrl);
 
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+
+            log.debug(
+                    "Failed to parse Liquipedia match row for game={}: {}",
+                    game,
+                    e.getMessage());
 
             return null;
         }
     }
 
-
     /**
-     * Extracts the series score from the match row when Liquipedia exposes it.
-     * The CSS varies slightly between game wikis, so several score selectors
-     * are accepted. A finished marker is also recognized from the row/status
-     * text. Scores are series scores (e.g. 2-1 for a completed Bo3).
+     * Resolve an ambiguous past-start match from its Liquipedia Match page.
+     *
+     * Main_Page normally exposes data-finished and the winner marker, but
+     * those fields are not guaranteed to be present on every row. In that
+     * case we must not manufacture LIVE merely because kickoff is in the past.
      */
-    private MatchScore extractMatchScore(Element row, String team1, String team2) {
-        List<Integer> scores = new ArrayList<>();
-        for (String selector : List.of(
-                ".match-info-header-opponent .score",
-                ".match-info-header-opponent-score",
-                ".match-info-header-opponent .match-info-header-opponent-score",
-                ".match-info-score",
-                ".score")) {
-            for (Element element : row.select(selector)) {
-                String text = element.text().trim();
-                if (text.matches("\\d+")) {
-                    try {
-                        scores.add(Integer.parseInt(text));
-                    } catch (NumberFormatException ignored) {
-                    }
+    private String resolvePastMatchStatus(String matchUrl) {
+        if (matchUrl == null || matchUrl.isBlank()) {
+            return "UNKNOWN";
+        }
+
+        try {
+            WebClient.RequestHeadersSpec<?> request =
+                    webClient.get().uri(matchUrl);
+
+            if (liquipediaCookie != null && !liquipediaCookie.isBlank()) {
+                request = request.header(
+                        HttpHeaders.COOKIE,
+                        liquipediaCookie);
+            }
+
+            String html = request
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block(Duration.ofSeconds(8));
+
+            if (html == null || html.isBlank()) {
+                return "UNKNOWN";
+            }
+
+            Document document = Jsoup.parse(html);
+
+            Element result = document.selectFirst(
+                    ".match-bm-match-header-result-text");
+
+            if (result != null) {
+                String phase = result.text()
+                        .trim()
+                        .toLowerCase(Locale.ROOT);
+
+                if (phase.contains("live")
+                        || phase.contains("ongoing")) {
+                    return "LIVE";
+                }
+
+                if (phase.contains("finished")
+                        || phase.contains("completed")) {
+                    return "COMPLETED";
+                }
+
+                if (phase.contains("upcoming")) {
+                    return "UPCOMING";
                 }
             }
-            if (scores.size() >= 2) break;
+
+            /*
+             * MatchPage pages also expose the finished state through the
+             * result/winner structure. A winner on a past match is definitive.
+             */
+            if (!document.select(
+                    ".match-bm-match-header-opponent.match-info-header-winner, " +
+                            ".match-info-header-winner").isEmpty()) {
+                return "COMPLETED";
+            }
+
+        } catch (Exception e) {
+            log.debug(
+                    "Could not resolve Liquipedia match phase from {}: {}",
+                    matchUrl,
+                    e.getMessage());
         }
 
-        String rowText = row.text().replace('\u00A0', ' ').trim();
-        String lower = rowText.toLowerCase(Locale.ROOT);
+        /*
+         * We could not prove that this past-start match is live or completed.
+         * Do not manufacture a state from the kickoff time alone.
+         *
+         * UNKNOWN is intentionally exposed by the diagnostic endpoint and can
+         * be hidden by the game dashboard.
+         */
+        return "UNKNOWN";
+    }
 
-        boolean finished = row.classNames().stream()
-                .map(String::toLowerCase)
-                .anyMatch(v -> v.contains("finished") || v.contains("completed"));
+    private String normalizeBestOf(String value) {
 
-        finished = finished
-                || lower.contains("finished")
-                || lower.contains("completed")
-                || lower.contains("final");
-
-        Integer score1 = scores.size() > 0 ? scores.get(0) : null;
-        Integer score2 = scores.size() > 1 ? scores.get(1) : null;
-
-        // A numeric series score is enough to expose the result when both
-        // sides are known. We deliberately do not infer a winner from it.
-        if (score1 != null && score2 != null) {
-            String boText = rowText.toUpperCase(Locale.ROOT);
-            Integer bestOf = null;
-            var bo = java.util.regex.Pattern.compile("\\bBO\\s*([1357])\\b").matcher(boText);
-            if (bo.find()) {
-                bestOf = Integer.parseInt(bo.group(1));
-            }
-            if (!finished && bestOf != null) {
-                int target = (bestOf / 2) + 1;
-                finished = score1 >= target || score2 >= target;
-            }
-            return new MatchScore(score1, score2, bestOf, finished);
+        if (value == null || value.isBlank()) {
+            return "";
         }
 
-        return new MatchScore(null, null, null, finished);
+        String normalized = value.trim()
+                .replaceAll("\\s+", "")
+                .toUpperCase(Locale.ROOT);
+
+        if (normalized.matches("BO\\d+")) {
+            return "Bo" + normalized.substring(2);
+        }
+
+        if (normalized.matches("B\\d+")) {
+            return "Bo" + normalized.substring(1);
+        }
+
+        return value.trim();
+    }
+
+    private Integer parseScore(String value) {
+        try {
+            String v = value == null ? "" : value.trim();
+            return v.matches("\\d+") ? Integer.valueOf(v) : null;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private String buildMatchId(
@@ -650,7 +755,7 @@ public class LiquipediaEsportsScheduleScraper {
         return value == null
                 ? ""
                 : value.trim().toLowerCase(Locale.ROOT)
-                        .replaceAll("\\s+", " ");
+                .replaceAll("\\s+", " ");
     }
 
     private String fetch(String url) {
@@ -780,43 +885,35 @@ public class LiquipediaEsportsScheduleScraper {
             String tier,
             String team1,
             String team2,
+            Integer team1Score,
+            Integer team2Score,
+            String bestOf,
+            String winner,
+            boolean finished,
             OffsetDateTime startTime,
             OffsetDateTime endTime,
             String status,
             String tournamentUrl,
-            String matchUrl,
-            Integer team1Score,
-            Integer team2Score,
-            Integer bestOf,
-            boolean finished) {
+            String matchUrl) {
 
-        public boolean isFinished() {
-            return finished || "COMPLETED".equalsIgnoreCase(status);
-        }
-
+        /**
+         * Liquipedia is the source of truth for match state.
+         *
+         * UPCOMING is never active. COMPLETED/finished is never active.
+         * A match is active only while the scraper has classified it as LIVE.
+         *
+         * There is deliberately no start + 4 hour fallback here: that old
+         * heuristic caused completed matches to remain active and made the
+         * scheduler collect a game after its esports match had ended.
+         */
         public boolean isActive(Instant now) {
-            if (startTime == null || now == null || isFinished()) {
+            if (finished || "COMPLETED".equalsIgnoreCase(status)
+                    || "UPCOMING".equalsIgnoreCase(status)) {
                 return false;
             }
-
-            Instant start = startTime.toInstant();
-            Instant activeFrom = start.minus(Duration.ofMinutes(5));
-
-            // A real end time is authoritative. When Liquipedia has no end
-            // time, this is only a safety ceiling; the score/finished flag
-            // above is what normally ends the match much earlier.
-            Instant activeUntil = endTime != null
-                    ? endTime.toInstant()
-                    : start.plus(Duration.ofHours(4));
-
-            return !activeFrom.isAfter(now) && activeUntil.isAfter(now);
+            return "LIVE".equalsIgnoreCase(status)
+                    && startTime != null
+                    && !startTime.toInstant().isAfter(now);
         }
-    }
-
-    private record MatchScore(
-            Integer team1Score,
-            Integer team2Score,
-            Integer bestOf,
-            boolean finished) {
     }
 }
