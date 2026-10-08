@@ -25,12 +25,14 @@ public class TrackerController {
   private final TrackerService tracker;
   private final DynamicGameScheduler dynamicGameScheduler;
   private final EsportsMatchRecordRepository matchRepository;
+  private final LiquipediaEsportsScheduleScraper liquipediaEsportsScheduleScraper;
 
-  public TrackerController(EntityManager entityManager, TrackerService tracker, DynamicGameScheduler dynamicGameScheduler, EsportsMatchRecordRepository matchRepository) {
+  public TrackerController(EntityManager entityManager, TrackerService tracker, DynamicGameScheduler dynamicGameScheduler, EsportsMatchRecordRepository matchRepository, LiquipediaEsportsScheduleScraper liquipediaEsportsScheduleScraper) {
     this.entityManager = entityManager;
     this.tracker = tracker;
     this.dynamicGameScheduler = dynamicGameScheduler;
     this.matchRepository = matchRepository;
+      this.liquipediaEsportsScheduleScraper = liquipediaEsportsScheduleScraper;
   }
 
   @GetMapping("/status")
@@ -1312,6 +1314,18 @@ public class TrackerController {
     return streams(game, platform).stream()
             .limit(10)
             .toList();
+  }
+
+  /**
+   * Returns actual Liquipedia team logo URLs for the selected game.
+   *
+   * Example:
+   * GET /api/esports/team-logos?game=VALORANT
+   */
+  @GetMapping("/esports/team-logos")
+  public Map<String, String> esportsTeamLogos(
+          @RequestParam(defaultValue = "VALORANT") String game) {
+    return liquipediaEsportsScheduleScraper.getTeamLogoUrls(game);
   }
 
   private static int clampLimit(int limit) {

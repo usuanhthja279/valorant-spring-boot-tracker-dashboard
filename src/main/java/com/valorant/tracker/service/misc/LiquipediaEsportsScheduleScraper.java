@@ -55,6 +55,9 @@ public class LiquipediaEsportsScheduleScraper {
     private final Map<String, CacheEntry> cache =
             new ConcurrentHashMap<>();
 
+    private final Map<String, LogoCacheEntry> logoCache =
+            new ConcurrentHashMap<>();
+
     public LiquipediaEsportsScheduleScraper(
             WebClient.Builder webClientBuilder,
             @Value("${tracker.liquipedia.cache-minutes:5}")
@@ -82,6 +85,72 @@ public class LiquipediaEsportsScheduleScraper {
                         "Accept",
                         "text/html,application/xhtml+xml")
                 .build();
+    }
+
+
+    /**
+     * Return the actual team-logo image URLs used by Liquipedia's Main_Page
+     * match rows. Keys are the exact displayed team names (for example
+     * "100T", "G2", "Spirit", "M80").
+     *
+     * This deliberately uses the image URL from the match row instead of
+     * guessing a filename from the team name. That matters because Liquipedia
+     * can use aliases, sponsored names, or different logo filenames.
+     */
+    public Map<String, String> getTeamLogoUrls(String game) {
+        String normalized = normalizeGame(game);
+        LogoCacheEntry cached = logoCache.get(normalized);
+        if (cached != null && Instant.now().isBefore(cached.expiresAt())) {
+            return cached.logos();
+        }
+
+        String wiki = WIKIS.get(normalized);
+        if (wiki == null) {
+            return Collections.emptyMap();
+        }
+
+        try {
+            String url = BASE + wiki + "/Main_Page";
+            String html = fetch(url);
+            Document document = Jsoup.parse(html, url);
+
+            Map<String, String> logos = new LinkedHashMap<>();
+
+            for (Element row : document.select("div.match-info")) {
+                Elements opponents = row.select(".match-info-header-opponent");
+
+                for (Element opponent : opponents) {
+                    Element name = opponent.selectFirst(".name");
+                    Element image = opponent.selectFirst(
+                            ".team-template-image-icon img[src], img[src]");
+
+                    if (name == null || image == null) {
+                        continue;
+                    }
+
+                    String team = name.text().trim();
+                    String logo = image.absUrl("src");
+
+                    if (!team.isBlank() && !logo.isBlank()) {
+                        logos.putIfAbsent(team, logo);
+                    }
+                }
+            }
+
+            Map<String, String> immutable = Map.copyOf(logos);
+            logoCache.put(normalized,
+                    new LogoCacheEntry(
+                            Instant.now().plus(cacheDuration),
+                            immutable));
+
+            return immutable;
+        } catch (Exception e) {
+            log.debug(
+                    "Could not load Liquipedia team logos for game={}: {}",
+                    game,
+                    e.getMessage());
+            return Collections.emptyMap();
+        }
     }
 
     public List<EsportsMatch> getUpcomingMatches(String game) {
@@ -114,7 +183,9 @@ public class LiquipediaEsportsScheduleScraper {
             return current.matches();
         }
 
-        return refresh(game);
+        List<EsportsMatch> scraped = scrape(normalized);
+        cache.put(normalized, new CacheEntry(Instant.now().plus(cacheDuration), scraped));
+        return scraped;
     }
 
     /**
@@ -122,14 +193,7 @@ public class LiquipediaEsportsScheduleScraper {
      * This bypasses the normal scraper cache and replaces the cached result.
      */
     public List<EsportsMatch> refresh(String game) {
-        String normalized = normalizeGame(game);
-        List<EsportsMatch> scraped = scrape(normalized);
-        cache.put(
-                normalized,
-                new CacheEntry(
-                        Instant.now().plus(cacheDuration),
-                        scraped));
-        return scraped;
+        return getUpcomingAndLive(game);
     }
 
     public boolean hasActiveMatch(String game) {
@@ -453,17 +517,6 @@ public class LiquipediaEsportsScheduleScraper {
                         matchLink.absUrl("href"));
             }
 
-            /*
-             * Liquipedia completed rows expose the final score directly as:
-             *
-             * .match-info-header-scoreholder-score
-             *
-             * Parse these nodes from the complete match row rather than relying
-             * on the score-wrapper selector. This handles the current
-             * Counter-Strike Main_Page markup such as:
-             *     <score class="...score">2</score>
-             *     <score class="...score match-info-header-winner">0</score>
-             */
             Integer team1Score = null;
             Integer team2Score = null;
 
@@ -683,13 +736,14 @@ public class LiquipediaEsportsScheduleScraper {
         }
 
         /*
-         * We could not prove that this past-start match is live or completed.
-         * Do not manufacture a state from the kickoff time alone.
+         * A past match with no explicit completion marker is treated as LIVE.
+         * Liquipedia can temporarily omit the finished marker on a live row;
+         * using UNKNOWN here would make a genuinely long-running match disappear
+         * from the active scheduler simply because the kickoff time is old.
          *
-         * UNKNOWN is intentionally exposed by the diagnostic endpoint and can
-         * be hidden by the game dashboard.
+         * Explicit COMPLETED/winner/score evidence above still takes priority.
          */
-        return "UNKNOWN";
+        return "LIVE";
     }
 
     private String normalizeBestOf(String value) {
@@ -876,6 +930,11 @@ public class LiquipediaEsportsScheduleScraper {
     private record CacheEntry(
             Instant expiresAt,
             List<EsportsMatch> matches) {
+    }
+
+    private record LogoCacheEntry(
+            Instant expiresAt,
+            Map<String, String> logos) {
     }
 
     public record EsportsMatch(

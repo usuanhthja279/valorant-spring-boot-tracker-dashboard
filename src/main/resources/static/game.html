@@ -37,7 +37,7 @@ main{padding:18px 22px 28px;max-width:1800px;margin:auto}
 .top-overview-grid .live-viewership .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
 .top-overview-grid .active-match-section{grid-area:matches;margin:0;min-width:0;width:100%;height:auto;min-height:0;display:flex;flex-direction:column;overflow:visible;box-sizing:border-box;background:transparent;border:0;border-radius:0;padding:0}
 .top-overview-grid .active-match-row{display:flex;flex-direction:column;gap:8px;overflow:visible;padding:8px 10px 10px;min-height:0;flex:1}
-.top-overview-grid .active-match-card{width:100%;min-width:0;flex:0 0 auto;min-height:0;height:84px;padding:10px 12px}
+.top-overview-grid .active-match-card{width:100%;min-width:0;flex:0 0 auto;min-height:104px;height:auto;padding:10px 12px;box-sizing:border-box}
 .top-overview-grid .active-match-section .active-match-header{flex:0 0 auto;padding:0 0 7px;background:transparent;border:0;border-radius:0}.top-overview-grid .active-match-section .active-match-header strong{font-size:16px}.top-overview-grid .active-match-section .active-match-header .match-meta{margin-top:3px}.top-overview-grid .active-match-section .match-schedule-controls{flex:0 0 auto}.top-overview-grid .active-match-section .match-schedule-controls input{min-width:0}.top-overview-grid .active-match-section #activeMatchesBody{background:#0f1720;border:1px solid #202d39;border-radius:11px;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#425267 transparent}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar{width:7px}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar-track{background:transparent}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar-thumb{background:#425267;border-radius:8px}
 .match-score{display:flex;align-items:center;gap:7px;margin-top:8px;font-weight:800}.match-score .score-value{font-size:17px}.match-score .score-sep{color:#7f8b99}.match-status-upcoming{color:#fbbf24}.match-status-completed{color:#9aa7b7}.live-viewership{margin-bottom:14px}.live-viewership-heading{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.live-viewership-heading h2{font-size:16px;margin:0}
 .match-score{display:flex;align-items:center;gap:7px;margin-top:8px;font-weight:800}.match-score .score-value{font-size:17px}.match-score .score-sep{color:#7f8b99}.match-status-upcoming{color:#fbbf24}.match-status-completed{color:#9aa7b7}.live-viewership{margin-bottom:14px}.live-viewership-heading{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.live-viewership-heading h2{font-size:16px;margin:0}
@@ -123,9 +123,13 @@ header,main{min-width:0;width:100%;max-width:100%}
 .match-schedule-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}.match-schedule-controls input{flex:1;min-width:150px;padding:8px 10px}.match-schedule-controls select{padding:8px 10px}.match-filter-count{font-size:11px;color:#8e99a8;white-space:nowrap}.match-status-live{color:#37d67a}.match-status-upcoming{color:#fbbf24}.match-status-completed{color:#9aa7b7}.match-score .winner-score{color:#fff}.active-match-card{touch-action:manipulation;-webkit-tap-highlight-color:transparent}.active-match-card:active{transform:none;background:#16212d}.active-match-detail-panel{scroll-margin-top:12px}
 .match-panel{margin:18px 0;padding:20px;background:#111821;border:1px solid #202b36;border-radius:16px}.match-panel h2{margin:0}.match-meta{color:#91a0b1;font-size:13px;margin-top:6px}.match-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px}.match-stream{background:#0c1219;border:1px solid #263341;border-radius:10px;padding:12px}.match-stream .viewers{font-size:20px;font-weight:700}.match-empty{color:#91a0b1;padding:12px 0}.match-link{color:#eef2f7;text-decoration:none}.match-link:hover{text-decoration:underline}
 
-.active-match-section{padding:0;overflow:hidden}.active-match-header{width:100%;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 20px 14px;background:transparent;border:0;border-bottom:1px solid #202b36;color:#eef2f7;text-align:left}.active-match-header strong{display:block;font-size:20px}.active-match-header .match-meta{display:block;margin-top:5px}.active-match-header-right{display:flex;align-items:center;gap:12px}.active-match-header-rule{display:block;width:42px;height:1px;background:#2b3948;flex:0 0 auto}.active-match-card{min-height:84px;padding:12px;border:1px solid #2a3745;border-radius:12px;background:#0c1219;color:#eef2f7;text-align:left;cursor:pointer;transition:border-color .15s,transform .15s,background .15s}.active-match-card:hover{transform:translateY(-1px);border-color:#4b6074}.active-match-card.selected{border-color:#7c8fa3;background:#111a24;box-shadow:0 0 0 1px #7c8fa333}.active-match-card .match-teams{font-size:18px;font-weight:800;line-height:1.2}.active-match-card .match-vs{color:#91a0b1;font-size:11px;margin:3px 0}.active-match-card .match-tournament{margin-top:6px;color:#91a0b1;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.active-match-card .match-time{margin-top:4px;color:#b7c3d0;font-size:11px}.active-match-detail-panel{margin-top:14px}.active-match-detail{margin:0;padding:20px;border:1px solid #2a3745;border-radius:14px;background:#0c1219}.active-match-detail-panel .active-match-detail{border:0;border-radius:0;background:transparent}.active-match-detail[hidden]{display:none}.active-match-detail-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.active-match-detail h3{margin:0;font-size:23px}.match-detail-sub{color:#91a0b1;font-size:12px;margin-top:6px}
+.active-match-section{padding:0;overflow:hidden}.active-match-header{width:100%;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 20px 14px;background:transparent;border:0;border-bottom:1px solid #202b36;color:#eef2f7;text-align:left}.active-match-header strong{display:block;font-size:20px}.active-match-header .match-meta{display:block;margin-top:5px}.active-match-header-right{display:flex;align-items:center;gap:12px}.active-match-header-rule{display:block;width:42px;height:1px;background:#2b3948;flex:0 0 auto}.active-match-card{min-height:104px;padding:10px 12px;border:1px solid #2a3745;border-radius:12px;background:#0c1219;color:#eef2f7;text-align:left;cursor:pointer;transition:border-color .15s,transform .15s,background .15s}.active-match-card:hover{transform:translateY(-1px);border-color:#4b6074}.active-match-card.selected{border-color:#7c8fa3;background:#111a24;box-shadow:0 0 0 1px #7c8fa333}.active-match-card .match-teams{display:flex;align-items:center;justify-content:flex-start;gap:7px;font-size:14px;font-weight:800;line-height:1.15;min-width:0}.active-match-card .match-team{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:44%}.active-match-card .match-team-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.active-match-card .match-vs{color:#91a0b1;font-size:10px;font-weight:700;flex:0 0 auto}.active-match-card .match-team-logo{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 24px}.active-match-card .match-team-logo img{max-width:24px;max-height:24px;width:auto;height:auto;object-fit:contain;display:block}.active-match-card .match-team-logo img[src=""]{display:none}.active-match-card .match-tournament{margin-top:5px;color:#91a0b1;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.active-match-card .match-time{margin-top:3px;color:#b7c3d0;font-size:10px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.active-match-card .match-score{justify-content:center;margin-top:4px}.active-match-card .match-score .score-value{font-size:14px}.active-match-detail-panel{margin-top:14px}.active-match-detail{margin:0;padding:20px;border:1px solid #2a3745;border-radius:14px;background:#0c1219}.active-match-detail-panel .active-match-detail{border:0;border-radius:0;background:transparent}.active-match-detail[hidden]{display:none}.active-match-detail-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.active-match-detail h3{margin:0;font-size:23px}.match-detail-sub{color:#91a0b1;font-size:12px;margin-top:6px}
 .match-detail-title-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:8px;vertical-align:-5px;border:1px solid #334456;border-radius:8px;background:#151e28;color:#dbeafe}
 .match-detail-title-icon svg{width:17px;height:17px;display:block}
+.match-team-logo{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;vertical-align:-7px}.match-team-logo-left{margin-right:9px}.match-team-logo-right{margin-left:9px}
+.match-team-logo img{max-width:30px;max-height:30px;width:auto;height:auto;object-fit:contain;display:block}
+.match-team-logo img[src=""]{display:none}
+.match-vs-title{color:#91a0b1;font-size:16px;margin:0 3px}
 .match-metric .label.metric-label{display:flex;align-items:center;gap:7px}
 .match-metric .metric-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex:0 0 18px}
 .match-metric .metric-icon svg{width:18px;height:18px;display:block}
@@ -158,7 +162,7 @@ header,main{min-width:0;width:100%;max-width:100%}
 </div>
 </section><section class="match-panel active-match-section" id="activeMatchesPanel" hidden aria-label="Esports matches schedule">
   <div class="active-match-header" id="activeMatchesHeader">
-    <span><strong>⚔ Esports matches</strong><span class="match-meta" id="activeMatchesMeta">Loading matches…</span></span>
+    <span><strong>⚔ Live & upcoming matches</strong><span class="match-meta" id="activeMatchesMeta">Loading matches…</span></span>
     <span class="active-match-header-rule" aria-hidden="true"></span>
   </div>
   <div class="match-schedule-controls" aria-label="Match filters">
@@ -765,6 +769,7 @@ async function showChannelHistory(channel,platform){
 
 let activeMatchItems=[];
 let selectedActiveMatchId=null;
+let activeMatchLogos={};
 
 function toggleActiveMatches(){}
 
@@ -811,17 +816,56 @@ function renderActiveMatchRow(items=activeMatchItems){
     const score=(s1!=null&&s2!=null)
       ? `<div class="match-score"><span class="score-value ${m.winner===m.team1?'winner-score':''}">${escapeHtml(String(s1))}</span><span class="score-sep">:</span><span class="score-value ${m.winner===m.team2?'winner-score':''}">${escapeHtml(String(s2))}</span></div>` : '';
     const label=live?'● LIVE':completed?'● COMPLETED':unknown?'● STATUS UNKNOWN':'● UPCOMING';
-    const labelClass=live?'match-status-live':completed?'match-status-completed':unknown?'match-status-upcoming':'match-status-upcoming';
+    const labelClass=live?'match-status-live':completed?'match-status-completed':'match-status-upcoming';
     const timeLabel=live?'Started':completed?'Completed':unknown?'Time':'Starts';
     const bo=formatBestOf(m.bestOf);
+    const team1=m.team1||'TBD',team2=m.team2||'TBD';
+    const logo1=activeMatchLogos[team1]||'';
+    const logo2=activeMatchLogos[team2]||'';
+    const img=(url,name)=>url?`<span class="match-team-logo"><img src="${escapeHtml(url)}" alt="${escapeHtml(name)} logo" loading="eager" referrerpolicy="no-referrer"></span>`:'<span class="match-team-logo" aria-hidden="true"></span>';
     return `<button type="button" class="active-match-card${selected?' selected':''}" role="listitem" onclick="selectActiveMatch('${escapeJs(m.matchId||'')}')">
-      <div class="${labelClass}" style="font-size:11px;font-weight:800">${label}</div>
-      <div class="match-teams">${escapeHtml(m.team1||'TBD')} <span class="match-vs">vs</span> ${escapeHtml(m.team2||'TBD')}</div>
+      <div class="${labelClass}" style="font-size:10px;font-weight:800;text-align:left">${label}</div>
+      <div class="match-teams"><span class="match-team">${img(logo1,team1)}<span class="match-team-name">${escapeHtml(team1)}</span></span><span class="match-vs">vs</span><span class="match-team"><span class="match-team-name">${escapeHtml(team2)}</span>${img(logo2,team2)}</span></div>
       ${score}
       <div class="match-tournament">${escapeHtml(m.tournament||'Esports match')}${bo?` · ${escapeHtml(bo)}`:''}</div>
       <div class="match-time">${timeLabel} ${date} · ${time}</div>
     </button>`;
   }).join('');
+}
+
+async function loadSelectedMatchTeamLogos(match){
+  try{
+    const game=match?.game||selectedGame;
+    const logos=Object.keys(activeMatchLogos).length?activeMatchLogos:await getJson('/api/esports/team-logos?game='+encodeURIComponent(game));
+    const team1=String(match?.team1||'').trim();
+    const team2=String(match?.team2||'').trim();
+
+    const logo1=logos?.[team1]||'';
+    const logo2=logos?.[team2]||'';
+
+    const img1=document.getElementById('matchTeam1Logo');
+    const img2=document.getElementById('matchTeam2Logo');
+
+    if(img1){
+      if(logo1){
+        img1.src=logo1;
+        img1.alt=team1+' logo';
+      }else{
+        img1.removeAttribute('src');
+      }
+    }
+
+    if(img2){
+      if(logo2){
+        img2.src=logo2;
+        img2.alt=team2+' logo';
+      }else{
+        img2.removeAttribute('src');
+      }
+    }
+  }catch(error){
+    console.debug('Unable to load Liquipedia team logos',error);
+  }
 }
 
 async function selectActiveMatch(matchId){
@@ -841,12 +885,14 @@ async function selectActiveMatch(matchId){
   detailPanel.hidden=false;
   detail.hidden=false;
   const s1=match.team1Score ?? match.score1;
+  // Load the real team logos from the same Liquipedia source used for the schedule.
+  loadSelectedMatchTeamLogos(match);
   const s2=match.team2Score ?? match.score2;
   const bo=formatBestOf(match.bestOf);
   const status=String(match.status||'UPCOMING').toUpperCase();
   // Render immediately from the schedule payload. Do not wait for the analytics request.
   detail.innerHTML=`<div class="active-match-detail-top">
-    <div><h3><span class="match-detail-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M2.8 19c.7-3.2 2.4-5 5.2-5s4.5 1.8 5.2 5M10.8 19c.7-2.5 2.4-4 5.2-4 2.8 0 4.5 1.5 5.2 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>${escapeHtml(match.team1||'TBD')} vs ${escapeHtml(match.team2||'TBD')}</h3><div class="match-detail-sub">${escapeHtml(match.tournament||'Esports match')} · ${escapeHtml(match.tier||'S/A')}${bo?' · '+escapeHtml(bo):''}</div><div class="match-detail-sub">${status}${match.startTime?' · '+new Date(match.startTime).toLocaleString():''}</div></div>
+    <div><h3><span class="match-team-logo match-team-logo-left" aria-hidden="true"><img id="matchTeam1Logo" alt="" loading="eager" referrerpolicy="no-referrer"></span>${escapeHtml(match.team1||'TBD')} <span class="match-vs-title">vs</span> ${escapeHtml(match.team2||'TBD')}<span class="match-team-logo match-team-logo-right" aria-hidden="true"><img id="matchTeam2Logo" alt="" loading="eager" referrerpolicy="no-referrer"></span></h3><div class="match-detail-sub">${escapeHtml(match.tournament||'Esports match')} · ${escapeHtml(match.tier||'S/A')}${bo?' · '+escapeHtml(bo):''}</div><div class="match-detail-sub">${status}${match.startTime?' · '+new Date(match.startTime).toLocaleString():''}</div></div>
     <div class="match-detail-actions"><a href="/match.html?matchId=${encodeURIComponent(match.matchId)}&game=${encodeURIComponent(selectedGame)}">View Match Details →</a>${match.matchUrl?`<a href="${escapeHtml(match.matchUrl)}" target="_blank" rel="noopener">Liquipedia Match ↗</a>`:''}</div>
   </div>
   <div class="match-detail-metrics">
@@ -915,6 +961,10 @@ async function loadActiveMatches(){
       matches=Array.isArray(state?.matches)?state.matches:[];
     }catch(f){console.warn('Active-matches endpoint unavailable',f);}
   }
+  try{
+    activeMatchLogos=await getJson('/api/esports/team-logos?game='+encodeURIComponent(selectedGame));
+    if(!activeMatchLogos || typeof activeMatchLogos!=='object') activeMatchLogos={};
+  }catch(e){ activeMatchLogos={}; console.debug('Team logos unavailable',e); }
   activeMatchItems=matches.sort((a,b)=>{
     const rank=x=>String(x.status||'').toUpperCase()==='LIVE'?0:String(x.status||'').toUpperCase()==='UPCOMING'?1:2;
     return rank(a)-rank(b)||new Date(a.startTime||0)-new Date(b.startTime||0);
@@ -1148,7 +1198,16 @@ async function renderChannelSuggestions(rawQuery){
     const index=universalResults.length-1;
     const teams=`${match.team1||'TBD'} vs ${match.team2||'TBD'}`;
     const date=match.startTime?new Date(match.startTime).toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'}):'';
-    return `<button type="button" class="search-result match-search-result" role="option" aria-selected="false" data-index="${index}" onclick="selectUniversalSuggestion(${index})"><span class="search-result-name"><strong>${highlight(teams)}</strong><span class="match-search-meta">${escapeHtml(match.tournament||'')} · ${escapeHtml(match.game||selectedGame)}</span></span><span class="match-search-status ${match.active?'live':'history'}">${match.active?'LIVE':'HISTORY'}</span><span class="match-search-date">${escapeHtml(date)}</span></button>`;
+    const rawStatus=String(match.status||'').toUpperCase();
+    const startMs=match.startTime?new Date(match.startTime).getTime():NaN;
+    const endMs=match.endTime?new Date(match.endTime).getTime():NaN;
+    const nowMs=Date.now();
+    const isLive=rawStatus==='LIVE'||match.active===true;
+    const isCompleted=rawStatus==='COMPLETED'||rawStatus==='FINISHED'||rawStatus==='DONE'||(Number.isFinite(endMs)&&endMs<nowMs&&!isLive);
+    const isUpcoming=!isLive&&!isCompleted&&(rawStatus==='UPCOMING'||(Number.isFinite(startMs)&&startMs>nowMs));
+    const searchStatus=isLive?'LIVE':isUpcoming?'UPCOMING':isCompleted?'COMPLETED':'UPCOMING';
+    const searchStatusClass=isLive?'live':isUpcoming?'upcoming':'history';
+    return `<button type="button" class="search-result match-search-result" role="option" aria-selected="false" data-index="${index}" onclick="selectUniversalSuggestion(${index})"><span class="search-result-name"><strong>${highlight(teams)}</strong><span class="match-search-meta">${escapeHtml(match.tournament||'')} · ${escapeHtml(match.game||selectedGame)}</span></span><span class="match-search-status ${searchStatusClass}">${searchStatus}</span><span class="match-search-date">${escapeHtml(date)}</span></button>`;
   }).join('');
 
   const channelItems=searchMatches.map(item=>{
