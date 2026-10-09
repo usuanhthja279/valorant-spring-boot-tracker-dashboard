@@ -96,6 +96,7 @@ public class MatchStreamMatcher {
             Map.entry("xtreme gaming", List.of("xtreme gaming", "xtreme", "xg")),
             Map.entry("azure ray", List.of("azure ray", "azr")),
             Map.entry("parivision", List.of("parivision", "pari")),
+            Map.entry("pari", List.of("pari", "pv", "pari vision", "pvision", "parivision")),
             Map.entry("wbg", List.of("wbg", "weibo gaming")),
             Map.entry("darkzero", List.of("darkzero", "darkzero esports", "dz")),
             Map.entry("spacestation gaming", List.of("spacestation gaming", "spacestation", "ssg")),

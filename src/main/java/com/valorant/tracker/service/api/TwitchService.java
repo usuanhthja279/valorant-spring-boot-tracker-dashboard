@@ -171,9 +171,10 @@ public class TwitchService {
     * ============================================================
     */
 
+   logger.info("{} | Twitch collection started", game);
    for (int page = 1; page <= MAX_PAGES; page++) {
     final String currentCursor = cursor;
-    logger.info("Twitch streams: requesting page {}/{}{} for game {}", page, MAX_PAGES, currentCursor == null ? "" : " with cursor", game);
+    logger.debug("Twitch streams: requesting page {}/{}{} for game {}", page, MAX_PAGES, currentCursor == null ? "" : " with cursor", game);
     String response =
             client.get()
                     .uri(uriBuilder -> {
@@ -242,7 +243,7 @@ public class TwitchService {
      pageStreams++;
     }
 
-    logger.info("Twitch page {}/{} returned {} streams for game {}. Total collected: {}",
+    logger.debug("Twitch page {}/{} returned {} streams for game {}. Total collected: {}",
             page,
             MAX_PAGES,
             pageStreams,
@@ -298,11 +299,11 @@ public class TwitchService {
     * ============================================================
     */
 
-   logger.info("================================================");
-   logger.info("Twitch collection complete for game {}. Summary:", game);
-   logger.info("Streams collected: {}", streams.size());
-   logger.info("Total viewers across collected streams: {} for game {}", totalViewers, game);
-   logger.info("================================================");
+//   logger.info("================================================");
+//   logger.info("Twitch collection complete for game {}. Summary:", game);
+//   logger.info("Streams collected: {}", streams.size());
+   logger.info("Twitch collection complete for game {}, Streams collectied: {}, Total viewers: {}", game, streams.size(), totalViewers);
+//   logger.info("================================================");
 
    /*
     * ============================================================
@@ -310,17 +311,17 @@ public class TwitchService {
     * ============================================================
     */
 
-   logger.info("Twitch Top 20 streams for game {}:", game);
-
-   streams.stream()
-           .limit(TOP_DISPLAY_COUNT)
-           .forEachOrdered(stream ->
-                           logger.info(
-                                   "{}. {} -> {} viewers | {}",
-                                   streams.indexOf(stream) + 1,
-                                   stream.channelTitle(),
-                                   stream.viewers(),
-                                   stream.title()));
+//   logger.info("Twitch Top 20 streams for game {}:", game);
+//
+//   streams.stream()
+//           .limit(TOP_DISPLAY_COUNT)
+//           .forEachOrdered(stream ->
+//                           logger.info(
+//                                   "{}. {} -> {} viewers | {}",
+//                                   streams.indexOf(stream) + 1,
+//                                   stream.channelTitle(),
+//                                   stream.viewers(),
+//                                   stream.title()));
 
    /*
     * Return all collected streams.

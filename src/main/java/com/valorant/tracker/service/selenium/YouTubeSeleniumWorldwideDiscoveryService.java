@@ -362,20 +362,20 @@ public class YouTubeSeleniumWorldwideDiscoveryService {
               out.get("error"),
               out.get("warnings"));
 
-      if (resultStreams instanceof List<?> list) {
-        int limit = Math.min(20, list.size());
-        log.info("YouTube Selenium Top 20 for {}: ", game);
-        for (int index = 0; index < limit; index++) {
-          Object item = list.get(index);
-          if (item instanceof LiveStream stream) {
-            log.info("{}. {} -> {} viewers | {}",
-                    index + 1,
-                    stream.channelTitle(),
-                    stream.viewers(),
-                    stream.title());
-          }
-        }
-      }
+//      if (resultStreams instanceof List<?> list) {
+//        int limit = Math.min(20, list.size());
+//        log.info("YouTube Selenium Top 20 for {}: ", game);
+//        for (int index = 0; index < limit; index++) {
+//          Object item = list.get(index);
+//          if (item instanceof LiveStream stream) {
+//            log.info("{}. {} -> {} viewers | {}",
+//                    index + 1,
+//                    stream.channelTitle(),
+//                    stream.viewers(),
+//                    stream.title());
+//          }
+//        }
+//      }
     }
     return out;
   }

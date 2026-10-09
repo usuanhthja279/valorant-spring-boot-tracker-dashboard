@@ -76,15 +76,15 @@ public class KickScraperService {
       logger.info("Kick category scraper returned {} streams for game {}", results.size(), game);
       logger.info("Total viewers across collected streams: {} for game {}", results.stream().mapToLong(LiveStream::viewers).sum(), game);
 
-      logger.info("Kick Top 20 streams for game {}:", game);
-      for (int index = 0; index < Math.min(TOP_DISPLAY_COUNT, results.size()); index++) {
-        LiveStream stream = results.get(index);
-        logger.info("{}. {} -> {} viewers | {}",
-            index + 1,
-            stream.channelTitle(),
-            stream.viewers(),
-            stream.title());
-      }
+//      logger.info("Kick Top 20 streams for game {}:", game);
+//      for (int index = 0; index < Math.min(TOP_DISPLAY_COUNT, results.size()); index++) {
+//        LiveStream stream = results.get(index);
+//        logger.info("{}. {} -> {} viewers | {}",
+//            index + 1,
+//            stream.channelTitle(),
+//            stream.viewers(),
+//            stream.title());
+//      }
       return List.copyOf(results);
     } catch (Exception e) {
       logger.error("Failed to parse Kick category page for game {}: ", game, e);
