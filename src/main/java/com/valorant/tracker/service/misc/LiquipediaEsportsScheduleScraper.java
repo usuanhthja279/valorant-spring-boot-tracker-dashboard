@@ -122,7 +122,7 @@ public class LiquipediaEsportsScheduleScraper {
                 for (Element opponent : opponents) {
                     Element name = opponent.selectFirst(".name");
                     Element image = opponent.selectFirst(
-                            ".team-template-image-icon img[src], img[src]");
+                            ".team-template-image-icon img[src], .team-template-image-icon img[data-src], img[src], img[data-src]");
 
                     if (name == null || image == null) {
                         continue;
@@ -130,9 +130,11 @@ public class LiquipediaEsportsScheduleScraper {
 
                     String team = name.text().trim();
                     String logo = image.absUrl("src");
+                    if (logo.isBlank()) logo = image.absUrl("data-src");
 
                     if (!team.isBlank() && !logo.isBlank()) {
                         logos.putIfAbsent(team, logo);
+                        logos.putIfAbsent(normalizeTeamName(team), logo);
                     }
                 }
             }
@@ -178,14 +180,32 @@ public class LiquipediaEsportsScheduleScraper {
 
     public List<EsportsMatch> getUpcomingAndLive(String game) {
         String normalized = normalizeGame(game);
+        Instant now = Instant.now();
         CacheEntry current = cache.get(normalized);
-        if (current != null && Instant.now().isBefore(current.expiresAt())) {
+        if (current != null && now.isBefore(current.expiresAt())) {
             return current.matches();
         }
 
         List<EsportsMatch> scraped = scrape(normalized);
-        cache.put(normalized, new CacheEntry(Instant.now().plus(cacheDuration), scraped));
-        return scraped;
+        if (scraped != null) {
+            Instant expiresAt = now.plus(cacheDuration);
+            cache.put(normalized, new CacheEntry(
+                    expiresAt,
+                    expiresAt.plus(Duration.ofMinutes(10)),
+                    scraped));
+            return scraped;
+        }
+
+        // A scraper outage means "unknown", not "no matches". Retain the
+        // last successful schedule for a bounded grace period so a temporary
+        // Liquipedia 403/timeout cannot immediately stop a genuinely live game.
+        if (current != null && now.isBefore(current.staleUntil())) {
+            log.warn("Liquipedia unavailable for game={}; retaining last successful schedule until {}",
+                    normalized, current.staleUntil());
+            return current.matches();
+        }
+
+        return List.of();
     }
 
     /**
@@ -270,7 +290,7 @@ public class LiquipediaEsportsScheduleScraper {
             return List.copyOf(result);
         } catch (Exception e) {
             log.warn("Liquipedia scrape failed for game={}: {}", game, e.getMessage());
-            return Collections.emptyList();
+            return null;
         }
     }
 
@@ -610,17 +630,26 @@ public class LiquipediaEsportsScheduleScraper {
 
             String status;
 
+            /*
+             * Main_Page is the source of truth for the schedule state.
+             *
+             * Liquipedia's Main_Page does not provide a separate LIVE section
+             * for every game. Therefore state is determined from the match
+             * timer plus explicit completion markers:
+             *
+             *   - future start time  -> UPCOMING
+             *   - timer has expired  -> LIVE
+             *   - explicit finished/winner evidence -> COMPLETED
+             *
+             * Do not depend on the Liquipedia Match page/Match URL to decide
+             * whether a match is live. Some rows (notably CS2) have no Match URL.
+             */
             if (finished) {
                 status = "COMPLETED";
             } else if (start.isAfter(now)) {
                 status = "UPCOMING";
             } else {
-                /*
-                 * Do not assume every past-start match is live. Liquipedia can
-                 * occasionally omit data-finished from the main-page row while
-                 * the match page already knows the real phase.
-                 */
-                status = resolvePastMatchStatus(matchUrl);
+                status = "LIVE";
             }
 
             String matchId = buildMatchId(
@@ -660,90 +689,6 @@ public class LiquipediaEsportsScheduleScraper {
 
             return null;
         }
-    }
-
-    /**
-     * Resolve an ambiguous past-start match from its Liquipedia Match page.
-     *
-     * Main_Page normally exposes data-finished and the winner marker, but
-     * those fields are not guaranteed to be present on every row. In that
-     * case we must not manufacture LIVE merely because kickoff is in the past.
-     */
-    private String resolvePastMatchStatus(String matchUrl) {
-        if (matchUrl == null || matchUrl.isBlank()) {
-            return "UNKNOWN";
-        }
-
-        try {
-            WebClient.RequestHeadersSpec<?> request =
-                    webClient.get().uri(matchUrl);
-
-            if (liquipediaCookie != null && !liquipediaCookie.isBlank()) {
-                request = request.header(
-                        HttpHeaders.COOKIE,
-                        liquipediaCookie);
-            }
-
-            String html = request
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block(Duration.ofSeconds(8));
-
-            if (html == null || html.isBlank()) {
-                return "UNKNOWN";
-            }
-
-            Document document = Jsoup.parse(html);
-
-            Element result = document.selectFirst(
-                    ".match-bm-match-header-result-text");
-
-            if (result != null) {
-                String phase = result.text()
-                        .trim()
-                        .toLowerCase(Locale.ROOT);
-
-                if (phase.contains("live")
-                        || phase.contains("ongoing")) {
-                    return "LIVE";
-                }
-
-                if (phase.contains("finished")
-                        || phase.contains("completed")) {
-                    return "COMPLETED";
-                }
-
-                if (phase.contains("upcoming")) {
-                    return "UPCOMING";
-                }
-            }
-
-            /*
-             * MatchPage pages also expose the finished state through the
-             * result/winner structure. A winner on a past match is definitive.
-             */
-            if (!document.select(
-                    ".match-bm-match-header-opponent.match-info-header-winner, " +
-                            ".match-info-header-winner").isEmpty()) {
-                return "COMPLETED";
-            }
-
-        } catch (Exception e) {
-            log.debug(
-                    "Could not resolve Liquipedia match phase from {}: {}",
-                    matchUrl,
-                    e.getMessage());
-        }
-
-        /*
-         * A past match with no explicit completion marker is treated as LIVE.
-         * Liquipedia can temporarily omit the finished marker on a live row;
-         * using UNKNOWN here would make a genuinely long-running match disappear
-         * from the active scheduler simply because the kickoff time is old.
-         *
-         * Explicit COMPLETED/winner/score evidence above still takes priority.
-         */
-        return "LIVE";
     }
 
     private String normalizeBestOf(String value) {
@@ -927,8 +872,15 @@ public class LiquipediaEsportsScheduleScraper {
                 : href;
     }
 
+    private String normalizeTeamName(String value) {
+        if (value == null) return "";
+        return value.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", " ");
+    }
+
     private record CacheEntry(
             Instant expiresAt,
+            Instant staleUntil,
             List<EsportsMatch> matches) {
     }
 
@@ -972,7 +924,8 @@ public class LiquipediaEsportsScheduleScraper {
             }
             return "LIVE".equalsIgnoreCase(status)
                     && startTime != null
-                    && !startTime.toInstant().isAfter(now);
+                    && !startTime.toInstant().isAfter(now)
+                    && (endTime == null || endTime.toInstant().isAfter(now));
         }
     }
 }

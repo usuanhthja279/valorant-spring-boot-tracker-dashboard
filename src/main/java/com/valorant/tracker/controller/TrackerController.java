@@ -9,6 +9,7 @@ import com.valorant.tracker.service.misc.DynamicGameScheduler;
 import com.valorant.tracker.service.misc.LiquipediaEsportsScheduleScraper;
 import com.valorant.tracker.service.tracker.TrackerService;
 import jakarta.persistence.EntityManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,6 +20,12 @@ import java.util.*;
 @RestController
 @RequestMapping("/api")
 public class TrackerController {
+    /*
+     * Performance contract:
+     * - HikariCP maximum pool size: 15 (deployment properties).
+     * - TrackerService background DB persistence: max 2 concurrent transactions.
+     * - Expensive overview endpoints keep filtering/limiting work in the database.
+     */
     private static final int MAX_HISTORY_LIMIT = 20000;
 
     private final EntityManager entityManager;
@@ -55,6 +62,7 @@ public class TrackerController {
      * Recent snapshots, kept for compatibility with the existing dashboard.
      */
     @GetMapping("/snapshots")
+    @Cacheable(cacheNames = "apiSnapshots", sync = true)
     public List<Snapshot> snapshots(@RequestParam(defaultValue = "VALORANT") String game) {
         GameConfig config = GameConfig.from(game);
         return entityManager.createQuery(
@@ -67,6 +75,7 @@ public class TrackerController {
      * Bounded, indexed history query for chart ranges. The upper timestamp is exclusive.
      */
     @GetMapping("/snapshots/range")
+    @Cacheable(cacheNames = "apiSnapshotsRange", sync = true)
     public List<Snapshot> snapshotsRange(
             @RequestParam OffsetDateTime from,
             @RequestParam OffsetDateTime to,
@@ -94,6 +103,7 @@ public class TrackerController {
     }
 
     @GetMapping("/games")
+    @Cacheable(cacheNames = "apiGames", sync = true)
     public List<Map<String, Object>> games() {
 
         List<Map<String, Object>> result = new ArrayList<>();
@@ -114,7 +124,7 @@ public class TrackerController {
             item.put("activeMatches", activeMatches);
             if (!activeMatches.isEmpty()) {
                 // Keep the singular field for existing clients while exposing the complete list.
-                item.put("activeMatch", activeMatches.getFirst());
+                item.put("activeMatch", activeMatches.get(0));
             }
 
             // Never expose stale database data as CURRENT
@@ -223,6 +233,7 @@ public class TrackerController {
     }
 
     @GetMapping("/streams")
+    @Cacheable(cacheNames = "apiStreams", sync = true)
     public List<Map<String, Object>> streams(
             @RequestParam(defaultValue = "VALORANT") String game,
             @RequestParam(defaultValue = "Overall") String platform) {
@@ -469,6 +480,7 @@ public class TrackerController {
      * Returns all currently active Liquipedia matches for a game.
      */
     @GetMapping("/esports/active-matches")
+    @Cacheable(cacheNames = "apiActiveMatches", sync = true)
     public Map<String, Object> activeMatches(
             @RequestParam(defaultValue = "VALORANT") String game) {
         GameConfig config = GameConfig.from(game);
@@ -493,6 +505,7 @@ public class TrackerController {
      * currently live or completed matches.
      */
     @GetMapping("/esports/matches/search")
+    @Cacheable(cacheNames = "apiMatchSearch", sync = true)
     public List<Map<String, Object>> searchEsportsMatches(
             @RequestParam String q,
             @RequestParam(defaultValue = "VALORANT") String game,
@@ -595,6 +608,7 @@ public class TrackerController {
      * Match catalog endpoint used by search/history clients.
      */
     @GetMapping("/esports/matches")
+    @Cacheable(cacheNames = "apiMatches", sync = true)
     public List<Map<String, Object>> esportsMatches(
             @RequestParam(defaultValue = "VALORANT") String game,
             @RequestParam(defaultValue = "all") String status,
@@ -675,6 +689,13 @@ public class TrackerController {
      * - explicitly persisted LIVE state -> LIVE
      * - stale past records are not treated as current LIVE
      */
+    private void validateMatchGame(EsportsMatchRecord match, GameConfig requestedGame) {
+        String matchGame = match.getGame();
+        if (matchGame == null || matchGame.isBlank()) return;
+        if (!requestedGame.getId().equalsIgnoreCase(matchGame) && !requestedGame.getDisplayName().equalsIgnoreCase(matchGame))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Match does not belong to game " + requestedGame.getDisplayName());
+    }
+
     private String effectiveMatchStatus(
             EsportsMatchRecord match,
             OffsetDateTime now,
@@ -700,10 +721,17 @@ public class TrackerController {
             return "UPCOMING";
         }
 
-        // Preserve an explicitly persisted LIVE state. There is deliberately
-        // no four-hour cutoff: a genuinely long-running match can cross midnight
-        // or run for more than four hours.
+        // A persisted LIVE value is only trustworthy while the scheduler has
+        // refreshed this match recently. This prevents an old LIVE row from
+        // surviving indefinitely after a match disappears from the schedule.
         if ("LIVE".equalsIgnoreCase(match.getStatus())) {
+            if (match.getEndTime() != null && !match.getEndTime().isAfter(now)) {
+                return "COMPLETED";
+            }
+            OffsetDateTime lastSeen = match.getLastSeen();
+            if (lastSeen != null && lastSeen.isBefore(now.minusMinutes(15))) {
+                return "COMPLETED";
+            }
             return "LIVE";
         }
 
@@ -730,6 +758,7 @@ public class TrackerController {
      * Backward-compatible endpoint returning the first active match, if one exists.
      */
     @GetMapping("/esports/active-match")
+    @Cacheable(cacheNames = "apiActiveMatch", sync = true)
     public Map<String, Object> activeMatch(
             @RequestParam(defaultValue = "VALORANT") String game) {
         GameConfig config = GameConfig.from(game);
@@ -747,21 +776,32 @@ public class TrackerController {
      * Returns persisted stream samples associated with one esports match.
      */
     @GetMapping("/match-streams")
-    public List<Map<String, Object>> matchStreams(
+    @Cacheable(cacheNames = "apiMatchStreams", sync = true)
+    public Map<String, Object> matchStreams(
             @RequestParam String matchId,
-            @RequestParam(defaultValue = "VALORANT") String game) {
+            @RequestParam(defaultValue = "VALORANT") String game,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
         GameConfig config = GameConfig.from(game);
-        List<StreamSample> samples = entityManager.createQuery(
-                        "select s from StreamSample s " +
-                                "where s.matchId = :matchId " +
-                                "and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) " +
-                                "order by s.timestamp desc, s.viewers desc, s.id desc",
-                        StreamSample.class)
-                .setParameter("matchId", matchId)
-                .setParameter("game", config.getId())
-                .setMaxResults(1000)
-                .getResultList();
-        List<Map<String, Object>> response = new ArrayList<>();
+        EsportsMatchRecord match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Match not found: " + matchId));
+        validateMatchGame(match, config);
+        int safePage = Math.max(0, page);
+        int safeSize = Math.clamp(size, 1, 500);
+        String legacy = match.getMatchUrl();
+        String where = "(s.matchId = :matchId " + (legacy != null && !legacy.isBlank() ? "or s.matchId = :legacyMatchId " : "") + ") " +
+                "and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT'))";
+        var countQuery = entityManager.createQuery("select count(s.id) from StreamSample s where " + where, Long.class)
+                .setParameter("matchId", matchId).setParameter("game", config.getId());
+        if (legacy != null && !legacy.isBlank()) countQuery.setParameter("legacyMatchId", legacy);
+        long total = countQuery.getSingleResult();
+        var query = entityManager.createQuery("select s from StreamSample s where " + where +
+                        " order by s.timestamp desc, s.viewers desc, s.id desc", StreamSample.class)
+                .setParameter("matchId", matchId).setParameter("game", config.getId())
+                .setFirstResult(safePage * safeSize).setMaxResults(safeSize);
+        if (legacy != null && !legacy.isBlank()) query.setParameter("legacyMatchId", legacy);
+        List<StreamSample> samples = query.getResultList();
+        List<Map<String, Object>> items = new ArrayList<>();
         for (StreamSample sample : samples) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", sample.getId());
@@ -774,141 +814,108 @@ public class TrackerController {
             item.put("viewers", sample.getViewers());
             item.put("url", sample.getUrl());
             item.put("timestamp", sample.getTimestamp());
-            response.add(item);
+            items.add(item);
         }
-        return response;
+        return Map.of("items", items, "page", safePage, "pageSize", safeSize, "total", total,
+                "pages", total == 0 ? 0 : (total + safeSize - 1) / safeSize);
     }
 
-    /**
-     * Detailed match dashboard data, including persisted metadata and match-specific stream analytics.
-     */
     @GetMapping("/esports/matches/{matchId}")
+    @Cacheable(cacheNames = "apiMatchDetails", sync = true)
     public Map<String, Object> esportsMatchDetails(
-            @PathVariable String matchId,
-            @RequestParam(defaultValue = "VALORANT") String game) {
+            @PathVariable String matchId, @RequestParam(defaultValue = "VALORANT") String game) {
         GameConfig config = GameConfig.from(game);
         EsportsMatchRecord match = matchRepository.findById(matchId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Match not found: " + matchId));
-
-        // Read both the normalized ID and the legacy Liquipedia-URL ID so
-        // historical StreamSamples collected by older builds are not lost.
-        String legacyMatchId = match.getMatchUrl();
-        String sampleQuery = "select s from StreamSample s where " +
-                "(s.matchId = :matchId " +
-                (legacyMatchId != null && !legacyMatchId.isBlank() ? "or s.matchId = :legacyMatchId " : "") +
-                ") " +
-                "and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) " +
-                "order by s.timestamp asc, s.id asc";
-
-        var sampleTypedQuery = entityManager.createQuery(sampleQuery, StreamSample.class)
-                .setParameter("matchId", matchId)
-                .setParameter("game", config.getId());
-        if (legacyMatchId != null && !legacyMatchId.isBlank()) {
-            sampleTypedQuery.setParameter("legacyMatchId", legacyMatchId);
-        }
-        List<StreamSample> samples = sampleTypedQuery
-                .setMaxResults(20000)
-                .getResultList();
-
-        Map<String, List<StreamSample>> byTimestamp = new LinkedHashMap<>();
-        for (StreamSample sample : samples) {
-            byTimestamp.computeIfAbsent(sample.getTimestamp().toString(), k -> new ArrayList<>()).add(sample);
-        }
-
-        List<Map<String, Object>> timeline = new ArrayList<>();
-        long peakCombined = 0;
-        long combinedSum = 0;
-        long combinedPoints = 0;
-        Map<String, Long> platformPeaks = new LinkedHashMap<>();
+        validateMatchGame(match, config);
+        String legacy = match.getMatchUrl();
+        String idClause = "(s.matchId = :matchId " + (legacy != null && !legacy.isBlank() ? "or s.matchId = :legacyMatchId " : "") + ")";
+        final int pageSize = 5000;
+        OffsetDateTime cursorTimestamp = null;
+        Long cursorId = null;
+        long sampleCount = 0;
+        TreeMap<OffsetDateTime, Map<String, Long>> byTimestamp = new TreeMap<>();
         Map<String, Set<String>> platformChannels = new LinkedHashMap<>();
-        Map<String, Long> latestPlatform = new LinkedHashMap<>();
-        OffsetDateTime latestSampleTimestamp = null;
-
-        for (var entry : byTimestamp.entrySet()) {
-            Map<String, Long> platformValues = new LinkedHashMap<>();
-            for (StreamSample sample : entry.getValue()) {
+        Map<String, StreamSample> latestByStream = new LinkedHashMap<>();
+        while (true) {
+            String query = "select s from StreamSample s where " + idClause +
+                    " and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) " +
+                    (cursorTimestamp != null ? " and (s.timestamp > :cursorTimestamp or (s.timestamp = :cursorTimestamp and s.id > :cursorId)) " : "") +
+                    " order by s.timestamp asc, s.id asc";
+            var q = entityManager.createQuery(query, StreamSample.class).setParameter("matchId", matchId)
+                    .setParameter("game", config.getId()).setMaxResults(pageSize);
+            if (legacy != null && !legacy.isBlank()) q.setParameter("legacyMatchId", legacy);
+            if (cursorTimestamp != null)
+                q.setParameter("cursorTimestamp", cursorTimestamp).setParameter("cursorId", cursorId);
+            List<StreamSample> pageRows = q.getResultList();
+            if (pageRows.isEmpty()) break;
+            for (StreamSample sample : pageRows) {
+                sampleCount++;
+                OffsetDateTime ts = sample.getTimestamp();
                 String platform = sample.getPlatform() == null ? "Unknown" : sample.getPlatform();
-                platformValues.merge(platform, sample.getViewers(), Long::sum);
-                platformChannels.computeIfAbsent(platform, k -> new LinkedHashSet<>())
-                        .add(sample.getChannel() == null ? "" : sample.getChannel());
+                byTimestamp.computeIfAbsent(ts, k -> new LinkedHashMap<>()).merge(platform, sample.getViewers(), Long::sum);
+                platformChannels.computeIfAbsent(platform, k -> new LinkedHashSet<>()).add(sample.getChannel() == null ? "" : sample.getChannel());
+                String key = platform + "|" + (sample.getStreamId() == null || sample.getStreamId().isBlank() ? sample.getChannel() : sample.getStreamId());
+                latestByStream.put(key, sample);
             }
-            long combined = platformValues.values().stream().mapToLong(Long::longValue).sum();
+            StreamSample last = pageRows.get(pageRows.size() - 1);
+            cursorTimestamp = last.getTimestamp();
+            cursorId = last.getId();
+            if (pageRows.size() < pageSize) break;
+        }
+        List<Map<String, Object>> timeline = new ArrayList<>();
+        Map<String, Long> platformPeaks = new LinkedHashMap<>();
+        long peakCombined = 0, combinedSum = 0, combinedPoints = 0;
+        Map<String, Long> latestPlatform = new LinkedHashMap<>();
+        for (var entry : byTimestamp.entrySet()) {
+            Map<String, Long> vals = entry.getValue();
+            long combined = vals.values().stream().mapToLong(Long::longValue).sum();
             peakCombined = Math.max(peakCombined, combined);
             combinedSum += combined;
             combinedPoints++;
-            for (var p : platformValues.entrySet()) {
-                platformPeaks.merge(p.getKey(), p.getValue(), Math::max);
-            }
-
-            // Keep the latest observation independently for each platform. Do not
-            // overwrite the whole latest map at every timestamp because YouTube,
-            // Twitch and Kick are not necessarily sampled at exactly the same time.
-            OffsetDateTime pointTimestamp = OffsetDateTime.parse(entry.getKey());
-            if (latestSampleTimestamp == null || pointTimestamp.isAfter(latestSampleTimestamp)) {
-                latestSampleTimestamp = pointTimestamp;
-            }
-            for (var p : platformValues.entrySet()) {
-                latestPlatform.put(p.getKey(), p.getValue());
-            }
+            vals.forEach((k, v) -> platformPeaks.merge(k, v, Math::max));
+            vals.forEach(latestPlatform::put);
             Map<String, Object> point = new LinkedHashMap<>();
             point.put("timestamp", entry.getKey());
-            point.put("youtube", platformValues.getOrDefault("YouTube", 0L));
-            point.put("twitch", platformValues.getOrDefault("Twitch", 0L));
-            point.put("kick", platformValues.getOrDefault("Kick", 0L));
+            point.put("youtube", vals.getOrDefault("YouTube", 0L));
+            point.put("twitch", vals.getOrDefault("Twitch", 0L));
+            point.put("kick", vals.getOrDefault("Kick", 0L));
             point.put("combined", combined);
             timeline.add(point);
         }
-
         Map<String, Object> latest = new LinkedHashMap<>();
         latest.put("youtube", latestPlatform.getOrDefault("YouTube", 0L));
         latest.put("twitch", latestPlatform.getOrDefault("Twitch", 0L));
         latest.put("kick", latestPlatform.getOrDefault("Kick", 0L));
-        latest.put("combined", latestPlatform.entrySet().stream()
-                .filter(e -> !e.getKey().equalsIgnoreCase("Unknown"))
-                .mapToLong(Map.Entry::getValue).sum());
-
+        latest.put("combined", latestPlatform.entrySet().stream().filter(e -> !e.getKey().equalsIgnoreCase("Unknown")).mapToLong(Map.Entry::getValue).sum());
         Map<String, Object> peak = new LinkedHashMap<>();
         peak.put("youtube", platformPeaks.getOrDefault("YouTube", 0L));
         peak.put("twitch", platformPeaks.getOrDefault("Twitch", 0L));
         peak.put("kick", platformPeaks.getOrDefault("Kick", 0L));
         peak.put("combined", peakCombined);
-
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("peakCombined", peakCombined);
         summary.put("averageCombined", combinedPoints == 0 ? 0 : Math.round((double) combinedSum / combinedPoints));
-        summary.put("samples", samples.size());
+        summary.put("samples", sampleCount);
         summary.put("timelinePoints", timeline.size());
         summary.put("latest", latest);
         summary.put("peak", peak);
         summary.put("peakByPlatform", platformPeaks);
-        summary.put("channelsByPlatform", platformChannels.entrySet().stream()
-                .collect(LinkedHashMap::new, (m, e) -> m.put(e.getKey(), e.getValue().size()), Map::putAll));
-
+        summary.put("channelsByPlatform", platformChannels.entrySet().stream().collect(LinkedHashMap::new, (m, e) -> m.put(e.getKey(), e.getValue().size()), Map::putAll));
         List<Map<String, Object>> streamRows = new ArrayList<>();
-        Map<String, StreamSample> latestByStream = new LinkedHashMap<>();
-        for (StreamSample sample : samples) {
-            String key = (sample.getPlatform() == null ? "" : sample.getPlatform()) + "|" +
-                    (sample.getStreamId() == null ? sample.getChannel() : sample.getStreamId());
-            latestByStream.put(key, sample);
-        }
-        latestByStream.values().stream()
-                .sorted(Comparator.comparingLong(StreamSample::getViewers).reversed())
-                .limit(100)
-                .forEach(sample -> {
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("platform", sample.getPlatform());
-                    row.put("channel", sample.getChannel());
-                    row.put("title", sample.getTitle());
-                    row.put("viewers", sample.getViewers());
-                    row.put("url", sample.getUrl());
-                    row.put("timestamp", sample.getTimestamp());
-                    streamRows.add(row);
-                });
-
+        latestByStream.values().stream().sorted(Comparator.comparingLong(StreamSample::getViewers).reversed()).limit(100).forEach(sample -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("platform", sample.getPlatform());
+            row.put("channel", sample.getChannel());
+            row.put("title", sample.getTitle());
+            row.put("viewers", sample.getViewers());
+            row.put("url", sample.getUrl());
+            row.put("timestamp", sample.getTimestamp());
+            streamRows.add(row);
+        });
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("match", match);
-        response.put("active", dynamicGameScheduler.getActiveMatches(match.getGame()).stream()
-                .anyMatch(m -> matchId.equals(m.matchId())));
+        response.put("active", dynamicGameScheduler.getActiveMatches(match.getGame()).stream().anyMatch(m -> matchId.equals(m.matchId())));
         response.put("summary", summary);
         response.put("timeline", timeline);
         response.put("streams", streamRows);
@@ -919,93 +926,74 @@ public class TrackerController {
      * Searchable catalog of every channel ever sampled, with live status from the latest collection.
      */
     @GetMapping("/channels/catalog")
+    @Cacheable(cacheNames = "apiChannelCatalog", sync = true)
     public List<Map<String, Object>> channelCatalog(@RequestParam(defaultValue = "VALORANT") String game) {
         GameConfig config = GameConfig.from(game);
-        OffsetDateTime latestTimestamp = entityManager.createQuery(
-                        "select max(s.timestamp) from StreamSample s " +
-                                "where (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT'))",
-                        OffsetDateTime.class)
-                .setParameter("game", config.getId())
-                .getSingleResult();
+        OffsetDateTime latestTimestamp = entityManager.createQuery("select max(s.timestamp) from StreamSample s where (lower(s.game)=lower(:game) or (s.game is null and :game='VALORANT'))", OffsetDateTime.class).setParameter("game", config.getId()).getSingleResult();
         if (latestTimestamp == null) return List.of();
-        List<Object[]> grouped = entityManager.createQuery(
-                        "select s.platform, s.channel, s.channelId, s.url, max(s.timestamp) from StreamSample s " +
-                                "where (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT')) " +
-                                "group by s.platform, s.channel, s.channelId, s.url", Object[].class)
+        String condition = "(lower(s.game)=lower(:game) or (s.game is null and :game='VALORANT'))";
+        List<StreamSample> latest = entityManager.createQuery(
+                        "select s from StreamSample s where " + condition +
+                                " and s.timestamp=(select max(x.timestamp) from StreamSample x where " + condition.replace("s.", "x.") +
+                                " and lower(x.platform)=lower(s.platform) and lower(coalesce(x.channel,''))=lower(coalesce(s.channel,'')) " +
+                                " and coalesce(x.channelId,'')=coalesce(s.channelId,''))", StreamSample.class)
                 .setParameter("game", config.getId()).getResultList();
-        List<StreamSample> current = entityManager.createQuery(
-                        "select s from StreamSample s where s.timestamp = :timestamp and (lower(s.game) = lower(:game) or (s.game is null and :game = 'VALORANT'))", StreamSample.class)
-                .setParameter("timestamp", latestTimestamp).setParameter("game", config.getId()).getResultList();
-        Map<String, StreamSample> liveByIdentity = new HashMap<>();
-        for (StreamSample sample : current)
-            liveByIdentity.putIfAbsent(channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel()), sample);
+        Map<String, StreamSample> unique = new LinkedHashMap<>();
+        for (StreamSample sample : latest)
+            unique.putIfAbsent(channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel()), sample);
         List<Map<String, Object>> catalog = new ArrayList<>();
-        for (Object[] row : grouped) {
-            String platform = (String) row[0], channel = (String) row[1], channelId = (String) row[2], url = (String) row[3];
-            OffsetDateTime lastSeen = (OffsetDateTime) row[4];
-            StreamSample liveSample = lastSeen.equals(latestTimestamp) ? liveByIdentity.get(channelIdentity(platform, channelId, channel)) : null;
+        for (StreamSample sample : unique.values()) {
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("platform", platform);
-            item.put("channel", channel);
-            item.put("channelId", channelId);
-            item.put("identity", channelIdentity(platform, channelId, channel));
-            item.put("url", url);
-            item.put("live", liveSample != null);
-            item.put("viewers", liveSample == null ? null : liveSample.getViewers());
-            item.put("lastSeen", lastSeen);
+            item.put("platform", sample.getPlatform());
+            item.put("channel", sample.getChannel());
+            item.put("channelId", sample.getChannelId());
+            item.put("identity", channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel()));
+            item.put("url", sample.getUrl());
+            item.put("live", latestTimestamp.equals(sample.getTimestamp()));
+            item.put("viewers", latestTimestamp.equals(sample.getTimestamp()) ? sample.getViewers() : null);
+            item.put("lastSeen", sample.getTimestamp());
             catalog.add(item);
         }
         catalog.sort(Comparator.comparing((Map<String, Object> x) -> String.valueOf(x.get("channel")), String.CASE_INSENSITIVE_ORDER).thenComparing(x -> String.valueOf(x.get("platform")), String.CASE_INSENSITIVE_ORDER));
         return catalog;
     }
 
-    /**
-     * Bounded, indexed channel search for historical comparisons, including offline channels.
-     */
     @GetMapping("/channels/catalog/search")
+    @Cacheable(cacheNames = "apiChannelCatalogSearch", sync = true)
     public List<Map<String, Object>> searchChannelCatalog(@RequestParam String query, @RequestParam(defaultValue = "VALORANT") String game) {
         String term = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
         if (term.length() < 2) return List.of();
         GameConfig config = GameConfig.from(game);
-        OffsetDateTime latestTimestamp = entityManager.createQuery(
-                        "select max(s.timestamp) from StreamSample s " +
-                                "where (lower(s.game)=lower(:game) or (s.game is null and :game='VALORANT'))",
-                        OffsetDateTime.class)
-                .setParameter("game", config.getId()).getSingleResult();
+        OffsetDateTime latestTimestamp = entityManager.createQuery("select max(s.timestamp) from StreamSample s where (lower(s.game)=lower(:game) or (s.game is null and :game='VALORANT'))", OffsetDateTime.class).setParameter("game", config.getId()).getSingleResult();
         if (latestTimestamp == null) return List.of();
-        List<Object[]> grouped = entityManager.createQuery(
-                        "select s.platform,s.channel,s.channelId,s.url,max(s.timestamp) from StreamSample s " +
-                                "where (lower(s.game)=lower(:game) or (s.game is null and :game='VALORANT')) and " +
-                                "(lower(s.channel) like :term or lower(s.platform) like :term or lower(coalesce(s.channelId,'')) like :term) " +
-                                "group by s.platform,s.channel,s.channelId,s.url order by lower(s.channel),lower(s.platform)", Object[].class)
+        String condition = "(lower(s.game)=lower(:game) or (s.game is null and :game='VALORANT'))";
+        List<StreamSample> latest = entityManager.createQuery(
+                        "select s from StreamSample s where " + condition +
+                                " and (lower(s.channel) like :term or lower(s.platform) like :term or lower(coalesce(s.channelId,'')) like :term)" +
+                                " and s.timestamp=(select max(x.timestamp) from StreamSample x where " + condition.replace("s.", "x.") +
+                                " and lower(x.platform)=lower(s.platform) and lower(coalesce(x.channel,''))=lower(coalesce(s.channel,'')) and coalesce(x.channelId,'')=coalesce(s.channelId,''))", StreamSample.class)
                 .setParameter("term", "%" + term + "%").setParameter("game", config.getId()).setMaxResults(100).getResultList();
-        if (grouped.isEmpty()) return List.of();
-        List<StreamSample> current = entityManager.createQuery(
-                        "select s from StreamSample s where s.timestamp=:timestamp and (lower(s.game)=lower(:game) or (s.game is null and :game='VALORANT'))", StreamSample.class)
-                .setParameter("timestamp", latestTimestamp).setParameter("game", config.getId()).getResultList();
-        Map<String, StreamSample> liveByIdentity = new HashMap<>();
-        for (StreamSample sample : current)
-            liveByIdentity.putIfAbsent(channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel()), sample);
+        Map<String, StreamSample> unique = new LinkedHashMap<>();
+        for (StreamSample sample : latest)
+            unique.putIfAbsent(channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel()), sample);
         List<Map<String, Object>> matches = new ArrayList<>();
-        for (Object[] row : grouped) {
-            String platform = (String) row[0], channel = (String) row[1], channelId = (String) row[2];
-            OffsetDateTime lastSeen = (OffsetDateTime) row[4];
-            StreamSample live = lastSeen.equals(latestTimestamp) ? liveByIdentity.get(channelIdentity(platform, channelId, channel)) : null;
+        for (StreamSample sample : unique.values()) {
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("platform", platform);
-            item.put("channel", channel);
-            item.put("channelId", channelId);
-            item.put("identity", channelIdentity(platform, channelId, channel));
-            item.put("url", row[3]);
-            item.put("live", live != null);
-            item.put("viewers", live == null ? null : live.getViewers());
-            item.put("lastSeen", lastSeen);
+            item.put("platform", sample.getPlatform());
+            item.put("channel", sample.getChannel());
+            item.put("channelId", sample.getChannelId());
+            item.put("identity", channelIdentity(sample.getPlatform(), sample.getChannelId(), sample.getChannel()));
+            item.put("url", sample.getUrl());
+            item.put("live", latestTimestamp.equals(sample.getTimestamp()));
+            item.put("viewers", latestTimestamp.equals(sample.getTimestamp()) ? sample.getViewers() : null);
+            item.put("lastSeen", sample.getTimestamp());
             matches.add(item);
         }
         return matches;
     }
 
     @GetMapping("/channels/status")
+    @Cacheable(cacheNames = "apiChannelStatus", sync = true)
     public List<Map<String, Object>> channelStatus(
             @RequestParam String name,
             @RequestParam(required = false) String platform,
@@ -1100,6 +1088,7 @@ public class TrackerController {
      * Channel history supports database-side time filtering and a hard result cap.
      */
     @GetMapping("/channels/history")
+    @Cacheable(cacheNames = "apiChannelHistory", sync = true)
     public List<StreamSample> channelHistory(
             @RequestParam String name,
             @RequestParam(required = false) String platform,
@@ -1132,6 +1121,7 @@ public class TrackerController {
      * Compares a channel's selected window with the same window one calendar period earlier.
      */
     @GetMapping("/channels/comparison")
+    @Cacheable(cacheNames = "apiChannelComparison", sync = true)
     public Map<String, Object> channelComparison(
             @RequestParam String name,
             @RequestParam(required = false) String platform,
@@ -1220,6 +1210,7 @@ public class TrackerController {
      * Historical analytics for [from, to), processed in bounded keyset pages.
      */
     @GetMapping("/analytics")
+    @Cacheable(cacheNames = "apiAnalytics", sync = true)
     public Map<String, Object> analytics(
             @RequestParam OffsetDateTime from,
             @RequestParam OffsetDateTime to,
@@ -1366,6 +1357,7 @@ public class TrackerController {
     }
 
     @GetMapping("/top10")
+    @Cacheable(cacheNames = "apiTop10", sync = true)
     public List<Map<String, Object>> top(
             @RequestParam(defaultValue = "VALORANT") String game,
             @RequestParam(defaultValue = "Overall") String platform) {
@@ -1375,7 +1367,17 @@ public class TrackerController {
                 .toList();
     }
 
+    /**
+     * Returns actual Liquipedia team logo URLs for the selected game.
+     *
+     * Example:
+     * GET /api/esports/team-logos?game=VALORANT
+     */
+    /**
+     * Cross-game overview data for the Games landing page.
+     */
     @GetMapping("/esports/overview")
+    @Cacheable(cacheNames = "apiEsportsOverview", sync = true)
     public Map<String, Object> esportsOverview(
             @RequestParam(defaultValue = "day") String period,
             @RequestParam(defaultValue = "Combined") String platform,
@@ -1393,6 +1395,7 @@ public class TrackerController {
     }
 
     @GetMapping("/esports/overview/games")
+    @Cacheable(cacheNames = "apiEsportsOverviewGames", sync = true)
     public Map<String, Object> esportsOverviewGames(
             @RequestParam(defaultValue = "day") String range,
             @RequestParam(defaultValue = "Combined") String platform) {
@@ -1404,7 +1407,7 @@ public class TrackerController {
         List<Object[]> rows = entityManager.createQuery(
                         "select s.game, s.timestamp, s.youtubeViewers, s.twitchViewers, s.kickViewers, s.combinedViewers " +
                                 "from Snapshot s where s.timestamp >= :from order by s.timestamp asc, s.id asc", Object[].class)
-                .setParameter("from", from).setMaxResults(300000).getResultList();
+                .setParameter("from", from).setMaxResults(100000).getResultList();
 
         Map<String, List<Map<String, Object>>> byGame = new LinkedHashMap<>();
         for (Object[] row : rows) {
@@ -1436,6 +1439,7 @@ public class TrackerController {
     }
 
     @GetMapping("/esports/overview/streams")
+    @Cacheable(cacheNames = "apiEsportsOverviewStreams", sync = true)
     public Map<String, Object> esportsOverviewStreams(
             @RequestParam(defaultValue = "day") String range) {
         OffsetDateTime now = OffsetDateTime.now(java.time.ZoneOffset.UTC);
@@ -1510,14 +1514,22 @@ public class TrackerController {
     }
 
     @GetMapping("/esports/overview/matches/recent")
+    @Cacheable(cacheNames = "apiEsportsOverviewRecentMatches", sync = true)
     public Map<String, Object> esportsOverviewRecentMatches(
             @RequestParam(defaultValue = "Combined") String platform) {
         String selectedPlatform = normalizeOverviewPlatform(platform);
         OffsetDateTime now = OffsetDateTime.now(java.time.ZoneOffset.UTC);
-        List<EsportsMatchRecord> matches = matchRepository.findAll().stream()
-                .filter(m -> m.getStartTime() != null && m.getStartTime().isBefore(now))
-                .filter(this::isUsableOverviewMatch)
-                .sorted(Comparator.comparing(EsportsMatchRecord::getStartTime).reversed()).toList();
+        List<EsportsMatchRecord> matches = entityManager.createQuery(
+                        "select m from EsportsMatchRecord m " +
+                        "where m.startTime is not null and m.startTime < :now " +
+                        "and m.team1 is not null and m.team2 is not null " +
+                        "and trim(m.team1) <> '' and trim(m.team2) <> '' " +
+                        "and upper(m.team1) <> 'TBD' and upper(m.team2) <> 'TBD' " +
+                        "order by m.startTime desc",
+                        EsportsMatchRecord.class)
+                .setParameter("now", now)
+                .setMaxResults(100)
+                .getResultList();
         Map<String, Map<String, Object>> stats = loadOverviewMatchStats(matches, now.minusDays(365));
         List<Map<String, Object>> items = matches.stream()
                 .map(m -> overviewMatch(m, stats.get(m.getMatchId()), selectedPlatform))
@@ -1529,6 +1541,7 @@ public class TrackerController {
     }
 
     @GetMapping("/esports/overview/matches/top")
+    @Cacheable(cacheNames = "apiEsportsOverviewTopMatches", sync = true)
     public Map<String, Object> esportsOverviewTopMatches(
             @RequestParam(defaultValue = "day") String period,
             @RequestParam(defaultValue = "Combined") String platform) {
@@ -1536,9 +1549,18 @@ public class TrackerController {
         String selectedPlatform = normalizeOverviewPlatform(platform);
         OffsetDateTime now = OffsetDateTime.now(java.time.ZoneOffset.UTC);
         OffsetDateTime from = overviewFrom(now, normalizedPeriod);
-        List<EsportsMatchRecord> matches = matchRepository.findAll().stream()
-                .filter(m -> m.getStartTime() != null && !m.getStartTime().isBefore(from) && m.getStartTime().isBefore(now))
-                .filter(this::isUsableOverviewMatch).toList();
+        List<EsportsMatchRecord> matches = entityManager.createQuery(
+                        "select m from EsportsMatchRecord m " +
+                        "where m.startTime is not null and m.startTime >= :from and m.startTime < :now " +
+                        "and m.team1 is not null and m.team2 is not null " +
+                        "and trim(m.team1) <> '' and trim(m.team2) <> '' " +
+                        "and upper(m.team1) <> 'TBD' and upper(m.team2) <> 'TBD' " +
+                        "order by m.startTime desc",
+                        EsportsMatchRecord.class)
+                .setParameter("from", from)
+                .setParameter("now", now)
+                .setMaxResults(500)
+                .getResultList();
         Map<String, Map<String, Object>> stats = loadOverviewMatchStats(matches, from);
         List<Map<String, Object>> items = matches.stream()
                 .map(m -> overviewMatch(m, stats.get(m.getMatchId()), selectedPlatform))
@@ -1573,6 +1595,7 @@ public class TrackerController {
                                 "order by s.matchId asc, s.timestamp asc, s.id asc", Object[].class)
                 .setParameter("from", from)
                 .setParameter("matchIds", ids)
+                .setMaxResults(200000)
                 .getResultList();
 
         Map<String, Map<String, Map<String, Long>>> byMatchTimestamp = new HashMap<>();
@@ -1688,16 +1711,8 @@ public class TrackerController {
         return item;
     }
 
-    /**
-     * Returns actual Liquipedia team logo URLs for the selected game.
-     *
-     * Example:
-     * GET /api/esports/team-logos?game=VALORANT
-     */
-    /**
-     * Cross-game overview data for the Games landing page.
-     */
     @GetMapping("/esports/team-logos")
+    @Cacheable(cacheNames = "apiTeamLogos", sync = true)
     public Map<String, String> esportsTeamLogos(
             @RequestParam(defaultValue = "VALORANT") String game) {
         return liquipediaEsportsScheduleScraper.getTeamLogoUrls(game);

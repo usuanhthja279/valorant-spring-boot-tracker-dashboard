@@ -14,23 +14,26 @@ import com.valorant.tracker.service.scraper.KickScraperService;
 import jakarta.persistence.EntityManager;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -46,8 +49,11 @@ public class TrackerService {
   final MatchStreamMatcher matchStreamMatcher;
   final EntityManager em;
   final TransactionTemplate transactions;
+  final CacheManager cacheManager;
 
   private volatile OffsetDateTime lastRun;
+  /** Prevent overlapping scheduled collection cycles without blocking the scheduler thread. */
+  private final AtomicBoolean collectionRunning = new AtomicBoolean(false);
   @Value("${tracker.interval-ms:120000}")
   private long intervalMs;
   /** Backward-compatible aggregate health keyed by platform. */
@@ -62,6 +68,17 @@ public class TrackerService {
   private static final int MAX_CACHED_FAILURE_RUNS = 2;
   private final ExecutorService providerExecutor = Executors.newFixedThreadPool(6);
   private final ExecutorService gameExecutor = Executors.newFixedThreadPool(2);
+  /** Limit background DB transactions so API requests retain connection-pool capacity. */
+  // Keep background persistence to 2 concurrent DB transactions so the
+  // 15-connection Hikari pool retains capacity for API requests.
+  private final Semaphore backgroundDbSemaphore = new Semaphore(2);
+
+  /**
+   * Cache invalidation must never block the Spring scheduling thread.
+   * A single worker prevents multiple invalidation jobs from piling up.
+   */
+  private final ExecutorService cacheInvalidationExecutor = Executors.newSingleThreadExecutor();
+  private final AtomicBoolean cacheInvalidationRunning = new AtomicBoolean(false);
 
   /*
    * Selenium launches a full ChromeDriver instance and is much heavier than
@@ -75,7 +92,8 @@ public class TrackerService {
           TwitchService t,
           KickScraperService k, DynamicGameScheduler dynamicGameScheduler,
           MatchStreamMatcher matchStreamMatcher, EntityManager e,
-          PlatformTransactionManager transactionManager) {
+          PlatformTransactionManager transactionManager,
+          CacheManager cacheManager) {
     yt = y;
     yt1 = yt12;
     tw = t;
@@ -84,6 +102,7 @@ public class TrackerService {
       this.matchStreamMatcher = matchStreamMatcher;
       em = e;
     transactions = new TransactionTemplate(transactionManager);
+    this.cacheManager = cacheManager;
     providerHealth.put("YouTube", ProviderHealth.initial());
     providerHealth.put("Twitch", ProviderHealth.initial());
     providerHealth.put("Kick", ProviderHealth.initial());
@@ -100,15 +119,27 @@ public class TrackerService {
           initialDelayString = "${tracker.initial-delay-ms:0}",
           fixedRateString = "${tracker.interval-ms:120000}")
   public void scheduled() {
-    collectAllGames();
+    logger.info("Tracker scheduled cycle START");
+    try {
+      collectAllGames();
+    } finally {
+      logger.info("Tracker scheduled cycle END");
+    }
   }
 
-  public synchronized void collectValorantData() {
-    collectGameData(GameConfig.VALORANT);
+  public void collectAllGames() {
+    if (!collectionRunning.compareAndSet(false, true)) {
+      logger.warn("Tracker collection already running; manual collection skipped");
+      return;
+    }
+    try {
+      collectAllGamesInternal();
+    } finally {
+      collectionRunning.set(false);
+    }
   }
 
-  public synchronized void collectAllGames() {
-
+  private void collectAllGamesInternal() {
     List<CompletableFuture<Void>> gameFutures = new ArrayList<>();
 
     for (GameConfig game : GameConfig.values()) {
@@ -117,19 +148,105 @@ public class TrackerService {
         logger.info("{} | esports schedule inactive - skipping collection", gameId);
         continue;
       }
-
-      gameFutures.add(CompletableFuture.runAsync(() -> collectGameData(game), gameExecutor));
+      gameFutures.add(CompletableFuture.runAsync(() -> {
+        try {
+          collectGameData(game);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException(e);
+        }
+      }, gameExecutor));
     }
 
     if (gameFutures.isEmpty()) {
       logger.info("No games scheduled for collection");
+      requestApiCacheInvalidation();
       return;
     }
 
-    CompletableFuture.allOf(gameFutures.toArray(new CompletableFuture[0])).join();
+    try {
+      CompletableFuture.allOf(gameFutures.toArray(new CompletableFuture[0])).join();
+      logger.info("Tracker collection cycle completed successfully for {} games", gameFutures.size());
+    } catch (CompletionException e) {
+      logger.error("Tracker collection cycle completed with one or more game failures", e);
+    } finally {
+      requestApiCacheInvalidation();
+    }
   }
 
-  private void collectGameData(GameConfig game) {
+  /** Queue cache invalidation without blocking the scheduler thread. */
+  private void requestApiCacheInvalidation() {
+    if (!cacheInvalidationRunning.compareAndSet(false, true)) {
+      logger.debug("API cache invalidation already running; skipping duplicate request");
+      return;
+    }
+
+    logger.info("API cache invalidation queued");
+    try {
+      cacheInvalidationExecutor.submit(() -> {
+        try {
+          clearApiCaches();
+        } catch (Throwable e) {
+          logger.error("API cache invalidation failed", e);
+        } finally {
+          cacheInvalidationRunning.set(false);
+        }
+      });
+    } catch (RuntimeException e) {
+      cacheInvalidationRunning.set(false);
+      logger.error("Unable to queue API cache invalidation", e);
+    }
+  }
+
+  private void clearApiCaches() {
+    // These caches depend directly on tracker-collected data.
+    // Stable catalog/search/logo caches are intentionally not cleared every cycle.
+    String[] caches = {
+            "apiSnapshots",
+            "apiSnapshotsRange",
+            "apiGames",
+            "apiStreams",
+            "apiActiveMatches",
+            "apiMatches",
+            "apiActiveMatch",
+            "apiMatchStreams",
+            "apiMatchDetails",
+            "apiChannelStatus",
+            "apiChannelHistory",
+            "apiChannelComparison",
+            "apiAnalytics",
+            "apiTop10",
+            "apiEsportsOverview",
+            "apiEsportsOverviewGames",
+            "apiEsportsOverviewStreams",
+            "apiEsportsOverviewRecentMatches",
+            "apiEsportsOverviewTopMatches",
+            "apiChannelCatalog",
+            "apiChannelCatalogSearch",
+            "apiMatchSearch"
+    };
+    logger.info("Clearing API caches START");
+
+    for (String name : caches) {
+      logger.info("Clearing cache: {}", name);
+      Cache cache = cacheManager.getCache(name);
+
+      if (cache != null) {
+        boolean cacheInvalidation = cache.invalidate();
+        if (cacheInvalidation) {
+          logger.info("Cache invalidated and cleared: {}", name);
+        } else {
+          logger.info("Cache invalidated: {} (no existing entries detected or presence unknown)", name);
+        }
+      } else {
+        logger.info("Cache not found: {}", name);
+      }
+    }
+
+    logger.info("Clearing API caches COMPLETE");
+  }
+
+  private void collectGameData(GameConfig game) throws InterruptedException {
     OffsetDateTime timestamp = OffsetDateTime.now(ZoneId.of("Asia/Kolkata"));
 
     CompletableFuture<ProviderResult> youtubeFetch = CompletableFuture.supplyAsync(
@@ -163,7 +280,12 @@ public class TrackerService {
     List<LiquipediaEsportsScheduleScraper.EsportsMatch> activeMatches =
             dynamicGameScheduler.getActiveMatches(game.getDisplayName());
 
-    transactions.executeWithoutResult(status -> {
+    boolean dbSlotAcquired = false;
+    try {
+      backgroundDbSemaphore.acquire();
+      dbSlotAcquired = true;
+
+      transactions.executeWithoutResult(status -> {
       em.persist(new Snapshot(timestamp, game.getId(), youtubeViewers, twitchViewers, kickViewers,
               count(streams, "YouTube"), count(streams, "Twitch"), count(streams, "Kick"),
               youtube.success(), twitch.success(), kickResult.success()));
@@ -191,7 +313,12 @@ public class TrackerService {
 
         em.persist(new StreamSample(timestamp, game.getId(), stream, matchId));
       });
-    });
+      });
+    } finally {
+      if (dbSlotAcquired) {
+        backgroundDbSemaphore.release();
+      }
+    }
 
     lastRun = timestamp;
     logger.info("{} | {} | YouTube {} ({}) | Twitch {} ({}) | Kick {} ({}) | TOTAL {}",
@@ -205,6 +332,7 @@ public class TrackerService {
     providerExecutor.shutdown();
     gameExecutor.shutdown();
     seleniumExecutor.shutdown();
+    cacheInvalidationExecutor.shutdown();
   }
 
   /**

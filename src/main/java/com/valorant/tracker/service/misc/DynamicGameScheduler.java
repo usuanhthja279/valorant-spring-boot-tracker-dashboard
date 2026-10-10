@@ -7,7 +7,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.valorant.tracker.model.EsportsMatchRecord;
 import com.valorant.tracker.repository.EsportsMatchRecordRepository;
 import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import org.springframework.stereotype.Component;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.event.EventListener;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.core.annotation.Order;
@@ -16,6 +19,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class DynamicGameScheduler {
@@ -55,6 +62,28 @@ public class DynamicGameScheduler {
     private final ConcurrentHashMap<String, List<LiquipediaEsportsScheduleScraper.EsportsMatch>> activeMatches =
             new ConcurrentHashMap<>();
 
+    /**
+     * Cached future/upcoming matches discovered during the normal 5-minute
+     * Liquipedia refresh. This lets the scheduler know exactly when a match
+     * should be checked without waiting for the next 5-minute refresh.
+     */
+    private final ConcurrentHashMap<String, List<LiquipediaEsportsScheduleScraper.EsportsMatch>> scheduledMatches =
+            new ConcurrentHashMap<>();
+
+    /** One exact start-time confirmation task per scheduled match. */
+    private final ConcurrentHashMap<String, ScheduledFuture<?>> startConfirmationTasks =
+            new ConcurrentHashMap<>();
+
+    private final ScheduledExecutorService confirmationExecutor =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "esports-start-confirmation");
+                t.setDaemon(true);
+                return t;
+            });
+
+    /** Retry a start confirmation shortly after a transient Liquipedia failure. */
+    private static final long START_CONFIRMATION_RETRY_SECONDS = 30;
+
     public DynamicGameScheduler(
             LiquipediaEsportsScheduleScraper scraper,
             EsportsMatchRecordRepository matchRepository) {
@@ -83,62 +112,262 @@ public class DynamicGameScheduler {
      */
     @Scheduled(fixedRateString = "${tracker.esports.schedule-check-ms:300000}")
     @Transactional
-    public synchronized void refreshSchedule() {
+    @CacheEvict(cacheNames = {
+            "apiGames", "apiActiveMatches", "apiMatchSearch", "apiMatches",
+            "apiActiveMatch", "apiMatchDetails", "apiEsportsOverview",
+            "apiEsportsOverviewGames", "apiEsportsOverviewStreams",
+            "apiEsportsOverviewRecentMatches", "apiEsportsOverviewTopMatches",
+            "apiTeamLogos"
+    }, allEntries = true)
+    public void refreshSchedule() {
         log.info("Refreshing esports game schedule...");
+        Instant now = Instant.now();
+
         for (String game : ESPORTS_GAMES) {
             try {
-                List<LiquipediaEsportsScheduleScraper.EsportsMatch> scrapedMatches =
+                List<LiquipediaEsportsScheduleScraper.EsportsMatch> scraped =
                         scraper.getUpcomingAndLive(game).stream()
                                 .filter(match -> match.startTime() != null)
                                 .toList();
 
-                // One Liquipedia row must produce one persistence operation.
-                // This also protects against duplicate DOM rows from a single scrape.
-                List<LiquipediaEsportsScheduleScraper.EsportsMatch> scheduledMatches =
-                        new java.util.ArrayList<>(
-                                scrapedMatches.stream()
-                                        .collect(java.util.stream.Collectors.toMap(
-                                                LiquipediaEsportsScheduleScraper.EsportsMatch::matchId,
-                                                match -> match,
-                                                (first, second) -> second,
-                                                java.util.LinkedHashMap::new))
-                                        .values());
+                // Persist every returned state, including COMPLETED, so the
+                // database remains the catalog/history source of truth.
+                persistMatchCatalog(game, scraped);
 
-                persistMatchCatalog(game, scheduledMatches);
+                List<LiquipediaEsportsScheduleScraper.EsportsMatch> discovered = scraped.stream()
+                        .filter(match -> !match.finished())
+                        .filter(match -> !"COMPLETED".equalsIgnoreCase(match.status()))
+                        .sorted(java.util.Comparator.comparing(
+                                LiquipediaEsportsScheduleScraper.EsportsMatch::startTime))
+                        .toList();
 
-                List<LiquipediaEsportsScheduleScraper.EsportsMatch> matches =
-                        scheduledMatches.stream()
-                                .filter(match -> match.isActive(java.time.Instant.now()))
-                                .sorted(java.util.Comparator.comparing(
-                                        LiquipediaEsportsScheduleScraper.EsportsMatch::startTime))
-                                .toList();
+                // Keep all future matches in memory so the UI can show them as
+                // Scheduled and the exact start-time task can verify them.
+                List<LiquipediaEsportsScheduleScraper.EsportsMatch> future = discovered.stream()
+                        .filter(match -> match.startTime().toInstant().isAfter(now))
+                        .toList();
+                scheduledMatches.put(game, List.copyOf(future));
 
-                boolean active = !matches.isEmpty();
-                boolean wasActive = activeGames.contains(game);
-
-                if (active) {
-                    activeGames.add(game);
-                    activeMatches.put(game, List.copyOf(matches));
-                    if (!wasActive) {
-                        log.info("ESPORTS GAME STARTED: {} | {} active matches", game, matches.size());
-                    }
-                    for (var match : matches) {
-                        log.debug("ACTIVE MATCH: {} | {} vs {} | {}",
-                                match.matchId(), match.team1(), match.team2(), match.tournament());
-                    }
-                } else if (wasActive) {
-                    activeGames.remove(game);
-                    activeMatches.remove(game);
-                    log.info("ESPORTS GAME STOPPED: {}", game);
-                } else {
-                    activeMatches.remove(game);
+                for (var match : future) {
+                    scheduleStartConfirmation(game, match);
                 }
+
+                // A normal 5-minute refresh also updates already-live matches
+                // and is the source of truth for completion/removal.
+                List<LiquipediaEsportsScheduleScraper.EsportsMatch> live = discovered.stream()
+                        .filter(match -> match.isActive(now))
+                        .sorted(java.util.Comparator.comparing(
+                                LiquipediaEsportsScheduleScraper.EsportsMatch::startTime))
+                        .toList();
+
+                updateActiveState(game, live, scraped);
             } catch (Exception e) {
+                // A Liquipedia failure must NOT turn a known live game off or
+                // erase its scheduled matches. Keep the last known cache/state.
                 log.warn("Failed to check esports schedule for game={}: {}", game, e.getMessage());
             }
         }
 
         log.info("Currently active esports games: {}", activeGames);
+    }
+
+    /**
+     * Schedule an exact start-time confirmation for a future match. The task
+     * re-queries Liquipedia at the scheduled time so a delayed match is not
+     * incorrectly activated.
+     */
+    private void scheduleStartConfirmation(
+            String game,
+            LiquipediaEsportsScheduleScraper.EsportsMatch match) {
+
+        if (match.matchId() == null || match.startTime() == null || match.finished()) {
+            return;
+        }
+
+        String key = match.matchId();
+        // Refreshing the Liquipedia schedule may move a match's start time.
+        // Cancel the previous timer and always schedule against the latest time.
+        ScheduledFuture<?> existing = startConfirmationTasks.remove(key);
+        if (existing != null && !existing.isDone() && !existing.isCancelled()) {
+            existing.cancel(false);
+        }
+
+        long delayMs = Math.max(
+                0L,
+                Duration.between(Instant.now(), match.startTime().toInstant()).toMillis());
+
+        ScheduledFuture<?> future = confirmationExecutor.schedule(
+                () -> confirmMatchStart(game, key),
+                delayMs,
+                TimeUnit.MILLISECONDS);
+
+        ScheduledFuture<?> previous = startConfirmationTasks.put(key, future);
+        if (previous != null && !previous.isDone() && !previous.isCancelled()) {
+            previous.cancel(false);
+        }
+
+        log.info("ESPORTS MATCH SCHEDULED: {} | {} vs {} | starts {}",
+                game, match.team1(), match.team2(), match.startTime());
+    }
+
+    /**
+     * At the scheduled start time, refresh Liquipedia immediately. If the
+     * match is really LIVE, activate the game and allow TrackerService to
+     * collect it. If Liquipedia moved the start time, reschedule. If the
+     * provider temporarily fails, retain the scheduled state and retry.
+     */
+    private void confirmMatchStart(String game, String matchId) {
+        try {
+            List<LiquipediaEsportsScheduleScraper.EsportsMatch> latest =
+                    scraper.getUpcomingAndLive(game).stream()
+                            .filter(match -> match.matchId() != null)
+                            .filter(match -> matchId.equals(match.matchId()))
+                            .toList();
+
+            if (latest.isEmpty()) {
+                log.warn("Start confirmation unavailable for {} | {}. Retaining scheduled state and retrying.",
+                        game, matchId);
+                retryStartConfirmation(game, matchId);
+                return;
+            }
+
+            LiquipediaEsportsScheduleScraper.EsportsMatch match = latest.get(0);
+            persistMatchCatalog(game, List.of(match));
+
+            Instant now = Instant.now();
+            if (match.finished() || "COMPLETED".equalsIgnoreCase(match.status())) {
+                removeScheduledMatch(game, matchId);
+                startConfirmationTasks.remove(matchId);
+                log.info("ESPORTS MATCH COMPLETED BEFORE START: {} | {}", game, matchId);
+                return;
+            }
+
+            if (match.isActive(now)) {
+                activateMatch(game, match);
+                startConfirmationTasks.remove(matchId);
+                return;
+            }
+
+            // Liquipedia says the match is still upcoming. Use its updated
+            // start time, if available, and schedule another exact check.
+            if (match.startTime() != null && match.startTime().toInstant().isAfter(now)) {
+                upsertScheduledMatch(game, match);
+                startConfirmationTasks.remove(matchId);
+                scheduleStartConfirmation(game, match);
+                log.info("ESPORTS MATCH DELAYED: {} | {} | new start {}",
+                        game, matchId, match.startTime());
+                return;
+            }
+
+            // Start time has arrived but Liquipedia has not confirmed LIVE yet.
+            retryStartConfirmation(game, matchId);
+        } catch (Exception e) {
+            log.warn("Start confirmation failed for game={} match={}: {}",
+                    game, matchId, e.getMessage());
+            retryStartConfirmation(game, matchId);
+        }
+    }
+
+    private void retryStartConfirmation(String game, String matchId) {
+        ScheduledFuture<?> previous = startConfirmationTasks.remove(matchId);
+        if (previous != null && !previous.isDone()) {
+            previous.cancel(false);
+        }
+
+        ScheduledFuture<?> retry = confirmationExecutor.schedule(
+                () -> confirmMatchStart(game, matchId),
+                START_CONFIRMATION_RETRY_SECONDS,
+                TimeUnit.SECONDS);
+        startConfirmationTasks.put(matchId, retry);
+    }
+
+    private void activateMatch(
+            String game,
+            LiquipediaEsportsScheduleScraper.EsportsMatch match) {
+
+        activeGames.add(game);
+        activeMatches.compute(game, (key, existing) -> {
+            List<LiquipediaEsportsScheduleScraper.EsportsMatch> values =
+                    existing == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(existing);
+            values.removeIf(existingMatch -> match.matchId().equals(existingMatch.matchId()));
+            values.add(match);
+            values.sort(java.util.Comparator.comparing(
+                    LiquipediaEsportsScheduleScraper.EsportsMatch::startTime));
+            return List.copyOf(values);
+        });
+
+        removeScheduledMatch(game, match.matchId());
+        log.info("ESPORTS GAME STARTED: {} | MATCH LIVE: {} | {} vs {}",
+                game, match.matchId(), match.team1(), match.team2());
+    }
+
+    private void updateActiveState(
+            String game,
+            List<LiquipediaEsportsScheduleScraper.EsportsMatch> live,
+            List<LiquipediaEsportsScheduleScraper.EsportsMatch> scraped) {
+
+        if (!live.isEmpty()) {
+            activeGames.add(game);
+            activeMatches.put(game, List.copyOf(live));
+            return;
+        }
+
+        List<LiquipediaEsportsScheduleScraper.EsportsMatch> existing =
+                activeMatches.getOrDefault(game, List.of());
+
+        if (existing.isEmpty()) {
+            activeGames.remove(game);
+            activeMatches.remove(game);
+            return;
+        }
+
+        // Do not turn a live game off merely because a normal Liquipedia
+        // refresh temporarily classifies the match differently or omits it.
+        // Stop only when Liquipedia explicitly reports completion/finished,
+        // or when the known match has an endTime that has passed.
+        List<LiquipediaEsportsScheduleScraper.EsportsMatch> completed = scraped.stream()
+                .filter(match -> match.finished()
+                        || "COMPLETED".equalsIgnoreCase(match.status()))
+                .toList();
+
+        List<LiquipediaEsportsScheduleScraper.EsportsMatch> stillActive = existing.stream()
+                .filter(existingMatch -> completed.stream().noneMatch(
+                        completedMatch -> existingMatch.matchId().equals(completedMatch.matchId())))
+                .filter(existingMatch -> existingMatch.endTime() == null
+                        || existingMatch.endTime().toInstant().isAfter(Instant.now()))
+                .toList();
+
+        if (!stillActive.isEmpty()) {
+            activeGames.add(game);
+            activeMatches.put(game, List.copyOf(stillActive));
+            return;
+        }
+
+        activeGames.remove(game);
+        activeMatches.remove(game);
+        log.info("ESPORTS GAME STOPPED: {}", game);
+    }
+
+    private void upsertScheduledMatch(
+            String game,
+            LiquipediaEsportsScheduleScraper.EsportsMatch match) {
+        scheduledMatches.compute(game, (key, existing) -> {
+            List<LiquipediaEsportsScheduleScraper.EsportsMatch> values =
+                    existing == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(existing);
+            values.removeIf(existingMatch -> match.matchId().equals(existingMatch.matchId()));
+            values.add(match);
+            values.sort(java.util.Comparator.comparing(
+                    LiquipediaEsportsScheduleScraper.EsportsMatch::startTime));
+            return List.copyOf(values);
+        });
+    }
+
+    private void removeScheduledMatch(String game, String matchId) {
+        scheduledMatches.computeIfPresent(game, (key, existing) -> {
+            List<LiquipediaEsportsScheduleScraper.EsportsMatch> values = new java.util.ArrayList<>(existing);
+            values.removeIf(match -> matchId.equals(match.matchId()));
+            return values.isEmpty() ? List.of() : List.copyOf(values);
+        });
     }
 
     private void persistMatchCatalog(String game, List<LiquipediaEsportsScheduleScraper.EsportsMatch> matches) {
@@ -180,12 +409,18 @@ public class DynamicGameScheduler {
      * an active esports match.
      */
     public boolean isGameActive(String game) {
-
         if (game == null) {
             return false;
         }
-
         return activeGames.contains(normalizeGame(game));
+    }
+
+    /** Returns all currently scheduled/future Liquipedia matches for a game. */
+    public List<LiquipediaEsportsScheduleScraper.EsportsMatch> getScheduledMatches(String game) {
+        if (game == null) {
+            return List.of();
+        }
+        return scheduledMatches.getOrDefault(normalizeGame(game), List.of());
     }
 
     /** Returns all active Liquipedia matches for a game. */
@@ -202,11 +437,9 @@ public class DynamicGameScheduler {
     }
 
     public boolean isManagedGame(String game) {
-
         if (game == null) {
             return false;
         }
-
         return ESPORTS_GAMES.contains(normalizeGame(game));
     }
 
@@ -217,17 +450,10 @@ public class DynamicGameScheduler {
                 .replace('_', ' ');
 
         return switch (value) {
-            case "CS2", "COUNTER STRIKE", "COUNTER-STRIKE" ->
-                    "COUNTER-STRIKE 2";
-
-            case "LOL" ->
-                    "LEAGUE OF LEGENDS";
-
-            case "DOTA2" ->
-                    "DOTA 2";
-
-            default ->
-                    value;
+            case "CS2", "COUNTER STRIKE", "COUNTER-STRIKE" -> "COUNTER-STRIKE 2";
+            case "LOL" -> "LEAGUE OF LEGENDS";
+            case "DOTA2" -> "DOTA 2";
+            default -> value;
         };
     }
 
@@ -235,7 +461,6 @@ public class DynamicGameScheduler {
      * Returns a snapshot of currently active games.
      */
     public Set<String> getActiveGames() {
-
         return Set.copyOf(activeGames);
     }
 
@@ -243,7 +468,6 @@ public class DynamicGameScheduler {
      * Returns all games managed by this scheduler.
      */
     public List<String> getManagedGames() {
-
         return ESPORTS_GAMES;
     }
 
@@ -255,4 +479,11 @@ public class DynamicGameScheduler {
     public void refreshNow() {
         refreshSchedule();
     }
+
+    @jakarta.annotation.PreDestroy
+    public void shutdown() {
+        confirmationExecutor.shutdownNow();
+        startConfirmationTasks.clear();
+    }
+
 }

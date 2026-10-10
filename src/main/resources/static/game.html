@@ -1045,6 +1045,18 @@ function freshnessAgeLabel(ageMs){
 }
 async function refreshProviderFreshness(){
   try{
+    const gameState=await getGameLiveState();
+    if(!gameState?.active){
+      ['freshnessYoutube','freshnessTwitch','freshnessKick'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el){el.textContent='Game offline · historical data only';el.className='live-card-freshness freshness-unknown';}
+      });
+      const dot=document.querySelector('.status .dot');
+      if(dot){dot.classList.remove('down','stale');}
+      const statusEl=document.getElementById('status');
+      if(statusEl)statusEl.textContent='Offline · historical data only';
+      return;
+    }
     const health=await getJson('/api/status'),providers=health.providers||{};
     const staleAfterMs=Math.max(120000,(Number(health.intervalMs)||60000)*2);
     let anyDown=false,anyStale=false;
@@ -1341,18 +1353,30 @@ function escapeHtml(s){
 
 async function refreshLiveSummary(){
   try{
-    const latestData = await getJson('/api/snapshots?game='+encodeURIComponent(selectedGame));
-    if(!Array.isArray(latestData) || !latestData.length) return;
-    latestData.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
-    const latest = latestData[latestData.length-1];
-    const displayProviderValue = (available, viewers) => available === false || viewers == null ? '—' : fmt(viewers);
-    document.getElementById('yt').textContent = displayProviderValue(latest.youtubeAvailable, latest.youtubeViewers);
-    document.getElementById('tw').textContent = displayProviderValue(latest.twitchAvailable, latest.twitchViewers);
-    document.getElementById('kick').textContent = displayProviderValue(latest.kickAvailable, latest.kickViewers);
-    document.getElementById('total').textContent = latest.combinedViewers == null ? '—' : fmt(latest.combinedViewers);
+    // Never use the latest historical snapshot as CURRENT live data.
+    // This function is also used for long historical ranges (6h/24h), so
+    // first check whether the game is currently active.
+    const gameState = await getGameLiveState();
+    if(!gameState?.active){
+      clearLiveSection(true);
+      const statusEl = document.getElementById('status');
+      if(statusEl) statusEl.textContent = 'Offline · historical data only';
+      const last = document.getElementById('last');
+      if(last) last.textContent = 'Offline · live stream data hidden';
+      return;
+    }
+
+    const displayProviderValue = viewers => viewers == null ? '—' : fmt(viewers);
+    document.getElementById('yt').textContent = displayProviderValue(gameState.youtubeViewers);
+    document.getElementById('tw').textContent = displayProviderValue(gameState.twitchViewers);
+    document.getElementById('kick').textContent = displayProviderValue(gameState.kickViewers);
+    document.getElementById('total').textContent = displayProviderValue(gameState.totalViewers);
+
     const last = document.getElementById('last');
-    if(last) last.textContent = 'Latest: ' + new Date(latest.timestamp).toLocaleString();
-  } catch(e) { console.error('Unable to refresh live summary', e); }
+    if(last) last.textContent = 'Current live data';
+  } catch(e) {
+    console.error('Unable to refresh live summary', e);
+  }
 }
 
 async function collect(){
