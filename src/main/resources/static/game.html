@@ -26,13 +26,21 @@ header{padding:16px 22px;border-bottom:1px solid #222832;background:#0c121a;disp
 .search-result-platform{color:#aab6c5;font-size:12px;white-space:nowrap}
 .search-result-viewers{color:#dbe6f2;font-size:12px;white-space:nowrap}.search-result-status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;white-space:nowrap}.search-result-status.live{color:#37d67a}.search-result-status.offline{color:#a0a9b6}.search-result-status .presence-dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:currentColor}
 .search-empty{padding:14px;color:#9aa7b7;font-size:13px}
-.search-footer{padding:9px 14px;border-top:1px solid #202a35;color:#8e99a8;font-size:11px}
+.search-footer{padding:9px 14px;border-top:1px solid #202a35;color:#8e99a8;font-size:11px}.match-search-result{grid-template-columns:minmax(0,1fr) auto auto}.match-search-result .search-result-name{display:flex;flex-direction:column;gap:3px}.match-search-result .match-search-meta{font-size:11px;color:#8e99a8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.match-search-result .match-search-status{font-size:11px;font-weight:800;white-space:nowrap}.match-search-status.live{color:#37d67a}.match-search-status.history{color:#9aa7b8}.match-search-result .match-search-date{font-size:11px;color:#aab6c5;white-space:nowrap}
 h1{margin:0;font-size:25px}.sub{color:#8e99a8;font-size:13px;margin-top:5px}
 .status{display:flex;gap:8px;align-items:center;color:#8e99a8;font-size:13px}
 .dot{width:9px;height:9px;border-radius:50%;background:#37d67a;display:inline-block}
 main{padding:18px 22px 28px;max-width:1800px;margin:auto}
 .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.live-viewership{margin-bottom:14px}.live-viewership-heading{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.live-viewership-heading h2{font-size:16px;margin:0}
+.top-overview-grid{display:grid;grid-template-columns:minmax(0,8fr) minmax(260px,2fr);grid-template-areas:"live matches";gap:14px;align-items:start;margin-bottom:14px;width:100%}
+.top-overview-grid .live-viewership{grid-area:live;margin-bottom:0;min-width:0;width:100%}
+.top-overview-grid .live-viewership .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+.top-overview-grid .active-match-section{grid-area:matches;margin:0;min-width:0;width:100%;height:auto;min-height:0;display:flex;flex-direction:column;overflow:visible;box-sizing:border-box;background:transparent;border:0;border-radius:0;padding:0}
+.top-overview-grid .active-match-row{display:flex;flex-direction:column;gap:8px;overflow:visible;padding:8px 10px 10px;min-height:0;flex:1}
+.top-overview-grid .active-match-card{width:100%;min-width:0;flex:0 0 auto;min-height:104px;height:auto;padding:10px 12px;box-sizing:border-box}
+.top-overview-grid .active-match-section .active-match-header{flex:0 0 auto;padding:0 0 7px;background:transparent;border:0;border-radius:0}.top-overview-grid .active-match-section .active-match-header strong{font-size:16px}.top-overview-grid .active-match-section .active-match-header .match-meta{margin-top:3px}.top-overview-grid .active-match-section .match-schedule-controls{flex:0 0 auto}.top-overview-grid .active-match-section .match-schedule-controls input{min-width:0}.top-overview-grid .active-match-section #activeMatchesBody{background:#0f1720;border:1px solid #202d39;border-radius:11px;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#425267 transparent}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar{width:7px}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar-track{background:transparent}.top-overview-grid .active-match-section #activeMatchesBody::-webkit-scrollbar-thumb{background:#425267;border-radius:8px}
+.match-score{display:flex;align-items:center;gap:7px;margin-top:8px;font-weight:800}.match-score .score-value{font-size:17px}.match-score .score-sep{color:#7f8b99}.match-status-upcoming{color:#fbbf24}.match-status-completed{color:#9aa7b7}.live-viewership{margin-bottom:14px}.live-viewership-heading{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.live-viewership-heading h2{font-size:16px;margin:0}
+.match-score{display:flex;align-items:center;gap:7px;margin-top:8px;font-weight:800}.match-score .score-value{font-size:17px}.match-score .score-sep{color:#7f8b99}.match-status-upcoming{color:#fbbf24}.match-status-completed{color:#9aa7b7}.live-viewership{margin-bottom:14px}.live-viewership-heading{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.live-viewership-heading h2{font-size:16px;margin:0}
 .card{background:linear-gradient(145deg,#111c27,#0e151e);border:1px solid #202d39;border-radius:11px;padding:12px 15px;display:grid;grid-template-columns:auto 1fr;column-gap:9px;align-items:start}.live-viewership .card{cursor:pointer;transition:border-color .15s,transform .15s}.live-viewership .card:hover,.live-viewership .card:focus-visible{border-color:#38bdf8;transform:translateY(-1px);outline:none}.live-viewership .card[aria-expanded="true"]{border-color:#38bdf8;box-shadow:0 0 0 1px #38bdf833}.live-card-icon{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;margin-top:1px}.live-card-main{min-width:0}.live-card-label{display:flex;align-items:center;gap:6px}.live-card-spark-wrap{grid-column:1/-1;position:relative;height:32px;min-height:32px;max-height:32px;overflow:hidden;margin-top:8px}.live-card-spark{display:block!important;position:absolute!important;inset:0;width:100%!important;height:32px!important;max-height:32px!important}
 .label{font-size:12px;color:#8e99a8;text-transform:uppercase;letter-spacing:.08em}
 .value{font-size:28px;font-weight:750;margin-top:7px;font-variant-numeric:tabular-nums}
@@ -72,7 +80,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .live-card-freshness{font-size:10px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.freshness-fresh{color:#52df9c}.freshness-stale{color:#fbbf24}.freshness-down{color:#ff8585}.freshness-unknown{color:#8e99a8}.dot.stale{background:#fbbf24}.dot.down{background:#ff6464}
 .alerts-panel{position:fixed;top:74px;right:22px;z-index:20;width:min(540px,calc(100vw - 28px));margin:0;box-shadow:0 20px 60px #000b}.alerts-panel[hidden],.streams-panel[hidden]{display:none}.alerts-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.alerts-heading h2{margin:0}.alert-controls{display:flex;align-items:center;gap:8px;color:#9eacbd;font-size:12px}.alert-controls input{width:120px;min-width:0;padding:7px 9px}.alert-controls button{padding:7px 10px}.alert-list{display:grid;gap:7px;margin-top:10px;max-height:45vh;overflow:auto}.peak-alert{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;background:#111e29;border:1px solid #293746;font-size:12px}.peak-alert-title{font-weight:700}.peak-alert-reason{color:#52df9c}.peak-alert-time{color:#8e99a8;white-space:nowrap}.streams-panel{margin-top:10px}.streams-panel-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.streams-panel-heading h2{margin:0}.streams-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.streams-controls .sub{margin:0}.streams-table{overflow:auto;max-height:55vh}.streams-table table{min-width:620px}.analytics-grid>#channelHistoryPanel{grid-column:1/-1}.history-chart{height:260px}
 .channel-history-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.channel-page-link{display:inline-flex;align-items:center;justify-content:center;padding:7px 10px;border:1px solid #2b3441;border-radius:8px;background:#151b24;color:#dbeafe;text-decoration:none;font-size:12px}.channel-page-link:hover{background:#1b222d;color:#fff}.channel-page-link[hidden]{display:none}
-@media(max-width:1000px){header{flex-wrap:wrap;gap:12px}.header-brand{flex:1}.header-search{order:3;flex-basis:100%;margin:0;max-width:none}.header-right{margin-left:auto}.cards,.peak-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.grid,.analytics-grid{grid-template-columns:1fr}.analytics-grid>#channelHistoryPanel{grid-column:auto}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1000px){.top-overview-grid{grid-template-columns:1fr;grid-template-areas:"live" "matches"}.top-overview-grid .active-match-row{grid-template-columns:repeat(2,minmax(0,1fr))}header{flex-wrap:wrap;gap:12px}.header-brand{flex:1}.header-search{order:3;flex-basis:100%;margin:0;max-width:none}.header-right{margin-left:auto}.cards,.peak-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.grid,.analytics-grid{grid-template-columns:1fr}.analytics-grid>#channelHistoryPanel{grid-column:auto}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:550px){.cards,.peak-cards,.metric-grid{grid-template-columns:1fr}main{padding:12px}.grid{grid-template-columns:1fr}.value{font-size:25px}.peak-value{font-size:22px}}
 @media(max-width:550px){.cards{grid-template-columns:1fr}main{padding:15px}.grid{grid-template-columns:1fr}}
 *{scrollbar-width:thin;scrollbar-color:#344454 #0b0e13}*::-webkit-scrollbar{width:8px;height:8px}*::-webkit-scrollbar-track{background:#0b0e13}*::-webkit-scrollbar-thumb{background:#344454;border:2px solid #0b0e13;border-radius:999px}*::-webkit-scrollbar-thumb:hover{background:#4a6074}*::-webkit-scrollbar-corner{background:#0b0e13}
@@ -112,7 +120,22 @@ header,main{min-width:0;width:100%;max-width:100%}
   .table-wrap,.streams-table{max-width:100%;overflow-x:auto}
 }
 
+.match-schedule-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}.match-schedule-controls input{flex:1;min-width:150px;padding:8px 10px}.match-schedule-controls select{padding:8px 10px}.match-filter-count{font-size:11px;color:#8e99a8;white-space:nowrap}.match-status-live{color:#37d67a}.match-status-upcoming{color:#fbbf24}.match-status-completed{color:#9aa7b7}.match-score .winner-score{color:#fff}.active-match-card{touch-action:manipulation;-webkit-tap-highlight-color:transparent}.active-match-card:active{transform:none;background:#16212d}.active-match-detail-panel{scroll-margin-top:12px}
 .match-panel{margin:18px 0;padding:20px;background:#111821;border:1px solid #202b36;border-radius:16px}.match-panel h2{margin:0}.match-meta{color:#91a0b1;font-size:13px;margin-top:6px}.match-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px}.match-stream{background:#0c1219;border:1px solid #263341;border-radius:10px;padding:12px}.match-stream .viewers{font-size:20px;font-weight:700}.match-empty{color:#91a0b1;padding:12px 0}.match-link{color:#eef2f7;text-decoration:none}.match-link:hover{text-decoration:underline}
+
+.active-match-section{padding:0;overflow:hidden}.active-match-header{width:100%;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 20px 14px;background:transparent;border:0;border-bottom:1px solid #202b36;color:#eef2f7;text-align:left}.active-match-header strong{display:block;font-size:20px}.active-match-header .match-meta{display:block;margin-top:5px}.active-match-header-right{display:flex;align-items:center;gap:12px}.active-match-header-rule{display:block;width:42px;height:1px;background:#2b3948;flex:0 0 auto}.active-match-card{min-height:104px;padding:10px 12px;border:1px solid #2a3745;border-radius:12px;background:#0c1219;color:#eef2f7;text-align:left;cursor:pointer;transition:border-color .15s,transform .15s,background .15s}.active-match-card:hover{transform:translateY(-1px);border-color:#4b6074}.active-match-card.selected{border-color:#7c8fa3;background:#111a24;box-shadow:0 0 0 1px #7c8fa333}.active-match-card .match-teams{display:flex;align-items:center;justify-content:flex-start;gap:7px;font-size:14px;font-weight:800;line-height:1.15;min-width:0}.active-match-card .match-team{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:44%}.active-match-card .match-team-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.active-match-card .match-vs{color:#91a0b1;font-size:10px;font-weight:700;flex:0 0 auto}.active-match-card .match-team-logo{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 24px}.active-match-card .match-team-logo img{max-width:24px;max-height:24px;width:auto;height:auto;object-fit:contain;display:block}.active-match-card .match-team-logo img[src=""]{display:none}.active-match-card .match-tournament{margin-top:5px;color:#91a0b1;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.active-match-card .match-time{margin-top:3px;color:#b7c3d0;font-size:10px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.active-match-card .match-score{justify-content:center;margin-top:4px}.active-match-card .match-score .score-value{font-size:14px}.active-match-detail-panel{margin-top:14px}.active-match-detail{margin:0;padding:20px;border:1px solid #2a3745;border-radius:14px;background:#0c1219}.active-match-detail-panel .active-match-detail{border:0;border-radius:0;background:transparent}.active-match-detail[hidden]{display:none}.active-match-detail-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.active-match-detail h3{margin:0;font-size:23px}.match-detail-sub{color:#91a0b1;font-size:12px;margin-top:6px}
+.match-detail-title-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:8px;vertical-align:-5px;border:1px solid #334456;border-radius:8px;background:#151e28;color:#dbeafe}
+.match-detail-title-icon svg{width:17px;height:17px;display:block}
+.match-team-logo{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;vertical-align:-7px}.match-team-logo-left{margin-right:9px}.match-team-logo-right{margin-left:9px}
+.match-team-logo img{max-width:30px;max-height:30px;width:auto;height:auto;object-fit:contain;display:block}
+.match-team-logo img[src=""]{display:none}
+.match-vs-title{color:#91a0b1;font-size:16px;margin:0 3px}
+.match-metric .label.metric-label{display:flex;align-items:center;gap:7px}
+.match-metric .metric-icon{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;flex:0 0 18px}
+.match-metric .metric-icon svg{width:18px;height:18px;display:block}
+.match-metric .metric-icon.status-icon{border:1px solid #526477;border-radius:50%;width:9px;height:9px;flex-basis:9px}
+.match-detail-actions{display:flex;gap:8px;flex-wrap:wrap}.match-detail-actions a{padding:8px 11px;border:1px solid #2b3948;border-radius:8px;background:#151d27;color:#eef2f7;text-decoration:none;font-size:12px}.match-detail-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:16px}.match-metric{padding:12px;border:1px solid #263341;border-radius:10px;background:#111821}.match-metric .label{display:block}.match-metric .value{font-size:22px;font-weight:800;margin-top:5px}.match-streams-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:14px}.match-stream-mini{padding:11px;border:1px solid #263341;border-radius:10px;background:#0f171f}.match-stream-mini .platform{font-size:11px;color:#91a0b1}.match-stream-mini .channel{font-weight:700;margin-top:4px}.match-stream-mini .viewers{font-size:16px;font-weight:800;margin-top:5px}.match-stream-mini .title{font-size:12px;color:#c1cbd7;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.match-detail-empty{color:#91a0b1;padding:14px 0}.match-detail-section-title{margin:18px 0 8px;font-size:14px}@media(max-width:1200px){.match-detail-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.top-overview-grid{grid-template-columns:1fr;grid-template-areas:"live" "matches"}.top-overview-grid .live-viewership .cards{grid-template-columns:1fr}.top-overview-grid .active-match-section{max-height:none}.top-overview-grid .active-match-row{padding:10px 12px}.match-detail-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.active-match-header{padding:16px}.active-match-detail{margin:0 16px 16px}}
 </style>
 </head>
 <body>
@@ -120,16 +143,16 @@ header,main{min-width:0;width:100%;max-width:100%}
 <div class="header-brand"><a href="/" style="color:#9aa7b8;text-decoration:none;font-size:12px">← All games</a><h1 id="gamePageTitle">Live Game Tracker</h1><div class="sub">YouTube · Twitch · Kick · minute-by-minute viewership</div></div>
 <form class="header-search" onsubmit="openChannelStats(event)">
   <div class="search-field">
-    <input id="channelLookup" type="search" placeholder="Search channel stats (name, platform, ID)" aria-label="Search channel stats" autocomplete="off" aria-autocomplete="list" aria-controls="channelSuggestions" aria-expanded="false">
+    <input id="channelLookup" type="search" placeholder="Search live & historical matches (team, 9z vs BB, tournament)" aria-label="Search live and historical matches" autocomplete="off" aria-autocomplete="list" aria-controls="channelSuggestions" aria-expanded="false">
     <div id="channelSuggestions" class="search-suggestions" role="listbox" aria-label="Matching channels"></div>
   </div>
-  <button type="submit">View stats</button>
+  <button type="submit">Search</button>
 </form>
 <div class="header-right"><div class="header-actions"><a class="header-link" href="/stream-comparison.html">Compare streams <span aria-hidden="true">↗</span></a><button class="header-action" type="button" id="alertsToggle" aria-expanded="false" aria-controls="alertsPanel" onclick="togglePeakAlerts()">Alerts <span id="alertCount" class="alert-count"></span></button></div><div class="status"><span class="dot"></span><span id="status">Connecting…</span></div></div>
 </header>
 
 <main>
-<section class="live-viewership" aria-labelledby="liveViewershipHeading">
+<div class="top-overview-grid" id="topOverviewGrid"><section class="live-viewership" aria-labelledby="liveViewershipHeading">
 <div class="live-viewership-heading"><h2 id="liveViewershipHeading">Live viewership</h2><span class="subtle">Current viewers by platform</span></div>
 <div class="cards">
 <div class="card" role="button" tabindex="0" data-scope="YouTube" aria-expanded="false" aria-label="Show YouTube live streams" onclick="toggleStreamsPanel('YouTube',this)" onkeydown="activateStreamCard(event,this)"><div class="live-card-icon" id="liveYoutubeIcon"></div><div class="live-card-main"><div class="label live-card-label">YouTube</div><div class="value yt" id="yt">—</div><div class="live-card-freshness freshness-unknown" id="freshnessYoutube">Checking freshness…</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveYoutubeSpark"></canvas></div></div>
@@ -137,22 +160,34 @@ header,main{min-width:0;width:100%;max-width:100%}
 <div class="card" role="button" tabindex="0" data-scope="Kick" aria-expanded="false" aria-label="Show Kick live streams" onclick="toggleStreamsPanel('Kick',this)" onkeydown="activateStreamCard(event,this)"><div class="live-card-icon" id="liveKickIcon"></div><div class="live-card-main"><div class="label live-card-label">Kick</div><div class="value kick" id="kick">—</div><div class="live-card-freshness freshness-unknown" id="freshnessKick">Checking freshness…</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveKickSpark"></canvas></div></div>
 <div class="card" role="button" tabindex="0" data-scope="Overall" aria-expanded="false" aria-label="Show live streams across platforms" onclick="toggleStreamsPanel('Overall',this)" onkeydown="activateStreamCard(event,this)"><div class="live-card-icon" id="liveCombinedIcon"></div><div class="live-card-main"><div class="label live-card-label">Combined</div><div class="value total" id="total">—</div><div class="live-card-freshness freshness-unknown">Click to browse all platforms</div></div><div class="live-card-spark-wrap"><canvas class="live-card-spark" id="liveCombinedSpark"></canvas></div></div>
 </div>
+</section><section class="match-panel active-match-section" id="activeMatchesPanel" hidden aria-label="Esports matches schedule">
+  <div class="active-match-header" id="activeMatchesHeader">
+    <span><strong>⚔ Live & upcoming matches</strong><span class="match-meta" id="activeMatchesMeta">Loading matches…</span></span>
+    <span class="active-match-header-rule" aria-hidden="true"></span>
+  </div>
+  <div class="match-schedule-controls" aria-label="Match filters">
+    <input id="matchSearch" type="search" placeholder="Search team, tournament or match…" autocomplete="off" oninput="applyMatchFilters()">
+    <select id="matchStatusFilter" aria-label="Filter matches" onchange="applyMatchFilters()">
+      <option value="all">All</option>
+      <option value="live">Live</option>
+      <option value="upcoming">Upcoming</option>
+      <option value="completed">Completed</option>
+    </select>
+    <span class="match-filter-count" id="matchFilterCount">—</span>
+  </div>
+  <div id="activeMatchesBody">
+    <div class="active-match-row" id="activeMatchesList" role="list"></div>
+  </div>
+</section></div>
+<section class="panel active-match-detail-panel" id="activeMatchDetailPanel" hidden aria-label="Selected esports match">
+  <div id="activeMatchDetail" class="active-match-detail"></div>
 </section>
-
 <section class="panel alerts-panel" id="alertsPanel" aria-label="Peak alerts" hidden>
   <div class="alerts-heading"><h2>Peak alerts</h2><div class="alert-controls"><label for="peakAlertThreshold">Viewer threshold</label><input id="peakAlertThreshold" type="number" min="1" step="1000" value="10000"><button type="button" onclick="clearPeakAlerts()">Clear</button></div></div>
   <div class="subtle">Alerts appear when a live stream crosses the threshold or sets a new peak during this dashboard session.</div>
   <div class="alert-list" id="peakAlertList"><div class="subtle">Waiting for live stream samples…</div></div>
 </section>
 
-
-<section class="match-panel" id="activeMatchesPanel" hidden aria-label="Active esports matches">
-  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
-    <div><h2>Active esports matches</h2><div class="match-meta" id="activeMatchesMeta">Loading matches…</div></div>
-    <div class="hot" id="activeMatchesStatus">● LIVE MATCHES</div>
-  </div>
-  <div id="activeMatchesList"></div>
-</section>
 
 <section class="panel streams-panel" id="streamsPanel" aria-label="Live streams by platform" hidden>
 <div class="streams-panel-heading"><h2 id="streamsTitle">All live streams</h2><div class="streams-controls"><select id="scope" aria-label="Filter live streams by platform" onchange="loadStreams()"><option>Overall</option><option>YouTube</option><option>Twitch</option><option>Kick</option></select><button onclick="collect()">Collect now</button><button id="viewerSort" onclick="toggleViewerSort()" aria-label="Sort viewers high to low">Viewers: High-Low</button><span class="sub" id="last">—</span><span class="sub" id="snapshotInfo">—</span><button type="button" onclick="closeStreamsPanel()" aria-label="Close live streams">Close</button></div></div>
@@ -287,6 +322,7 @@ let peakAlerts=[];
 let allChannelNames=[];
 let channelCatalogLoaded=false;
 let searchMatches=[];
+let universalResults=[];
 let activeSuggestionIndex=-1;
 let searchDebounceTimer=null;
 let currentPage=0;
@@ -731,86 +767,216 @@ async function showChannelHistory(channel,platform){
   try{const rows=await getJson('/api/channels/history?game='+encodeURIComponent(selectedGame)+'&'+params.toString());const pts=rows||[];document.getElementById('channelHistoryHint').textContent=pts.length?`${fmt(pts.length)} samples in selected range`:'No channel samples found for this range';document.getElementById('channelHistoryMetrics').style.display=pts.length?'grid':'none';if(!pts.length){if(channelHistoryChart){channelHistoryChart.destroy();channelHistoryChart=null;}return;}const viewers=pts.map(p=>Number(p.viewers||0)),peakIndex=viewers.indexOf(Math.max(...viewers));document.getElementById('channelPeak').textContent=fmt(viewers[peakIndex]);document.getElementById('channelPeakTime').textContent='at '+new Date(pts[peakIndex].timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});document.getElementById('channelAverage').textContent=fmt(Math.round(viewers.reduce((a,b)=>a+b,0)/viewers.length));document.getElementById('channelSamples').textContent=fmt(pts.length);document.getElementById('channelFirstLast').textContent=`${fmt(viewers[0])} → ${fmt(viewers[viewers.length-1])}`;const change=viewers[0]===0?null:Math.round((viewers[viewers.length-1]-viewers[0])/viewers[0]*100);document.getElementById('channelChange').textContent=change===null?'Change unavailable':`${change>=0?'+':''}${change}%`;if(channelHistoryChart)channelHistoryChart.destroy();channelHistoryChart=new Chart(document.getElementById('channelHistoryChart'),{type:'line',data:{labels:pts.map(p=>new Date(p.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})),datasets:[{label:'Viewers',data:viewers,borderColor:platformColor(platform),backgroundColor:platformColor(platform)+'18',fill:true,tension:.25,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#91a0b1',maxTicksLimit:10},grid:{color:'#202b36'}},y:{beginAtZero:true,ticks:{color:'#91a0b1'},grid:{color:'#202b36'}}}}});}catch(e){document.getElementById('channelHistoryHint').textContent='Unable to load this channel history';console.error(e);}
 }
 
-async function loadActiveMatches(){
-  const panel=document.getElementById('activeMatchesPanel');
+let activeMatchItems=[];
+let selectedActiveMatchId=null;
+let activeMatchLogos={};
+
+function toggleActiveMatches(){}
+
+function formatBestOf(value){
+  const raw=String(value??'').trim();
+  if(!raw)return '';
+  return raw.toLowerCase().startsWith('bo') ? raw : `Bo${raw}`;
+}
+
+function applyMatchFilters(){
+  const query=String(document.getElementById('matchSearch')?.value||'').trim().toLocaleLowerCase();
+  const filter=String(document.getElementById('matchStatusFilter')?.value||'all').toLowerCase();
+  const filtered=activeMatchItems.filter(m=>{
+    const status=String(m.status||'UPCOMING').toUpperCase();
+    const statusOk=filter==='all'||(filter==='live'&&status==='LIVE')||(filter==='upcoming'&&status==='UPCOMING')||(filter==='completed'&&status==='COMPLETED');
+    if(!statusOk)return false;
+    if(!query)return true;
+    const hay=[m.team1,m.team2,m.tournament,m.matchId,m.game,m.tier,m.winner].filter(Boolean).join(' ').toLocaleLowerCase();
+    return hay.includes(query);
+  });
+  renderActiveMatchRow(filtered);
+  const count=document.getElementById('matchFilterCount');
+  if(count)count.textContent=`${filtered.length} match${filtered.length===1?'':'es'}`;
+}
+
+function renderActiveMatchRow(items=activeMatchItems){
   const list=document.getElementById('activeMatchesList');
-  const meta=document.getElementById('activeMatchesMeta');
-
-  // Prefer the dedicated endpoint. If the running backend is an older build,
-  // fall back to /api/games because that endpoint already exposes activeMatches.
-  let matches=[];
-  let source='active-matches';
-  try{
-    const state=await getJson('/api/esports/active-matches?game='+encodeURIComponent(selectedGame));
-    matches=Array.isArray(state?.matches)?state.matches:[];
-  }catch(e){
-    source='games-fallback';
-    console.warn('Active-matches endpoint unavailable; falling back to /api/games',e);
-  }
-
-  if(!matches.length){
-    try{
-      const games=await getJson('/api/games');
-      const game=(games||[]).find(g=>
-        String(g.id||'').toUpperCase()===selectedGame ||
-        String(g.name||'').toUpperCase()===selectedGame ||
-        (selectedGame==='COUNTER-STRIKE' && String(g.name||'').toUpperCase()==='COUNTER-STRIKE 2')
-      );
-      if(game && Array.isArray(game.activeMatches) && game.activeMatches.length){
-        matches=game.activeMatches;
-        source='games-fallback';
-      }else if(game && game.activeMatch){
-        matches=[game.activeMatch];
-        source='games-fallback';
-      }
-    }catch(e){
-      console.error('Unable to load active matches',e);
-    }
-  }
-
-  if(!matches.length){
-    panel.hidden=true;
-    list.innerHTML='';
+  if(!list)return;
+  if(!items.length){
+    list.innerHTML='<div class="match-empty">No matches match the selected filter.</div>';
     return;
   }
+  list.innerHTML=items.map(m=>{
+    const selected=m.matchId===selectedActiveMatchId;
+    const status=String(m.status||'UPCOMING').toUpperCase();
+    const live=status==='LIVE';
+    const completed=status==='COMPLETED';
+    const unknown=status==='UNKNOWN';
+    const dateObj=m.startTime?new Date(m.startTime):null;
+    const time=dateObj?dateObj.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—';
+    const date=dateObj?dateObj.toLocaleDateString([], {day:'2-digit',month:'short',year:'numeric'}):'—';
+    const s1=m.team1Score ?? m.score1;
+    const s2=m.team2Score ?? m.score2;
+    const score=(s1!=null&&s2!=null)
+      ? `<div class="match-score"><span class="score-value ${m.winner===m.team1?'winner-score':''}">${escapeHtml(String(s1))}</span><span class="score-sep">:</span><span class="score-value ${m.winner===m.team2?'winner-score':''}">${escapeHtml(String(s2))}</span></div>` : '';
+    const label=live?'● LIVE':completed?'● COMPLETED':unknown?'● STATUS UNKNOWN':'● UPCOMING';
+    const labelClass=live?'match-status-live':completed?'match-status-completed':'match-status-upcoming';
+    const timeLabel=live?'Started':completed?'Completed':unknown?'Time':'Starts';
+    const bo=formatBestOf(m.bestOf);
+    const team1=m.team1||'TBD',team2=m.team2||'TBD';
+    const logo1=activeMatchLogos[team1]||'';
+    const logo2=activeMatchLogos[team2]||'';
+    const img=(url,name)=>url?`<span class="match-team-logo"><img src="${escapeHtml(url)}" alt="${escapeHtml(name)} logo" loading="eager" referrerpolicy="no-referrer"></span>`:'<span class="match-team-logo" aria-hidden="true"></span>';
+    return `<button type="button" class="active-match-card${selected?' selected':''}" role="listitem" onclick="selectActiveMatch('${escapeJs(m.matchId||'')}')">
+      <div class="${labelClass}" style="font-size:10px;font-weight:800;text-align:left">${label}</div>
+      <div class="match-teams"><span class="match-team">${img(logo1,team1)}<span class="match-team-name">${escapeHtml(team1)}</span></span><span class="match-vs">vs</span><span class="match-team"><span class="match-team-name">${escapeHtml(team2)}</span>${img(logo2,team2)}</span></div>
+      ${score}
+      <div class="match-tournament">${escapeHtml(m.tournament||'Esports match')}${bo?` · ${escapeHtml(bo)}`:''}</div>
+      <div class="match-time">${timeLabel} ${date} · ${time}</div>
+    </button>`;
+  }).join('');
+}
 
-  panel.hidden=false;
-  meta.textContent=`${matches.length} active S/A-tier match${matches.length===1?'':'es'}${source==='games-fallback'?' · detected from game status':''}`;
+async function loadSelectedMatchTeamLogos(match){
+  try{
+    const game=match?.game||selectedGame;
+    const logos=Object.keys(activeMatchLogos).length?activeMatchLogos:await getJson('/api/esports/team-logos?game='+encodeURIComponent(game));
+    const team1=String(match?.team1||'').trim();
+    const team2=String(match?.team2||'').trim();
 
-  const cards=await Promise.all(matches.map(async m=>{
-    let rows=[];
-    try{
-      rows=await getJson('/api/match-streams?matchId='+encodeURIComponent(m.matchId)+'&game='+encodeURIComponent(selectedGame));
-    }catch(e){
-      console.warn('Unable to load match streams',m.matchId,e);
+    const logo1=logos?.[team1]||'';
+    const logo2=logos?.[team2]||'';
+
+    const img1=document.getElementById('matchTeam1Logo');
+    const img2=document.getElementById('matchTeam2Logo');
+
+    if(img1){
+      if(logo1){
+        img1.src=logo1;
+        img1.alt=team1+' logo';
+      }else{
+        img1.removeAttribute('src');
+      }
     }
 
-    const latest=rows.length ? rows[0].timestamp : null;
-    const current=latest ? rows.filter(x=>x.timestamp===latest) : [];
-    const streams=current.slice(0,12).map(x=>{
-      const title=escapeHtml(x.title||x.channel||'Live stream');
-      const channel=escapeHtml(x.channel||'Unknown channel');
-      const body=x.url ? `<a class="match-link" href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${title}</a>` : title;
-      return `<div class="match-stream"><div class="label">${escapeHtml(x.platform||'')}</div><div class="viewers">${fmt(x.viewers)} viewers</div><div class="label">${channel}</div><div style="margin-top:7px;font-size:13px">${body}</div></div>`;
-    }).join('');
+    if(img2){
+      if(logo2){
+        img2.src=logo2;
+        img2.alt=team2+' logo';
+      }else{
+        img2.removeAttribute('src');
+      }
+    }
+  }catch(error){
+    console.debug('Unable to load Liquipedia team logos',error);
+  }
+}
 
-    const start=m.startTime?new Date(m.startTime).toLocaleString():'—';
-    const end=m.endTime?new Date(m.endTime).toLocaleString():'—';
+async function selectActiveMatch(matchId){
+  const detail=document.getElementById('activeMatchDetail');
+  const detailPanel=document.getElementById('activeMatchDetailPanel');
+  if(selectedActiveMatchId===matchId){
+    selectedActiveMatchId=null;
+    if(detailPanel)detailPanel.hidden=true;
+    if(detail)detail.hidden=true;
+    applyMatchFilters();
+    return;
+  }
+  selectedActiveMatchId=matchId;
+  const match=activeMatchItems.find(m=>m.matchId===matchId);
+  if(!match||!detail||!detailPanel)return;
+  applyMatchFilters();
+  detailPanel.hidden=false;
+  detail.hidden=false;
+  const s1=match.team1Score ?? match.score1;
+  // Load the real team logos from the same Liquipedia source used for the schedule.
+  loadSelectedMatchTeamLogos(match);
+  const s2=match.team2Score ?? match.score2;
+  const bo=formatBestOf(match.bestOf);
+  const status=String(match.status||'UPCOMING').toUpperCase();
+  // Render immediately from the schedule payload. Do not wait for the analytics request.
+  detail.innerHTML=`<div class="active-match-detail-top">
+    <div><h3><span class="match-team-logo match-team-logo-left" aria-hidden="true"><img id="matchTeam1Logo" alt="" loading="eager" referrerpolicy="no-referrer"></span>${escapeHtml(match.team1||'TBD')} <span class="match-vs-title">vs</span> ${escapeHtml(match.team2||'TBD')}<span class="match-team-logo match-team-logo-right" aria-hidden="true"><img id="matchTeam2Logo" alt="" loading="eager" referrerpolicy="no-referrer"></span></h3><div class="match-detail-sub">${escapeHtml(match.tournament||'Esports match')} · ${escapeHtml(match.tier||'S/A')}${bo?' · '+escapeHtml(bo):''}</div><div class="match-detail-sub">${status}${match.startTime?' · '+new Date(match.startTime).toLocaleString():''}</div></div>
+    <div class="match-detail-actions"><a href="/match.html?matchId=${encodeURIComponent(match.matchId)}&game=${encodeURIComponent(selectedGame)}">View Match Details →</a>${match.matchUrl?`<a href="${escapeHtml(match.matchUrl)}" target="_blank" rel="noopener">Liquipedia Match ↗</a>`:''}</div>
+  </div>
+  <div class="match-detail-metrics">
+    <div class="match-metric"><span class="label metric-label"><span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h5v5H5zM14 14h5v5h-5zM10 7h4M12 9v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Score</span><div class="value">${s1!=null&&s2!=null?`${escapeHtml(String(s1))} : ${escapeHtml(String(s2))}`:'— : —'}</div></div>
+    <div class="match-metric"><span class="label metric-label"><span class="metric-icon status-icon" aria-hidden="true"></span>Status</span><div class="value">${escapeHtml(status)}</div></div>
+    <div class="match-metric"><span class="label metric-label" id="matchQuickYoutubeLabel"><span class="metric-icon" aria-hidden="true">${platformIcon('YouTube')}</span>YouTube</span><div class="value" id="matchQuickYoutube">—</div></div>
+    <div class="match-metric"><span class="label metric-label" id="matchQuickTwitchLabel"><span class="metric-icon" aria-hidden="true">${platformIcon('Twitch')}</span>Twitch</span><div class="value" id="matchQuickTwitch">—</div></div>
+    <div class="match-metric"><span class="label metric-label" id="matchQuickKickLabel"><span class="metric-icon" aria-hidden="true">${platformIcon('Kick')}</span>Kick</span><div class="value" id="matchQuickKick">—</div></div>
+    <div class="match-metric"><span class="label metric-label" id="matchQuickCombinedLabel"><span class="metric-icon" aria-hidden="true">${platformIcon('Overall')}</span>Combined</span><div class="value" id="matchQuickCombined">—</div></div>
+  </div>
+  <div class="match-detail-empty" style="padding-top:14px" id="matchQuickStatus">Loading live viewer summary…</div>`;
+  try{
+    const data=await getJson('/api/esports/matches/'+encodeURIComponent(matchId)+'?game='+encodeURIComponent(selectedGame));
+    if(selectedActiveMatchId!==matchId)return;
+    const summary=data?.summary||{};
+    const m=data.match||match;
+    const completed=String(m.status||status).toUpperCase()==='COMPLETED' || m.finished===true;
+    const metrics=completed ? (summary.peak||{}) : (summary.latest||{});
+    const mode=completed ? 'Peak' : 'Live';
+    const yt=Number(metrics.youtube||0),tw=Number(metrics.twitch||0),kick=Number(metrics.kick||0),combined=Number(metrics.combined||0);
+    const y=document.getElementById('matchQuickYoutube'),t=document.getElementById('matchQuickTwitch'),k=document.getElementById('matchQuickKick'),co=document.getElementById('matchQuickCombined'),q=document.getElementById('matchQuickStatus');
+    const yl=document.getElementById('matchQuickYoutubeLabel'),tl=document.getElementById('matchQuickTwitchLabel'),kl=document.getElementById('matchQuickKickLabel'),cl=document.getElementById('matchQuickCombinedLabel');
+    if(yl)yl.innerHTML='<span class="metric-icon" aria-hidden="true">'+platformIcon('YouTube')+'</span>'+(completed?'YouTube Peak':'YouTube Live');
+    if(tl)tl.innerHTML='<span class="metric-icon" aria-hidden="true">'+platformIcon('Twitch')+'</span>'+(completed?'Twitch Peak':'Twitch Live');
+    if(kl)kl.innerHTML='<span class="metric-icon" aria-hidden="true">'+platformIcon('Kick')+'</span>'+(completed?'Kick Peak':'Kick Live');
+    if(cl)cl.innerHTML='<span class="metric-icon" aria-hidden="true">'+platformIcon('Overall')+'</span>'+(completed?'Combined Peak':'Combined Live');
+    if(y)y.textContent=fmt(yt);
+    if(t)t.textContent=fmt(tw);
+    if(k)k.textContent=fmt(kick);
+    if(co)co.textContent=fmt(combined);
+    if(q)q.textContent=`${mode} viewer data · ${fmt(summary.samples||0)} samples`;
+  }catch(e){
+    const q=document.getElementById('matchQuickStatus');if(q)q.textContent='Match analytics unavailable right now.';
+    console.warn('Match quick summary unavailable',e);
+  }
+}
 
-    return `<article class="match-panel" style="margin:14px 0 0;padding:16px;background:#0c1219">
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
-        <div>
-          <h3 style="margin:0">${escapeHtml(m.team1||'TBD')} vs ${escapeHtml(m.team2||'TBD')}</h3>
-          <div class="match-meta">${escapeHtml(m.tournament||'Esports match')} · ${escapeHtml(m.tier||'S/A')} · ${escapeHtml(m.matchId||'')}</div>
-          <div class="match-meta">${start} → ${end}</div>
-        </div>
-        <div class="hot">● LIVE</div>
-      </div>
-      ${streams ? `<div class="match-grid">${streams}</div>` : '<div class="match-empty">No streams have been confidently matched to this match yet.</div>'}
-    </article>`;
-  }));
+function syncMatchScheduleHeight(){
+  const grid=document.getElementById('topOverviewGrid');
+  const live=document.querySelector('.top-overview-grid .live-viewership');
+  const panel=document.getElementById('activeMatchesPanel');
+  if(!grid||!live||!panel)return;
+  if(window.matchMedia('(max-width:700px)').matches){
+    panel.style.height='';
+    panel.style.maxHeight='360px';
+    return;
+  }
+  const h=Math.max(220,Math.round(live.getBoundingClientRect().height));
+  panel.style.height=h+'px';
+  panel.style.maxHeight=h+'px';
+  panel.style.minHeight='0';
+}
+window.addEventListener('resize',()=>requestAnimationFrame(syncMatchScheduleHeight));
 
-  list.innerHTML=cards.join('');
+async function loadActiveMatches(){
+  const panel=document.getElementById('activeMatchesPanel');
+  const meta=document.getElementById('activeMatchesMeta');
+  let matches=[];
+  try{
+    const rows=await getJson('/api/esports/matches?game='+encodeURIComponent(selectedGame)+'&status=all&limit=200');
+    matches=Array.isArray(rows)?rows:[];
+  }catch(e){
+    console.warn('Match catalog unavailable',e);
+    try{
+      const state=await getJson('/api/esports/active-matches?game='+encodeURIComponent(selectedGame));
+      matches=Array.isArray(state?.matches)?state.matches:[];
+    }catch(f){console.warn('Active-matches endpoint unavailable',f);}
+  }
+  try{
+    activeMatchLogos=await getJson('/api/esports/team-logos?game='+encodeURIComponent(selectedGame));
+    if(!activeMatchLogos || typeof activeMatchLogos!=='object') activeMatchLogos={};
+  }catch(e){ activeMatchLogos={}; console.debug('Team logos unavailable',e); }
+  activeMatchItems=matches.sort((a,b)=>{
+    const rank=x=>String(x.status||'').toUpperCase()==='LIVE'?0:String(x.status||'').toUpperCase()==='UPCOMING'?1:2;
+    return rank(a)-rank(b)||new Date(a.startTime||0)-new Date(b.startTime||0);
+  });
+  panel.hidden=false;
+  const liveCount=activeMatchItems.filter(m=>String(m.status||'').toUpperCase()==='LIVE').length;
+  const upcomingCount=activeMatchItems.filter(m=>String(m.status||'').toUpperCase()==='UPCOMING').length;
+  const completedCount=activeMatchItems.filter(m=>String(m.status||'').toUpperCase()==='COMPLETED').length;
+  meta.textContent=`${liveCount} live · ${upcomingCount} upcoming · ${completedCount} completed`;
+  if(!activeMatchItems.some(m=>m.matchId===selectedActiveMatchId))selectedActiveMatchId=null;
+  applyMatchFilters();
+  requestAnimationFrame(syncMatchScheduleHeight);
 }
 
 async function loadStreams(){
@@ -879,6 +1045,18 @@ function freshnessAgeLabel(ageMs){
 }
 async function refreshProviderFreshness(){
   try{
+    const gameState=await getGameLiveState();
+    if(!gameState?.active){
+      ['freshnessYoutube','freshnessTwitch','freshnessKick'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el){el.textContent='Game offline · historical data only';el.className='live-card-freshness freshness-unknown';}
+      });
+      const dot=document.querySelector('.status .dot');
+      if(dot){dot.classList.remove('down','stale');}
+      const statusEl=document.getElementById('status');
+      if(statusEl)statusEl.textContent='Offline · historical data only';
+      return;
+    }
     const health=await getJson('/api/status'),providers=health.providers||{};
     const staleAfterMs=Math.max(120000,(Number(health.intervalMs)||60000)*2);
     let anyDown=false,anyStale=false;
@@ -988,49 +1166,113 @@ async function updateChannelOptions(streams){
   if(input && input.value.trim()) renderChannelSuggestions(input.value.trim());
 }
 
-function renderChannelSuggestions(rawQuery){
+async function renderChannelSuggestions(rawQuery){
   const box=document.getElementById('channelSuggestions');
   const input=document.getElementById('channelLookup');
   const query=String(rawQuery||'').trim();
   if(!box||!input) return;
   activeSuggestionIndex=-1;
   searchMatches=[];
+  universalResults=[];
   if(!query){
     box.classList.remove('visible');
     box.innerHTML='';
     input.setAttribute('aria-expanded','false');
     return;
   }
+
   const q=query.toLocaleLowerCase();
-  const scored=allChannelNames.map(item=>{
+  const scoredChannels=allChannelNames.map(item=>{
     const name=item.channel.toLocaleLowerCase();
     const platform=item.platform.toLocaleLowerCase();
     const id=String(item.identity||'').toLocaleLowerCase();
-    let score=name===q?0:name.startsWith(q)?1:name.includes(q)?2:platform.includes(q)||id.includes(q)?3:99;
+    const score=name===q?0:name.startsWith(q)?1:name.includes(q)?2:platform.includes(q)||id.includes(q)?3:99;
     return {item,score};
-  }).filter(x=>x.score<99).sort((a,b)=>a.score-b.score || b.item.viewers-a.item.viewers || a.item.channel.localeCompare(b.item.channel));
-  searchMatches=scored.slice(0,8).map(x=>x.item);
+  }).filter(x=>x.score<99)
+    .sort((a,b)=>a.score-b.score || Number(b.item.viewers||0)-Number(a.item.viewers||0) || a.item.channel.localeCompare(b.item.channel));
+
+  searchMatches=scoredChannels.slice(0,6).map(x=>x.item);
+
+  let matches=[];
+  try{
+    matches=await getJson('/api/esports/matches/search?game='+encodeURIComponent(selectedGame)+'&q='+encodeURIComponent(query)+'&limit=8');
+    if(!Array.isArray(matches)) matches=[];
+  }catch(error){
+    console.error('Unable to search esports matches',error);
+  }
+
   const escapeRegex=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const regex=new RegExp(escapeRegex(query),'ig');
   const highlight=name=>escapeHtml(name).replace(regex,m=>`<mark>${m}</mark>`);
-  if(!searchMatches.length){
-    box.innerHTML=`<div class="suggestion-heading">Channels</div><div class="search-empty">No matching channels found for “${escapeHtml(query)}”.</div>`;
-  }else{
-    box.innerHTML=`<div class="suggestion-heading">Channels (${searchMatches.length}${scored.length>8?'+':''} results)</div>`+
-      searchMatches.map((item,i)=>`<button type="button" class="search-result" role="option" aria-selected="false" data-index="${i}" onclick="selectChannelSuggestion(${i})"><span class="search-result-name">${highlight(item.channel)}</span><span class="search-result-platform">${escapeHtml(item.platform)}</span><span class="search-result-status ${item.live?'live':'offline'}"><i class="presence-dot"></i>${item.live?'LIVE':'OFFLINE'}</span><span class="search-result-viewers">${item.live?`${fmt(item.viewers)} viewers`:'Last seen '+(item.lastSeen?new Date(item.lastSeen).toLocaleDateString([], {month:'short',day:'numeric'}):'in history')}</span></button>`).join('')+
-      `<div class="search-footer">Select a channel · Enter searches the best match · Esc closes</div>`;
+
+  const matchItems=matches.slice(0,8).map(match=>{
+    universalResults.push({kind:'match',match});
+    const index=universalResults.length-1;
+    const teams=`${match.team1||'TBD'} vs ${match.team2||'TBD'}`;
+    const date=match.startTime?new Date(match.startTime).toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'}):'';
+    const rawStatus=String(match.status||'').toUpperCase();
+    const startMs=match.startTime?new Date(match.startTime).getTime():NaN;
+    const endMs=match.endTime?new Date(match.endTime).getTime():NaN;
+    const nowMs=Date.now();
+    const isLive=rawStatus==='LIVE'||match.active===true;
+    const isCompleted=rawStatus==='COMPLETED'||rawStatus==='FINISHED'||rawStatus==='DONE'||(Number.isFinite(endMs)&&endMs<nowMs&&!isLive);
+    const isUpcoming=!isLive&&!isCompleted&&(rawStatus==='UPCOMING'||(Number.isFinite(startMs)&&startMs>nowMs));
+    const searchStatus=isLive?'LIVE':isUpcoming?'UPCOMING':isCompleted?'COMPLETED':'UPCOMING';
+    const searchStatusClass=isLive?'live':isUpcoming?'upcoming':'history';
+    return `<button type="button" class="search-result match-search-result" role="option" aria-selected="false" data-index="${index}" onclick="selectUniversalSuggestion(${index})"><span class="search-result-name"><strong>${highlight(teams)}</strong><span class="match-search-meta">${escapeHtml(match.tournament||'')} · ${escapeHtml(match.game||selectedGame)}</span></span><span class="match-search-status ${searchStatusClass}">${searchStatus}</span><span class="match-search-date">${escapeHtml(date)}</span></button>`;
+  }).join('');
+
+  const channelItems=searchMatches.map(item=>{
+    universalResults.push({kind:'channel',item});
+    const index=universalResults.length-1;
+    return `<button type="button" class="search-result" role="option" aria-selected="false" data-index="${index}" onclick="selectUniversalSuggestion(${index})"><span class="search-result-name">${highlight(item.channel)}</span><span class="search-result-platform">${escapeHtml(item.platform)}</span><span class="search-result-status ${item.live?'live':'offline'}"><i class="presence-dot"></i>${item.live?'LIVE':'OFFLINE'}</span><span class="search-result-viewers">${item.live?`${fmt(item.viewers)} viewers`:'Historical'}</span></button>`;
+  }).join('');
+
+  let html='';
+  if(matchItems){
+    html+=`<div class="suggestion-heading">Matches${matches.length>8?' (8+)':` (${matches.length})`}</div>`;
+    html+=matchItems||'<div class="search-empty">No live or historical matches found.</div>';
   }
+  if(channelItems){
+    html+=`<div class="suggestion-heading">Channels</div>${channelItems}`;
+  }
+
+  if(!html) html='<div class="search-empty">No live or historical matches or channels found for “'+escapeHtml(query)+'”.</div>';
+  else html+=`<div class="search-footer">Searches live + historical matches by team/tournament. Channel results are also shown.</div>`;
+
+  box.innerHTML=html;
   box.classList.add('visible');
   input.setAttribute('aria-expanded','true');
+}
+
+function selectUniversalSuggestion(index){
+  const result=universalResults[index];
+  if(!result) return;
+  const input=document.getElementById('channelLookup');
+  const box=document.getElementById('channelSuggestions');
+  box.classList.remove('visible');
+  input.setAttribute('aria-expanded','false');
+
+  if(result.kind==='match'){
+    const match=result.match;
+    input.value=`${match.team1||'TBD'} vs ${match.team2||'TBD'}`;
+    location.href='/match.html?'+new URLSearchParams({
+      matchId:match.matchId,
+      game:match.game||selectedGame
+    }).toString();
+    return;
+  }
+
+  const item=result.item;
+  input.value=item.channel;
+  location.href='/channel.html?name='+encodeURIComponent(item.channel)+'&platform='+encodeURIComponent(item.platform)+'&game='+encodeURIComponent(selectedGame);
 }
 
 function selectChannelSuggestion(index){
   const item=searchMatches[index];
   if(!item) return;
-  document.getElementById('channelLookup').value=item.channel;
-  document.getElementById('channelSuggestions').classList.remove('visible');
-  document.getElementById('channelLookup').setAttribute('aria-expanded','false');
-  location.href='/channel.html?name='+encodeURIComponent(item.channel)+'&platform='+encodeURIComponent(item.platform)+'&game='+encodeURIComponent(selectedGame);
+  const universalIndex=universalResults.findIndex(x=>x.kind==='channel' && x.item===item);
+  selectUniversalSuggestion(universalIndex);
 }
 
 function setActiveSuggestion(nextIndex){
@@ -1050,17 +1292,40 @@ async function openChannelStats(event){
   const input=document.getElementById('channelLookup');
   const query=input.value.trim();
   if(!query){input.focus();return;}
+
+  try{
+    const matches=await getJson('/api/esports/matches/search?game='+encodeURIComponent(selectedGame)+'&q='+encodeURIComponent(query)+'&limit=8');
+    if(Array.isArray(matches) && matches.length===1){
+      const match=matches[0];
+      location.href='/match.html?'+new URLSearchParams({
+        matchId:match.matchId,
+        game:match.game||selectedGame
+      }).toString();
+      return;
+    }
+    if(Array.isArray(matches) && matches.length>0){
+      renderChannelSuggestions(query);
+      return;
+    }
+  }catch(error){
+    console.error('Match search failed',error);
+  }
+
   if(!allChannelNames.length){
-    document.getElementById('status').textContent='Channel list is still loading';
+    document.getElementById('status').textContent='Search data is still loading';
+    renderChannelSuggestions(query);
     return;
   }
+
   const normalized=query.toLocaleLowerCase();
   const exact=allChannelNames.filter(item=>item.channel.toLocaleLowerCase()===normalized);
-  if(exact.length>=1){location.href='/channel.html?name='+encodeURIComponent(exact[0].channel)+'&platform='+encodeURIComponent(exact[0].platform)+'&game='+encodeURIComponent(selectedGame);return;}
-  const matches=allChannelNames.filter(item=>item.channel.toLocaleLowerCase().includes(normalized));
-  if(matches.length===1){location.href='/channel.html?name='+encodeURIComponent(matches[0].channel)+'&platform='+encodeURIComponent(matches[0].platform)+'&game='+encodeURIComponent(selectedGame);return;}
+  if(exact.length===1){
+    location.href='/channel.html?name='+encodeURIComponent(exact[0].channel)+'&platform='+encodeURIComponent(exact[0].platform)+'&game='+encodeURIComponent(selectedGame);
+    return;
+  }
+
   renderChannelSuggestions(query);
-  if(matches.length===0) document.getElementById('status').textContent='No matching channel in recorded history';
+  if(!exact.length) document.getElementById('status').textContent='No matching live or historical match/channel';
 }
 
 function initializeChannelSearch(){
@@ -1075,7 +1340,7 @@ function initializeChannelSearch(){
     if(event.key==='ArrowDown' && box.classList.contains('visible')){event.preventDefault();setActiveSuggestion(activeSuggestionIndex+1);}
     else if(event.key==='ArrowUp' && box.classList.contains('visible')){event.preventDefault();setActiveSuggestion(activeSuggestionIndex-1);}
     else if(event.key==='Escape'){box.classList.remove('visible');input.setAttribute('aria-expanded','false');}
-    else if(event.key==='Enter' && box.classList.contains('visible') && activeSuggestionIndex>=0){event.preventDefault();selectChannelSuggestion(activeSuggestionIndex);}
+    else if(event.key==='Enter' && box.classList.contains('visible') && activeSuggestionIndex>=0){event.preventDefault();selectUniversalSuggestion(activeSuggestionIndex);}
   });
   document.addEventListener('click',event=>{
     if(!event.target.closest('.header-search')){box.classList.remove('visible');input.setAttribute('aria-expanded','false');}
@@ -1088,18 +1353,30 @@ function escapeHtml(s){
 
 async function refreshLiveSummary(){
   try{
-    const latestData = await getJson('/api/snapshots?game='+encodeURIComponent(selectedGame));
-    if(!Array.isArray(latestData) || !latestData.length) return;
-    latestData.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
-    const latest = latestData[latestData.length-1];
-    const displayProviderValue = (available, viewers) => available === false || viewers == null ? '—' : fmt(viewers);
-    document.getElementById('yt').textContent = displayProviderValue(latest.youtubeAvailable, latest.youtubeViewers);
-    document.getElementById('tw').textContent = displayProviderValue(latest.twitchAvailable, latest.twitchViewers);
-    document.getElementById('kick').textContent = displayProviderValue(latest.kickAvailable, latest.kickViewers);
-    document.getElementById('total').textContent = latest.combinedViewers == null ? '—' : fmt(latest.combinedViewers);
+    // Never use the latest historical snapshot as CURRENT live data.
+    // This function is also used for long historical ranges (6h/24h), so
+    // first check whether the game is currently active.
+    const gameState = await getGameLiveState();
+    if(!gameState?.active){
+      clearLiveSection(true);
+      const statusEl = document.getElementById('status');
+      if(statusEl) statusEl.textContent = 'Offline · historical data only';
+      const last = document.getElementById('last');
+      if(last) last.textContent = 'Offline · live stream data hidden';
+      return;
+    }
+
+    const displayProviderValue = viewers => viewers == null ? '—' : fmt(viewers);
+    document.getElementById('yt').textContent = displayProviderValue(gameState.youtubeViewers);
+    document.getElementById('tw').textContent = displayProviderValue(gameState.twitchViewers);
+    document.getElementById('kick').textContent = displayProviderValue(gameState.kickViewers);
+    document.getElementById('total').textContent = displayProviderValue(gameState.totalViewers);
+
     const last = document.getElementById('last');
-    if(last) last.textContent = 'Latest: ' + new Date(latest.timestamp).toLocaleString();
-  } catch(e) { console.error('Unable to refresh live summary', e); }
+    if(last) last.textContent = 'Current live data';
+  } catch(e) {
+    console.error('Unable to refresh live summary', e);
+  }
 }
 
 async function collect(){

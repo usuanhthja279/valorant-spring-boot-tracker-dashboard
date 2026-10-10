@@ -55,6 +55,9 @@ public class LiquipediaEsportsScheduleScraper {
     private final Map<String, CacheEntry> cache =
             new ConcurrentHashMap<>();
 
+    private final Map<String, LogoCacheEntry> logoCache =
+            new ConcurrentHashMap<>();
+
     public LiquipediaEsportsScheduleScraper(
             WebClient.Builder webClientBuilder,
             @Value("${tracker.liquipedia.cache-minutes:5}")
@@ -84,6 +87,74 @@ public class LiquipediaEsportsScheduleScraper {
                 .build();
     }
 
+
+    /**
+     * Return the actual team-logo image URLs used by Liquipedia's Main_Page
+     * match rows. Keys are the exact displayed team names (for example
+     * "100T", "G2", "Spirit", "M80").
+     *
+     * This deliberately uses the image URL from the match row instead of
+     * guessing a filename from the team name. That matters because Liquipedia
+     * can use aliases, sponsored names, or different logo filenames.
+     */
+    public Map<String, String> getTeamLogoUrls(String game) {
+        String normalized = normalizeGame(game);
+        LogoCacheEntry cached = logoCache.get(normalized);
+        if (cached != null && Instant.now().isBefore(cached.expiresAt())) {
+            return cached.logos();
+        }
+
+        String wiki = WIKIS.get(normalized);
+        if (wiki == null) {
+            return Collections.emptyMap();
+        }
+
+        try {
+            String url = BASE + wiki + "/Main_Page";
+            String html = fetch(url);
+            Document document = Jsoup.parse(html, url);
+
+            Map<String, String> logos = new LinkedHashMap<>();
+
+            for (Element row : document.select("div.match-info")) {
+                Elements opponents = row.select(".match-info-header-opponent");
+
+                for (Element opponent : opponents) {
+                    Element name = opponent.selectFirst(".name");
+                    Element image = opponent.selectFirst(
+                            ".team-template-image-icon img[src], .team-template-image-icon img[data-src], img[src], img[data-src]");
+
+                    if (name == null || image == null) {
+                        continue;
+                    }
+
+                    String team = name.text().trim();
+                    String logo = image.absUrl("src");
+                    if (logo.isBlank()) logo = image.absUrl("data-src");
+
+                    if (!team.isBlank() && !logo.isBlank()) {
+                        logos.putIfAbsent(team, logo);
+                        logos.putIfAbsent(normalizeTeamName(team), logo);
+                    }
+                }
+            }
+
+            Map<String, String> immutable = Map.copyOf(logos);
+            logoCache.put(normalized,
+                    new LogoCacheEntry(
+                            Instant.now().plus(cacheDuration),
+                            immutable));
+
+            return immutable;
+        } catch (Exception e) {
+            log.debug(
+                    "Could not load Liquipedia team logos for game={}: {}",
+                    game,
+                    e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
     public List<EsportsMatch> getUpcomingMatches(String game) {
 
         OffsetDateTime now =
@@ -108,27 +179,41 @@ public class LiquipediaEsportsScheduleScraper {
     }
 
     public List<EsportsMatch> getUpcomingAndLive(String game) {
-
         String normalized = normalizeGame(game);
-
+        Instant now = Instant.now();
         CacheEntry current = cache.get(normalized);
-
-        if (current != null &&
-                Instant.now().isBefore(current.expiresAt())) {
-
+        if (current != null && now.isBefore(current.expiresAt())) {
             return current.matches();
         }
 
-        List<EsportsMatch> scraped =
-                scrape(normalized);
+        List<EsportsMatch> scraped = scrape(normalized);
+        if (scraped != null) {
+            Instant expiresAt = now.plus(cacheDuration);
+            cache.put(normalized, new CacheEntry(
+                    expiresAt,
+                    expiresAt.plus(Duration.ofMinutes(10)),
+                    scraped));
+            return scraped;
+        }
 
-        cache.put(
-                normalized,
-                new CacheEntry(
-                        Instant.now().plus(cacheDuration),
-                        scraped));
+        // A scraper outage means "unknown", not "no matches". Retain the
+        // last successful schedule for a bounded grace period so a temporary
+        // Liquipedia 403/timeout cannot immediately stop a genuinely live game.
+        if (current != null && now.isBefore(current.staleUntil())) {
+            log.warn("Liquipedia unavailable for game={}; retaining last successful schedule until {}",
+                    normalized, current.staleUntil());
+            return current.matches();
+        }
 
-        return scraped;
+        return List.of();
+    }
+
+    /**
+     * Force a fresh Main_Page scrape for manual/API diagnostics.
+     * This bypasses the normal scraper cache and replaces the cached result.
+     */
+    public List<EsportsMatch> refresh(String game) {
+        return getUpcomingAndLive(game);
     }
 
     public boolean hasActiveMatch(String game) {
@@ -164,55 +249,33 @@ public class LiquipediaEsportsScheduleScraper {
      */
     private List<EsportsMatch> scrape(String game) {
 
-        String wiki =
-                WIKIS.get(normalizeGame(game));
+        String wiki = WIKIS.get(normalizeGame(game));
 
         if (wiki == null) {
-
-            log.warn(
-                    "No Liquipedia wiki configured for game={}",
-                    game);
-
+            log.warn("No Liquipedia wiki configured for game={}", game);
             return Collections.emptyList();
         }
 
         try {
-
             /*
              * Fetch Main_Page ONCE.
              */
-            String url =
-                    BASE + wiki + "/Main_Page";
-
+            String url = BASE + wiki + "/Main_Page";
             String html = fetch(url);
-
-            Document document =
-                    Jsoup.parse(html, url);
+            Document document = Jsoup.parse(html, url);
 
             /*
              * Extract tournament -> tier information
              * from the same Main_Page.
              */
-            Map<String, String> tournamentTiers =
-                    extractTournamentTiers(
-                            document,
-                            wiki);
-
-            List<EsportsMatch> result =
-                    new ArrayList<>();
+            Map<String, String> tournamentTiers = extractTournamentTiers(document, wiki);
+            List<EsportsMatch> result = new ArrayList<>();
 
             /*
              * Parse match rows directly from Main_Page.
              */
-            for (Element row :
-                    document.select("div.match-info")) {
-
-                EsportsMatch match =
-                        parseMatch(
-                                game,
-                                row,
-                                tournamentTiers);
-
+            for (Element row : document.select("div.match-info")) {
+                EsportsMatch match = parseMatch(game, row, tournamentTiers);
                 if (match == null) {
                     continue;
                 }
@@ -222,25 +285,12 @@ public class LiquipediaEsportsScheduleScraper {
                 }
             }
 
-            result.sort(
-                    Comparator.comparing(
-                            EsportsMatch::startTime));
-
-            log.info(
-                    "Liquipedia {} schedule: {} eligible matches",
-                    game,
-                    result.size());
-
+            result.sort(Comparator.comparing(EsportsMatch::startTime));
+            log.info("Liquipedia {} schedule: {} eligible matches", game, result.size());
             return List.copyOf(result);
-
         } catch (Exception e) {
-
-            log.warn(
-                    "Liquipedia scrape failed for game={}: {}",
-                    game,
-                    e.getMessage());
-
-            return Collections.emptyList();
+            log.warn("Liquipedia scrape failed for game={}: {}", game, e.getMessage());
+            return null;
         }
     }
 
@@ -383,33 +433,27 @@ public class LiquipediaEsportsScheduleScraper {
     /**
      * Determines which tier system is valid for the game.
      */
-    private boolean isEligibleTier(
-            String game,
-            String tier) {
+    private boolean isEligibleTier(String game, String tier) {
 
         if (tier == null) {
             return false;
         }
 
-        String normalized =
-                normalizeGame(game);
+        String normalized = normalizeGame(game);
 
         /*
          * Dota 2:
          * Tier 1 + Tier 2
          */
         if ("DOTA 2".equals(normalized)) {
-
-            return "T1".equals(tier)
-                    || "T2".equals(tier);
+            return "T1".equals(tier) || "T2".equals(tier);
         }
 
         /*
          * Other esports:
          * S + A
          */
-        return "S".equals(tier)
-                || "A".equals(tier);
+        return "S".equals(tier) || "A".equals(tier);
     }
 
     private EsportsMatch parseMatch(
@@ -418,94 +462,205 @@ public class LiquipediaEsportsScheduleScraper {
             Map<String, String> tournamentTiers) {
 
         try {
+            /*
+             * Do not require .match-info-countdown to exist.
+             * Upcoming rows normally have a timer; completed rows can expose
+             * their final score/winner without the same countdown structure.
+             */
+            Element timer = row.selectFirst(
+                    ".match-info-countdown .timer-object[data-timestamp]");
 
-            Element timer =
-                    row.selectFirst(
-                            ".match-info-countdown " +
-                                    ".timer-object[data-timestamp]");
+            if (timer == null) {
+                timer = row.selectFirst(".timer-object[data-timestamp]");
+            }
+
+            if (timer == null) {
+                timer = row.selectFirst("[data-timestamp]");
+            }
 
             if (timer == null) {
                 return null;
             }
 
-            long epoch =
-                    Long.parseLong(
-                            timer.attr("data-timestamp"));
+            String timestampValue = timer.attr("data-timestamp").trim();
+            if (timestampValue.isBlank()) {
+                return null;
+            }
 
-            OffsetDateTime start =
-                    OffsetDateTime.ofInstant(
-                            Instant.ofEpochSecond(epoch),
-                            ZoneOffset.UTC);
+            long epoch = Long.parseLong(timestampValue);
 
-            Element tournamentAnchor =
-                    row.selectFirst(
-                            ".match-info-tournament-name a[href]");
+            OffsetDateTime start = OffsetDateTime.ofInstant(
+                    Instant.ofEpochSecond(epoch),
+                    ZoneOffset.UTC);
+
+            Element tournamentAnchor = row.selectFirst(
+                    ".match-info-tournament-name a[href]");
 
             if (tournamentAnchor == null) {
                 return null;
             }
 
-            String tournamentUrl =
-                    stripFragment(
-                            tournamentAnchor.absUrl("href"));
+            String tournamentUrl = stripFragment(
+                    tournamentAnchor.absUrl("href"));
 
-            String tournament =
-                    tournamentAnchor.text().trim();
+            String tournament = tournamentAnchor.text().trim();
 
             if (tournament.isBlank()) {
-                tournament =
-                        tournamentAnchor.attr("title");
+                tournament = tournamentAnchor.attr("title").trim();
             }
 
-            String tier =
-                    tournamentTiers.get(tournamentUrl);
+            String tier = tournamentTiers.get(tournamentUrl);
 
-            /*
-             * If the tournament wasn't found in the
-             * tournament list, don't invent a tier.
-             */
             if (tier == null) {
                 return null;
             }
 
-            Elements teams =
-                    row.select(
-                            ".match-info-header-opponent .name");
+            Elements teams = row.select(
+                    ".match-info-header-opponent .name");
 
-            String team1 =
-                    teams.size() > 0
-                            ? teams.get(0).text().trim()
-                            : "TBD";
+            String team1 = teams.size() > 0
+                    ? teams.get(0).text().trim()
+                    : "TBD";
 
-            String team2 =
-                    teams.size() > 1
-                            ? teams.get(1).text().trim()
-                            : "TBD";
+            String team2 = teams.size() > 1
+                    ? teams.get(1).text().trim()
+                    : "TBD";
 
             String matchUrl = "";
 
-            Element matchLink =
-                    row.selectFirst(
-                            ".match-page-button a[href], " +
-                                    "a[href*='/Match:']");
+            Element matchLink = row.selectFirst(
+                    ".match-page-button a[href], " +
+                            "a[href*='/Match:']");
 
             if (matchLink != null) {
-                matchUrl =
-                        stripFragment(
-                                matchLink.absUrl("href"));
+                matchUrl = stripFragment(
+                        matchLink.absUrl("href"));
             }
 
-            String status =
-                    start.isAfter(
-                            OffsetDateTime.now(
-                                    ZoneOffset.UTC))
-                            ? "UPCOMING"
-                            : "LIVE_OR_RECENT";
+            Integer team1Score = null;
+            Integer team2Score = null;
+
+            Elements scoreNodes = row.select(
+                    ".match-info-header-scoreholder-score");
+
+            if (scoreNodes.size() >= 2) {
+                team1Score = parseScore(scoreNodes.get(0).text());
+                team2Score = parseScore(scoreNodes.get(1).text());
+            }
+
+            String bestOf = "";
+            Element formatElement = row.selectFirst(
+                    ".match-info-header-scoreholder-lower");
+
+            if (formatElement != null) {
+                bestOf = formatElement.text().trim();
+
+                if (bestOf.startsWith("(")
+                        && bestOf.endsWith(")")) {
+                    bestOf = bestOf.substring(
+                            1,
+                            bestOf.length() - 1).trim();
+                }
+
+                bestOf = normalizeBestOf(bestOf);
+            }
+
+            /*
+             * Liquipedia marks completed rows with data-finished="finished".
+             * Check both the timestamp element and the complete match row.
+             */
+            boolean finished =
+                    "finished".equalsIgnoreCase(
+                            timer.attr("data-finished"))
+                            || "finished".equalsIgnoreCase(
+                            row.attr("data-finished"))
+                            || !row.select(
+                            "[data-finished='finished']").isEmpty();
+
+            String winner = null;
+
+            // Liquipedia marks the winning numeric score with the
+            // match-info-header-winner class. Map that marker back to team1/team2.
+            if (scoreNodes.size() >= 2) {
+                boolean team1Winner =
+                        scoreNodes.get(0).hasClass("match-info-header-winner");
+
+                boolean team2Winner =
+                        scoreNodes.get(1).hasClass("match-info-header-winner");
+
+                if (team1Winner) {
+                    winner = team1;
+                } else if (team2Winner) {
+                    winner = team2;
+                }
+            }
+
+            /*
+             * Liquipedia also marks the winning team container itself.
+             * Use that as a fallback if the score winner marker is absent.
+             */
+            if (winner == null) {
+                Elements opponents = row.select(
+                        ".match-info-header-opponent");
+
+                if (opponents.size() >= 2) {
+                    if (opponents.get(0)
+                            .hasClass("match-info-header-winner")) {
+                        winner = team1;
+                    } else if (opponents.get(1)
+                            .hasClass("match-info-header-winner")) {
+                        winner = team2;
+                    }
+                }
+            }
+
+            /*
+             * A winner marker plus two numeric scores is sufficient to classify
+             * the row as completed even if data-finished is absent.
+             */
+            if (!finished
+                    && winner != null
+                    && team1Score != null
+                    && team2Score != null) {
+                finished = true;
+            }
+
+            OffsetDateTime now =
+                    OffsetDateTime.now(ZoneOffset.UTC);
+
+            String status;
+
+            /*
+             * Main_Page is the source of truth for the schedule state.
+             *
+             * Liquipedia's Main_Page does not provide a separate LIVE section
+             * for every game. Therefore state is determined from the match
+             * timer plus explicit completion markers:
+             *
+             *   - future start time  -> UPCOMING
+             *   - timer has expired  -> LIVE
+             *   - explicit finished/winner evidence -> COMPLETED
+             *
+             * Do not depend on the Liquipedia Match page/Match URL to decide
+             * whether a match is live. Some rows (notably CS2) have no Match URL.
+             */
+            if (finished) {
+                status = "COMPLETED";
+            } else if (start.isAfter(now)) {
+                status = "UPCOMING";
+            } else {
+                status = "LIVE";
+            }
 
             String matchId = buildMatchId(
-                    game, tournament, team1, team2, start, matchUrl);
+                    game,
+                    tournament,
+                    team1,
+                    team2,
+                    start,
+                    matchUrl);
 
-            OffsetDateTime end = start.plusHours(4);
+            OffsetDateTime end = null;
 
             return new EsportsMatch(
                     matchId,
@@ -514,18 +669,57 @@ public class LiquipediaEsportsScheduleScraper {
                     tier,
                     team1,
                     team2,
+                    team1Score,
+                    team2Score,
+                    bestOf,
+                    winner,
+                    finished,
                     start,
                     end,
                     status,
                     tournamentUrl,
                     matchUrl);
 
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+
+            log.debug(
+                    "Failed to parse Liquipedia match row for game={}: {}",
+                    game,
+                    e.getMessage());
 
             return null;
         }
     }
 
+    private String normalizeBestOf(String value) {
+
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+
+        String normalized = value.trim()
+                .replaceAll("\\s+", "")
+                .toUpperCase(Locale.ROOT);
+
+        if (normalized.matches("BO\\d+")) {
+            return "Bo" + normalized.substring(2);
+        }
+
+        if (normalized.matches("B\\d+")) {
+            return "Bo" + normalized.substring(1);
+        }
+
+        return value.trim();
+    }
+
+    private Integer parseScore(String value) {
+        try {
+            String v = value == null ? "" : value.trim();
+            return v.matches("\\d+") ? Integer.valueOf(v) : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
 
     private String buildMatchId(
             String game,
@@ -535,16 +729,23 @@ public class LiquipediaEsportsScheduleScraper {
             OffsetDateTime start,
             String matchUrl) {
 
+        // Always use one internal ID format for every game.
+        // Never expose the Liquipedia URL itself as matchId because the
+        // match-detail API, persisted records and StreamSample.matchId must
+        // all use the same namespace.
+        String key;
         if (matchUrl != null && !matchUrl.isBlank()) {
-            return matchUrl;
+            key = normalizeIdentity(matchUrl);
+        } else {
+            // Some Liquipedia pages (notably some CS2 rows) do not expose a
+            // Match: URL. Use the stable match attributes as the fallback.
+            key = String.join("|",
+                    normalizeGame(game),
+                    normalizeIdentity(tournament),
+                    normalizeIdentity(team1),
+                    normalizeIdentity(team2),
+                    start.toInstant().toString());
         }
-
-        String key = String.join("|",
-                normalizeGame(game),
-                normalizeIdentity(tournament),
-                normalizeIdentity(team1),
-                normalizeIdentity(team2),
-                start.toInstant().toString());
 
         return "match:" + Integer.toUnsignedString(key.hashCode(), 36);
     }
@@ -553,7 +754,7 @@ public class LiquipediaEsportsScheduleScraper {
         return value == null
                 ? ""
                 : value.trim().toLowerCase(Locale.ROOT)
-                        .replaceAll("\\s+", " ");
+                .replaceAll("\\s+", " ");
     }
 
     private String fetch(String url) {
@@ -671,9 +872,21 @@ public class LiquipediaEsportsScheduleScraper {
                 : href;
     }
 
+    private String normalizeTeamName(String value) {
+        if (value == null) return "";
+        return value.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", " ");
+    }
+
     private record CacheEntry(
             Instant expiresAt,
+            Instant staleUntil,
             List<EsportsMatch> matches) {
+    }
+
+    private record LogoCacheEntry(
+            Instant expiresAt,
+            Map<String, String> logos) {
     }
 
     public record EsportsMatch(
@@ -683,25 +896,36 @@ public class LiquipediaEsportsScheduleScraper {
             String tier,
             String team1,
             String team2,
+            Integer team1Score,
+            Integer team2Score,
+            String bestOf,
+            String winner,
+            boolean finished,
             OffsetDateTime startTime,
             OffsetDateTime endTime,
             String status,
             String tournamentUrl,
             String matchUrl) {
 
+        /**
+         * Liquipedia is the source of truth for match state.
+         *
+         * UPCOMING is never active. COMPLETED/finished is never active.
+         * A match is active only while the scraper has classified it as LIVE.
+         *
+         * There is deliberately no start + 4 hour fallback here: that old
+         * heuristic caused completed matches to remain active and made the
+         * scheduler collect a game after its esports match had ended.
+         */
         public boolean isActive(Instant now) {
-
-            Instant start =
-                    startTime.toInstant();
-
-            /*
-             * Match is considered active from kickoff
-             * until 4 hours after kickoff.
-             */
-            return !start.isAfter(now)
-                    && start.plus(
-                            Duration.ofHours(4))
-                    .isAfter(now);
+            if (finished || "COMPLETED".equalsIgnoreCase(status)
+                    || "UPCOMING".equalsIgnoreCase(status)) {
+                return false;
+            }
+            return "LIVE".equalsIgnoreCase(status)
+                    && startTime != null
+                    && !startTime.toInstant().isAfter(now)
+                    && (endTime == null || endTime.toInstant().isAfter(now));
         }
     }
 }

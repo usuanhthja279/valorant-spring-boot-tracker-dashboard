@@ -50,8 +50,10 @@ public class StreamingTestController {
   }
 
   @GetMapping("/twitch/rest")
-  public List<LiveStream> getTwitchStreams(@RequestParam String gameCategory) {
-    return twitchService.fetch(gameCategory.toUpperCase());
+  public List<LiveStream> getTwitchStreams(
+          @RequestParam String game,
+          @RequestParam String gameCategory) {
+    return twitchService.fetch(game, gameCategory.toUpperCase());
   }
 
   @GetMapping("/kick/rest")
@@ -77,9 +79,10 @@ public class StreamingTestController {
 
   @GetMapping("/kick/scraped")
   public List<LiveStream> getScrapedKickStreams(
+          @RequestParam String game,
           @RequestParam(required = false) String pageUrl,
           @RequestParam(defaultValue = "false") boolean validateWithApi) {
-    return kickScraperService.fetch(pageUrl, validateWithApi);
+    return kickScraperService.fetch(game, pageUrl, validateWithApi);
   }
 
   @GetMapping("/youtube/selenium-scraped")
@@ -87,8 +90,9 @@ public class StreamingTestController {
           @RequestParam(required = false, defaultValue = "worldwide") String region,
           @RequestParam(defaultValue = "100") int maxStreams,
           @RequestParam(required = false) String pageUrl,
+          @RequestParam String game,
           @RequestParam(defaultValue = "false") boolean validateWithApi) {
-    return youTubeSeleniumWorldwideDiscoveryService.discover(maxStreams, pageUrl, region, validateWithApi);
+    return youTubeSeleniumWorldwideDiscoveryService.discover(maxStreams, pageUrl, region, game, validateWithApi);
   }
 
   @GetMapping("/twitch/selenium-scraped")

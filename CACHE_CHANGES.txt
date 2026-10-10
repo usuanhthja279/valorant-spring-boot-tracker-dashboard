@@ -1,0 +1,11 @@
+stremng cache update - 2026-10-09
+
+Implemented:
+1. Enabled Spring Cache in ValorantTrackerApplication.
+2. Added @Cacheable(sync=true) to all GET data endpoints in TrackerController except /api/status.
+3. TrackerService clears all API caches after a scheduled collection cycle completes and after manual /api/collect.
+4. DynamicGameScheduler clears schedule-dependent caches after each scheduled schedule refresh.
+5. Cache entries are therefore reused between tracker/schedule updates instead of repeatedly querying H2.
+6. No Hikari pool size was changed; current uploaded application.yml remains at maximum-pool-size=30.
+7. No new external cache dependency was added; uses Spring's simple in-memory cache.
+8. /api/status remains uncached because lastRun/provider health should be live.

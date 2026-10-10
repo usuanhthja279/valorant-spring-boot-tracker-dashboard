@@ -1,0 +1,88 @@
+package com.valorant.tracker.model;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import java.time.OffsetDateTime;
+
+@Entity
+@Table(name = "esports_matches")
+public class EsportsMatchRecord {
+  @Id
+  @Column(name = "match_id", length = 300)
+  private String matchId;
+
+  @Column(nullable = false, length = 100)
+  private String game;
+  @Column(length = 500) private String tournament;
+  @Column(length = 20) private String tier;
+  @Column(length = 300) private String team1;
+  @Column(length = 300) private String team2;
+  @Column(name = "team1score") private Integer team1Score;
+  @Column(name = "team2score") private Integer team2Score;
+  @Column(name = "best_of", length = 20) private String bestOf;
+  @Column(length = 300) private String winner;
+  @Column(nullable = false) private boolean finished;
+  private OffsetDateTime startTime;
+  private OffsetDateTime endTime;
+  @Column(length = 40) private String status;
+  @Column(length = 1000) private String tournamentUrl;
+  @Column(length = 1000) private String matchUrl;
+  private OffsetDateTime firstSeen;
+  private OffsetDateTime lastSeen;
+
+  protected EsportsMatchRecord() {}
+
+  public EsportsMatchRecord(String matchId, String game, String tournament, String tier,
+                            String team1, String team2, Integer team1Score, Integer team2Score,
+                            String bestOf, String winner, boolean finished,
+                            OffsetDateTime startTime, OffsetDateTime endTime, String status,
+                            String tournamentUrl, String matchUrl, OffsetDateTime seenAt) {
+    this.matchId = matchId;
+    update(game, tournament, tier, team1, team2, team1Score, team2Score, bestOf, winner,
+        finished, startTime, endTime, status, tournamentUrl, matchUrl, seenAt);
+    this.firstSeen = seenAt;
+  }
+
+  public void update(String game, String tournament, String tier, String team1, String team2,
+                     Integer team1Score, Integer team2Score, String bestOf, String winner,
+                     boolean finished, OffsetDateTime startTime, OffsetDateTime endTime, String status,
+                     String tournamentUrl, String matchUrl, OffsetDateTime seenAt) {
+    this.game = game;
+    this.tournament = tournament;
+    this.tier = tier;
+    this.team1 = team1;
+    this.team2 = team2;
+    this.team1Score = team1Score;
+    this.team2Score = team2Score;
+    this.bestOf = bestOf;
+    this.winner = winner;
+    this.finished = finished;
+    this.startTime = startTime;
+    this.endTime = endTime;
+    this.status = status;
+    this.tournamentUrl = tournamentUrl;
+    this.matchUrl = matchUrl;
+    this.lastSeen = seenAt;
+  }
+
+  public String getMatchId() { return matchId; }
+  public String getGame() { return game; }
+  public String getTournament() { return tournament; }
+  public String getTier() { return tier; }
+  public String getTeam1() { return team1; }
+  public String getTeam2() { return team2; }
+  public Integer getTeam1Score() { return team1Score; }
+  public Integer getTeam2Score() { return team2Score; }
+  public String getBestOf() { return bestOf; }
+  public String getWinner() { return winner; }
+  public boolean isFinished() { return finished; }
+  public OffsetDateTime getStartTime() { return startTime; }
+  public OffsetDateTime getEndTime() { return endTime; }
+  public String getStatus() { return status; }
+  public String getTournamentUrl() { return tournamentUrl; }
+  public String getMatchUrl() { return matchUrl; }
+  public OffsetDateTime getFirstSeen() { return firstSeen; }
+  public OffsetDateTime getLastSeen() { return lastSeen; }
+}

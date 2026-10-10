@@ -183,16 +183,16 @@ public class YouTubeScraperService {
       logger.info("YouTube collection complete");
       logger.info("Live streams collected: {}", streams.size());
       logger.info("Total viewers across collected streams: {}", totalViewers);
-      logger.info("YouTube Top 20:");
-      for (int index = 0; index < Math.min(20, streams.size()); index++) {
-        LiveStream stream = streams.get(index);
-        logger.info(
-            "{}. {} -> {} viewers | {}",
-            index + 1,
-            stream.channelTitle(),
-            stream.viewers(),
-            stream.title());
-      }
+//      logger.info("YouTube Top 20:");
+//      for (int index = 0; index < Math.min(20, streams.size()); index++) {
+//        LiveStream stream = streams.get(index);
+//        logger.info(
+//            "{}. {} -> {} viewers | {}",
+//            index + 1,
+//            stream.channelTitle(),
+//            stream.viewers(),
+//            stream.title());
+//      }
       cachedFetchResults = List.copyOf(streams);
       lastFetchTime = Instant.now();
       return cachedFetchResults;

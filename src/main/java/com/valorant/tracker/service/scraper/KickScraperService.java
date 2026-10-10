@@ -32,7 +32,7 @@ public class KickScraperService {
     this.mapper = mapper;
   }
 
-  public List<LiveStream> fetch(String pageUrl, boolean validateWithApi) {
+  public List<LiveStream> fetch(String game, String pageUrl, boolean validateWithApi) {
 
     String html = client.get()
             .uri(pageUrl)
@@ -73,20 +73,21 @@ public class KickScraperService {
       }
 
       results.sort(Comparator.comparingLong(LiveStream::viewers).reversed());
-      logger.info("Kick category scraper returned {} VALORANT streams", results.size());
-      logger.info("Total viewers across collected streams: {}", results.stream().mapToLong(LiveStream::viewers).sum());
+      logger.info("Kick category scraper returned {} streams for game {}", results.size(), game);
+      logger.info("Total viewers across collected streams: {} for game {}", results.stream().mapToLong(LiveStream::viewers).sum(), game);
 
-      logger.info("Kick Top 20:");
-      for (int index = 0; index < Math.min(TOP_DISPLAY_COUNT, results.size()); index++) {
-        LiveStream stream = results.get(index);
-        logger.info("{}. {} -> {} viewers | {}",
-            index + 1,
-            stream.channelTitle(),
-            stream.viewers(),
-            stream.title());
-      }
+//      logger.info("Kick Top 20 streams for game {}:", game);
+//      for (int index = 0; index < Math.min(TOP_DISPLAY_COUNT, results.size()); index++) {
+//        LiveStream stream = results.get(index);
+//        logger.info("{}. {} -> {} viewers | {}",
+//            index + 1,
+//            stream.channelTitle(),
+//            stream.viewers(),
+//            stream.title());
+//      }
       return List.copyOf(results);
     } catch (Exception e) {
+      logger.error("Failed to parse Kick category page for game {}: ", game, e);
       throw new IllegalStateException("Failed to parse Kick category page", e);
     }
   }
