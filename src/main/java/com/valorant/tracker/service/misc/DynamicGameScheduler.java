@@ -10,7 +10,6 @@ import java.time.OffsetDateTime;
 import java.time.Instant;
 import java.time.Duration;
 import org.springframework.stereotype.Component;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.event.EventListener;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.core.annotation.Order;
@@ -112,13 +111,8 @@ public class DynamicGameScheduler {
      */
     @Scheduled(fixedRateString = "${tracker.esports.schedule-check-ms:300000}")
     @Transactional
-    @CacheEvict(cacheNames = {
-            "apiGames", "apiActiveMatches", "apiMatchSearch", "apiMatches",
-            "apiActiveMatch", "apiMatchDetails", "apiEsportsOverview",
-            "apiEsportsOverviewGames", "apiEsportsOverviewStreams",
-            "apiEsportsOverviewRecentMatches", "apiEsportsOverviewTopMatches",
-            "apiTeamLogos"
-    }, allEntries = true)
+    // API cache invalidation is owned by TrackerService and runs asynchronously
+    // so this scheduling thread is never blocked by cache clearing.
     public void refreshSchedule() {
         log.info("Refreshing esports game schedule...");
         Instant now = Instant.now();
