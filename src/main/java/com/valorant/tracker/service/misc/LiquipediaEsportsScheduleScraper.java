@@ -305,9 +305,10 @@ public class LiquipediaEsportsScheduleScraper {
      *   Tier 3
      *   Tier 4
      *
+     * Valorant tournament list:
+     *   S-Tier, A-Tier, B-Tier, C-Tier
      * Other games:
-     *   S-Tier
-     *   A-Tier
+     *   S-Tier, A-Tier
      */
     private Map<String, String> extractTournamentTiers(
             Document document,
@@ -316,18 +317,44 @@ public class LiquipediaEsportsScheduleScraper {
         Map<String, String> result =
                 new HashMap<>();
 
+        /*
+         * Liquipedia's Valorant Main_Page has a dedicated tournament list.
+         * The tier is explicit in .tournament-badge__text, and the
+         * tournament link can point to a child page rather than the parent
+         * tournament URL used by match rows. Read this structure first so
+         * B-Tier is not lost due to the match row's surrounding DOM text.
+         */
+        for (Element tierEntry : document.select(
+                "[data-filter-group='filterbuttons-liquipediatier']")) {
+            Element badge = tierEntry.selectFirst(".tournament-badge__text");
+            if (badge == null) {
+                continue;
+            }
+
+            String tier = detectTier(badge.text());
+            if (tier == null) {
+                continue;
+            }
+
+            for (Element anchor : tierEntry.select("a[href]")) {
+                String href = normalizeTournamentUrl(anchor.absUrl("href"));
+                if (isTournamentPageUrl(href, wiki)) {
+                    result.put(href, tier);
+                }
+            }
+        }
+
+        // Generic fallback retained for wikis whose tier labels are inline.
         for (Element anchor :
                 document.select("a[href]")) {
 
-            String href =
-                    stripFragment(
-                            anchor.absUrl("href"));
+            String href = normalizeTournamentUrl(anchor.absUrl("href"));
 
             if (href.isBlank()) {
                 continue;
             }
 
-            if (!href.contains("/" + wiki + "/")) {
+            if (!isTournamentPageUrl(href, wiki)) {
                 continue;
             }
 
@@ -347,10 +374,58 @@ public class LiquipediaEsportsScheduleScraper {
                 continue;
             }
 
-            result.put(href, tier);
+            result.putIfAbsent(href, tier);
         }
 
         return result;
+    }
+
+    private boolean isTournamentPageUrl(String href, String wiki) {
+        return href != null
+                && !href.isBlank()
+                && href.contains("/" + wiki + "/")
+                && !href.contains("/Match:")
+                && !href.contains("Category:")
+                && !href.endsWith("/Main_Page");
+    }
+
+    /** Normalize URLs consistently for tier lookup. */
+    private String normalizeTournamentUrl(String href) {
+        String normalized = stripFragment(href);
+        int query = normalized.indexOf('?');
+        if (query >= 0) {
+            normalized = normalized.substring(0, query);
+        }
+        while (normalized.endsWith("/") && normalized.length() > BASE.length()) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
+
+    /**
+     * Match rows may link to a qualifier/playoff subpage while the tier list
+     * stores the parent tournament URL. Fall back to parent paths, longest
+     * match first, without changing the tier selected for exact URLs.
+     */
+    private String resolveTournamentTier(
+            String tournamentUrl,
+            Map<String, String> tournamentTiers) {
+        String normalized = normalizeTournamentUrl(tournamentUrl);
+        String tier = tournamentTiers.get(normalized);
+        if (tier != null) {
+            return tier;
+        }
+
+        int slash = normalized.lastIndexOf('/');
+        while (slash > BASE.length()) {
+            normalized = normalized.substring(0, slash);
+            tier = tournamentTiers.get(normalized);
+            if (tier != null) {
+                return tier;
+            }
+            slash = normalized.lastIndexOf('/');
+        }
+        return null;
     }
 
     /**
@@ -427,6 +502,14 @@ public class LiquipediaEsportsScheduleScraper {
             return "A";
         }
 
+        if (normalized.matches(".*\\bB[- ]?TIER\\b.*")) {
+            return "B";
+        }
+
+        if (normalized.matches(".*\\bC[- ]?TIER\\b.*")) {
+            return "C";
+        }
+
         return null;
     }
 
@@ -453,6 +536,10 @@ public class LiquipediaEsportsScheduleScraper {
          * Other esports:
          * S + A
          */
+        if ("VALORANT".equals(normalized)) {
+            return "S".equals(tier) || "A".equals(tier) || "B".equals(tier);
+        }
+
         return "S".equals(tier) || "A".equals(tier);
     }
 
@@ -509,7 +596,7 @@ public class LiquipediaEsportsScheduleScraper {
                 tournament = tournamentAnchor.attr("title").trim();
             }
 
-            String tier = tournamentTiers.get(tournamentUrl);
+            String tier = resolveTournamentTier(tournamentUrl, tournamentTiers);
 
             if (tier == null) {
                 return null;

@@ -1,0 +1,28 @@
+﻿timestamp_seconds,filename,reason,claude_labels,claude_note,human_agrees (Y/N),human_correction
+64,frame_000064_0000064000ms.jpg,weak evidence,broa=N map_=Y roun=N kill=N game=N roun=N othe=N ,Observer view with pre-round clock and loadout panel; early match start.,Y,"It is pre round view with time as 0:10, indicating buy phase (pre round)"
+88,frame_000088_0000088000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live round, observer switches to another player's first-person view/moment.",Y,
+144,frame_000144_0000144000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=Y ,Replay-badged gameplay; new view within replay.,Y,
+152,frame_000152_0000152000ms.jpg,random 10% spot check,broa=Y map_=N roun=N kill=N game=N roun=N othe=N ,Broadcast cam on players/crowd/arena.,Y,
+198,frame_000198_0000198000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live round, observer switches to another player's first-person view/moment.",Y,
+234,frame_000234_0000234000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live round, observer switches to another player's first-person view/moment.",N,"232, 233, 234 observer camera is on one person, 235 where it changes"
+315,frame_000315_0000315000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live round, observer switches to another player's first-person view/moment.",N,"213, 314, 315, 316 same person, 319 when camera changes to different player character"
+330,frame_000330_0000330000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=Y ,Replay-badged gameplay; new view within replay.,Y,
+397,frame_000397_0000397000ms.jpg,random 10% spot check,broa=Y map_=N roun=N kill=N game=N roun=N othe=N ,Broadcast cam on players/crowd/arena.,Y,
+410,frame_000410_0000410000ms.jpg,weak evidence,broa=N map_=Y roun=N kill=N game=N roun=N othe=N ,"Buy-phase panel still up, clock 0:00; round about to begin.",N,Players were celebrating prev round win (Player cam)
+429,frame_000429_0000429000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live round, observer switches to another player's first-person view/moment.",Y,
+481,frame_000481_0000481000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live round, observer switches to another player's first-person view/moment.",Y,
+520,frame_000520_0000520000ms.jpg,random 10% spot check,broa=Y map_=N roun=N kill=N game=N roun=N othe=N ,Broadcast cam on players/crowd/arena.,Y,
+528,frame_000528_0000528000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=N roun=N othe=Y ,Broadcast stinger/black transition frame; not live gameplay.,N,Replay
+615,frame_000615_0000615000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=Y ,Replay-badged gameplay; new view within replay.,Y,
+657,frame_000657_0000657000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live round, observer switches to another player's first-person view/moment.",Y,
+660,frame_000660_0000660000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live round, observer switches to another player's first-person view/moment.",Y,
+810,frame_000810_0000810000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live round, observer switches to another player's first-person view/moment.",Y,
+871,frame_000871_0000871000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=Y ,Replay-badged gameplay; new view within replay.,Y,
+914,frame_000914_0000914000ms.jpg,weak evidence,broa=Y map_=N roun=N kill=N game=N roun=N othe=Y ,Players cam with win/countdown panel (intermission-like); exact meaning unclear.,Y,"Player came, no celebration, just player cam and players thinking. Countdown is related to strategic timeout"
+921,frame_000921_0000921000ms.jpg,weak evidence,broa=Y map_=N roun=N kill=N game=N roun=N othe=Y ,Players cam with win/countdown panel (intermission-like); exact meaning unclear.,Y,"Player came, no celebration, just player cam and players thinking. Countdown is related to strategic timeout"
+946,frame_000946_0000946000ms.jpg,random 10% spot check,broa=N map_=Y roun=N kill=N game=N roun=N othe=N ,Buy-phase scoreboard/loadout panel over observer view; pre-round clock running.,Y,
+962,frame_000962_0000962000ms.jpg,random 10% spot check,broa=N map_=N roun=Y kill=N game=Y roun=N othe=N ,First live frames after buy phase (round clock ~1:3x); new round underway.,Y,
+1134,frame_001134_0001134000ms.jpg,weak evidence,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live view, new round clock ~0:29; view differs from prior frames.",N,"Buy phase it is, 1133 is prev round finish last frame when timer is 0:0"
+1220,frame_001220_0001220000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live round, observer switches to another player's first-person view/moment.",Y,
+1289,frame_001289_0001289000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=N roun=N othe=Y ,Broadcast stinger/black transition frame; not live gameplay.,Y,
+1336,frame_001336_0001336000ms.jpg,random 10% spot check,broa=N map_=N roun=N kill=N game=Y roun=N othe=N ,"Live round, observer switches to another player's first-person view/moment.",Y,

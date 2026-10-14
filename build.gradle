@@ -15,6 +15,7 @@ repositories {
 }
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web';
+    implementation 'org.springframework.boot:spring-boot-starter-mail';
     implementation 'org.springframework.boot:spring-boot-starter-webflux';
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa';
     implementation 'org.seleniumhq.selenium:selenium-java:4.35.0';
@@ -22,6 +23,8 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test';
     implementation 'org.jsoup:jsoup:1.18.3'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'com.github.ben-manes.caffeine:caffeine'
 }
 

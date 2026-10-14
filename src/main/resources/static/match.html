@@ -7,10 +7,163 @@
 <style>
 html,body{width:100%;max-width:100%;overflow-x:hidden}
 *{box-sizing:border-box}body{margin:0;background:#0b0e13;color:#eef2f7;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}a{color:#dbeafe}.back{color:#91a0b1;text-decoration:none;font-size:13px}.hero{margin-top:18px;padding:24px;border:1px solid #202b36;border-radius:16px;background:#111821}.hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}.hero h1{font-size:34px;margin:0 0 7px}.sub{color:#91a0b1;font-size:13px}.match-title{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}.match-title-team{display:inline-flex;align-items:center;gap:9px;min-width:0}.match-title-team-name{white-space:nowrap}.match-title-vs{white-space:nowrap}.match-title-logo{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px;overflow:hidden}.match-title-logo img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}.page{width:100%;max-width:1450px;margin:0 auto;padding:28px 24px 60px;min-width:0}.hero,.metrics,.grid,.panel,.scorebox{max-width:100%;min-width:0}.scoreline{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;justify-items:center;gap:14px;font-size:30px;font-weight:800;min-width:0}.scoreline .team-wrap{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-width:0}.scoreline .team-wrap:first-child{justify-content:flex-end}.scoreline .team-wrap:last-child{justify-content:flex-start}.scoreline .team-logo{width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 42px;overflow:hidden}.scoreline .team-logo img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}.scoreline .team{min-width:0;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.scoreline .score{font-size:38px;white-space:nowrap;flex:0 0 auto}.status-pill{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid #294052;border-radius:999px;font-size:12px;white-space:nowrap}.status-dot{width:7px;height:7px;border-radius:50%;background:#f5b83d;display:inline-block}.status-pill.live{color:#52df9c;border-color:#275a48}.status-pill.live .status-dot{background:#52df9c}.status-pill.completed{color:#aeb9c7}.status-pill.completed .status-dot{background:#91a0b1}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}.metric{padding:15px;border:1px solid #263341;border-radius:11px;background:#0c1219}.metric .label{color:#91a0b1;font-size:12px}.metric .value{font-size:25px;font-weight:800;margin-top:6px}.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:16px}.panel{padding:18px;border:1px solid #202b36;border-radius:14px;background:#111821}.panel h2{font-size:18px;margin:0 0 12px}.chart-wrap{height:330px}.platform-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.platform{padding:13px;border:1px solid #263341;border-radius:10px;background:#0c1219}.platform strong{font-size:20px}.stream-table-wrap{overflow-x:auto}.stream-table{width:100%;min-width:760px;border-collapse:collapse}.stream-table th,.stream-table td{padding:11px 10px;border-bottom:1px solid #202b36;text-align:left;vertical-align:top}.stream-table th{font-size:11px;color:#91a0b1;text-transform:uppercase;letter-spacing:.04em}.stream-table td.viewers{text-align:right;font-weight:800;white-space:nowrap}.stream-table .platform-cell{white-space:nowrap}.stream-table .channel-link{font-weight:800;text-decoration:none;color:#dbeafe}.stream-table .channel-link:hover{color:#36b9ff;text-decoration:underline}.stream-table .stream-link{font-size:12px}.stream-table .title-cell{color:#c1cbd7;line-height:1.4}.stream-table tr:hover{background:#0e161f}.stream-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}.stream-controls input,.stream-controls select{background:#0c1219;color:#eef2f7;border:1px solid #263341;border-radius:8px;padding:9px 10px;font:inherit;font-size:13px}.stream-controls input{min-width:240px;flex:1}.stream-controls select{min-width:135px}.stream-count{color:#91a0b1;font-size:12px;margin-left:auto}.pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}.pagination .page-info{color:#91a0b1;font-size:12px}.pagination button{background:#111821;color:#dbeafe;border:1px solid #294052;border-radius:8px;padding:8px 12px;cursor:pointer}.pagination button:disabled{opacity:.45;cursor:default}.info{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.scorebox{margin-top:18px;padding:18px;border:1px solid #263341;border-radius:12px;background:#0c1219;text-align:center}.scoremeta{margin-top:7px;color:#91a0b1;font-size:12px}.info div{padding:12px;border:1px solid #263341;border-radius:10px}.info span{display:block;color:#91a0b1;font-size:11px;margin-bottom:4px}.empty{color:#91a0b1;padding:15px 0}@media(max-width:550px){.hero{padding:18px}.hero h1{font-size:25px}.scoreline{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;font-size:22px}.scoreline .team-logo{width:34px;height:34px;flex-basis:34px}.scoreline .team{max-width:90px}.scoreline .score{font-size:28px}}@media(max-width:900px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:550px){.page{padding:18px 12px}.hero h1{font-size:26px}.metrics,.platform-grid,.info{grid-template-columns:1fr}.chart-wrap{height:250px}}
+.vlr-event-list{display:grid;gap:9px;margin-top:12px}.vlr-event{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px;align-items:start}.vlr-event-time{padding:6px 7px;text-align:center;background:#0c1219;border:1px solid #263341;border-radius:7px;font-size:12px;font-variant-numeric:tabular-nums}.vlr-event-copy{font-size:13px;line-height:1.45}.vlr-event-copy small{display:block;color:#91a0b1;margin-top:2px}.vlr-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.vlr-chip{display:inline-flex;padding:4px 8px;border:1px solid #294052;border-radius:999px;color:#b9c8d8;font-size:11px}.vlr-empty{padding:14px 0;color:#91a0b1;font-size:13px}.vlr-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}.vlr-panel-head h2{margin-bottom:4px}
+.vlr-explorer{display:grid;gap:16px}
+.vlr-selectors{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vlr-field label{display:block;color:#91a0b1;font-size:12px;margin-bottom:7px}
+.vlr-field select,.vlr-filter button{width:100%;background:#0c1219;color:#eef2f7;border:1px solid #2a3b4d;border-radius:10px;padding:11px 12px;font:inherit}
+.vlr-selected{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px;border:1px solid #263341;border-radius:10px;background:#0c1219}
+.vlr-selected h3{margin:0 0 5px;font-size:17px}.vlr-selected .sub{line-height:1.5}
+.vlr-round-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.vlr-stat{padding:13px;border:1px solid #263341;border-radius:10px;background:#0c1219;min-width:0}
+.vlr-stat span{display:block;color:#91a0b1;font-size:12px;margin-bottom:6px}.vlr-stat strong{font-size:16px;overflow-wrap:anywhere}
+.vlr-events-panel{padding:16px;border:1px solid #263341;border-radius:12px;background:#0c1219}
+.vlr-filter{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}
+.vlr-filter button{width:auto;padding:7px 11px;cursor:pointer;font-size:12px}
+.vlr-filter button.active{border-color:#36b9ff;color:#7dd3fc;background:#102333}
+.vlr-axis{position:relative;padding:72px 20px 68px;margin:8px 0 0;min-height:230px;overflow:hidden}
+.vlr-axis-line{position:absolute;left:20px;right:20px;top:50%;height:4px;border-radius:99px;background:#64748b;transform:translateY(-50%)}
+.vlr-axis-tick{position:absolute;top:calc(50% - 9px);width:2px;height:18px;background:#94a3b8;transform:translateX(-50%)}
+.vlr-axis-label{position:absolute;top:calc(50% + 25px);color:#91a0b1;font-size:12px;transform:translateX(-50%);white-space:nowrap}
+.vlr-axis-label.start{left:20px;transform:none}.vlr-axis-label.end{right:20px;left:auto;transform:none}
+.vlr-marker{position:absolute;top:50%;width:17px;height:17px;border:3px solid #0c1219;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;z-index:2;padding:0;box-shadow:0 0 0 1px currentColor}
+.vlr-marker:focus{outline:2px solid white;outline-offset:4px}
+.vlr-marker:before{content:"";position:absolute;left:50%;width:2px;height:42px;background:currentColor;transform:translateX(-50%)}
+.vlr-marker.above:before{bottom:100%}.vlr-marker.below:before{top:100%}
+.vlr-marker-label{position:absolute;left:50%;width:max-content;max-width:145px;text-align:center;white-space:normal;color:currentColor;font-size:12px;font-weight:700;line-height:1.25;transform:translateX(-50%)}
+.vlr-marker.above .vlr-marker-label{bottom:calc(100% + 43px)}.vlr-marker.below .vlr-marker-label{top:calc(100% + 43px)}
+.vlr-marker.kill{color:#fb7185;background:#fb7185}.vlr-marker.plant{color:#38bdf8;background:#38bdf8}.vlr-marker.defuse{color:#34d399;background:#34d399}.vlr-marker.explode{color:#f59e0b;background:#f59e0b}.vlr-marker.other{color:#a78bfa;background:#a78bfa}
+.vlr-event-detail{border:1px solid #263341;border-radius:10px;padding:14px;margin-top:8px;background:#101821}
+.vlr-event-detail h4{margin:0 0 6px;font-size:15px}.vlr-event-detail p{margin:0;line-height:1.5}.vlr-event-detail .sub{margin-top:6px}
+.vlr-event-list{display:grid;gap:8px;margin-top:12px}
+.vlr-event{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px;align-items:start}
+.vlr-event-time{padding:6px 7px;text-align:center;background:#111821;border:1px solid #263341;border-radius:7px;font-size:12px;font-variant-numeric:tabular-nums}
+.vlr-event-copy{font-size:13px;line-height:1.45}.vlr-event-copy small{display:block;color:#91a0b1;margin-top:2px}
+.vlr-empty{padding:14px 0;color:#91a0b1;font-size:13px}
+@media(max-width:650px){.vlr-selectors{grid-template-columns:1fr}.vlr-round-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.vlr-axis{padding-left:12px;padding-right:12px}.vlr-axis-line{left:12px;right:12px}.vlr-axis-label.start{left:12px}.vlr-axis-label.end{right:12px}.vlr-marker-label{max-width:90px;font-size:10px}}
+
 </style>
-</head><body><main class="page">
+</head><body>
+
+<style>
+#stAuthRoot{position:fixed;z-index:9999;top:14px;right:18px;font:14px/1.4 Inter,system-ui,sans-serif;color:#eef2f7}
+#stAuthRoot *{box-sizing:border-box}
+#stAuthRoot .st-auth-bar{display:flex;align-items:center;gap:8px;padding:7px 9px;background:#111821;border:1px solid #2b3948;border-radius:12px;box-shadow:0 8px 30px #0006}
+#stAuthRoot button,#stAuthRoot a.st-btn{font:inherit;text-decoration:none;cursor:pointer;border:1px solid #344456;border-radius:8px;padding:7px 10px;background:#182330;color:#eef2f7}
+#stAuthRoot button.st-primary,#stAuthRoot a.st-primary{background:#e8eef5;color:#101820;border-color:#e8eef5;font-weight:700}
+#stAuthRoot .st-muted{color:#aebaca;font-size:12px}
+#stAuthRoot .st-avatar{width:25px;height:25px;border-radius:50%;object-fit:cover;background:#263341}
+#stAuthRoot .st-modal{position:fixed;inset:0;background:#03070bd9;display:none;align-items:center;justify-content:center;padding:20px;z-index:10000}
+#stAuthRoot .st-modal.open{display:flex}
+#stAuthRoot .st-dialog{width:min(420px,100%);background:#101821;border:1px solid #304050;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0009}
+#stAuthRoot .st-dialog h2{margin:0 0 7px;font-size:22px}
+#stAuthRoot .st-dialog p{color:#aebaca;margin:0 0 16px}
+#stAuthRoot .st-form{display:grid;gap:10px}
+#stAuthRoot .st-form input{width:100%;padding:11px 12px;border:1px solid #344456;border-radius:8px;background:#0b1118;color:#f4f7fb;font:inherit}
+#stAuthRoot .st-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+#stAuthRoot .st-error{color:#ff9b9b;min-height:18px;font-size:13px}
+#stAuthRoot .st-close{float:right}
+@media(max-width:600px){#stAuthRoot{top:8px;right:8px}#stAuthRoot .st-auth-bar{gap:5px;padding:5px}#stAuthRoot button,#stAuthRoot a.st-btn{padding:6px 8px;font-size:12px}#stAuthRoot .st-user-label{display:none}}
+</style>
+<div id="stAuthRoot">
+  <div class="st-auth-bar" id="stAuthBar"><span class="st-muted">Checking account…</span></div>
+  <div class="st-modal" id="stAuthModal" role="dialog" aria-modal="true" aria-labelledby="stAuthTitle">
+    <section class="st-dialog">
+      <button type="button" class="st-close" id="stAuthClose" aria-label="Close">✕</button>
+      <h2 id="stAuthTitle">Create your account</h2>
+      <p id="stAuthDescription">Choose a username for your tracker account.</p>
+      <form class="st-form" id="stAuthForm"></form>
+      <div class="st-error" id="stAuthError" role="alert"></div>
+      <div class="st-actions" id="stAuthActions"></div>
+    </section>
+  </div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('stAuthRoot');
+  if (!root || root.dataset.initialized) return;
+  root.dataset.initialized = 'true';
+  const bar = document.getElementById('stAuthBar');
+  const modal = document.getElementById('stAuthModal');
+  const form = document.getElementById('stAuthForm');
+  const title = document.getElementById('stAuthTitle');
+  const description = document.getElementById('stAuthDescription');
+  const error = document.getElementById('stAuthError');
+  const actions = document.getElementById('stAuthActions');
+  let authState = null;
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const openModal = () => { modal.classList.add('open'); error.textContent=''; };
+  const closeModal = () => modal.classList.remove('open');
+  document.getElementById('stAuthClose').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if(e.target === modal && !(authState && authState.pendingUsername)) closeModal(); });
+  function button(label, action, primary=false) {
+    const b=document.createElement('button'); b.type='button'; b.textContent=label;
+    if(primary)b.className='st-primary'; b.addEventListener('click',action); return b;
+  }
+  function link(label, href, primary=false) {
+    const a=document.createElement('a'); a.className='st-btn'+(primary?' st-primary':''); a.textContent=label; a.href=href; return a;
+  }
+  function showUsernameForm() {
+    title.textContent='Choose your username';
+    description.textContent='One last step to create your tracker account. Use 3–30 letters, numbers, underscores, or hyphens.';
+    form.innerHTML='<label for="stOAuthUsername">Username</label><input id="stOAuthUsername" name="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_-]{3,30}" autocomplete="username" required placeholder="e.g. pro_gamer">';
+    actions.replaceChildren(button('Create account', () => form.requestSubmit(), true));
+    openModal();
+  }
+  function showRegisterForm() {
+    title.textContent='Create an account';
+    description.textContent='Register with an email and password.';
+    form.innerHTML='<input name="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_-]{3,30}" autocomplete="username" required placeholder="Username"><input name="name" maxlength="120" autocomplete="name" required placeholder="Full name"><input name="email" type="email" maxlength="320" autocomplete="email" required placeholder="Email"><input name="password" type="password" minlength="8" autocomplete="new-password" required placeholder="Password (8+ characters)">';
+    actions.replaceChildren(button('Create account', () => form.requestSubmit(), true), link('Back to login','/login'));
+    openModal();
+  }
+  form.addEventListener('submit', async e => {
+    e.preventDefault(); error.textContent='';
+    const values=Object.fromEntries(new FormData(form).entries());
+    const pending=Boolean(authState && authState.pendingUsername);
+    const endpoint=pending?'/api/auth/oauth/complete':'/api/auth/register';
+    try {
+      const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(pending?{username:values.username}:values)});
+      const data=await response.json().catch(()=>({error:'Unexpected server response'}));
+      if(!response.ok){error.textContent=data.error||'Unable to complete this request.';return;}
+      if(pending){authState={...data,authenticated:true,pendingUsername:false};closeModal();await loadAuth();window.location.reload();return;}
+      form.reset();error.textContent='Account created. Sign in to continue.';title.textContent='Account created';description.textContent='Your account is ready. Sign in with your username and password.';actions.replaceChildren(link('Sign in','/login',true));form.innerHTML='';
+    } catch(e2){error.textContent='Could not reach the server. Check that the tracker is running.';}
+  });
+  async function logout() {
+    try { const r=await fetch('/api/auth/logout',{method:'POST',credentials:'same-origin'}); if(!r.ok) throw new Error('Logout failed'); }
+    catch(e){error.textContent='Could not log out. Please try again.';openModal();return;}
+    window.location.reload();
+  }
+  async function loadAuth() {
+    try {
+      const response=await fetch('/api/auth/me',{credentials:'same-origin',cache:'no-store'});
+      authState=await response.json();
+    } catch(e) { authState={authenticated:false,unavailable:true}; }
+    bar.replaceChildren();
+    if(authState.pendingUsername){bar.append(document.createTextNode('Finish signup'));showUsernameForm();return;}
+    if(authState.authenticated){
+      if(authState.picture){const img=document.createElement('img');img.className='st-avatar';img.src=authState.picture;img.alt='';bar.append(img);}
+      const label=document.createElement('span');label.className='st-user-label';label.textContent=authState.username||authState.identifier||authState.name||'Account';bar.append(label);
+      bar.append(button('Log out',logout));return;
+    }
+    bar.append(link('Google','/oauth2/authorization/google',true));
+    bar.append(link('Login','/login'));
+    bar.append(button('Sign up',showRegisterForm));
+  }
+  window.stOpenSignup = showRegisterForm;
+  window.stOpenUsernameForm = showUsernameForm;
+  loadAuth();
+})();
+</script>
+
+<main class="page">
 <a class="back" href="javascript:history.back()">← Back</a>
 <section class="hero"><div class="hero-top"><div><h1 id="title" class="match-title"><span class="match-title-team"><span class="match-title-logo"><img id="titleTeam1Logo" alt="" loading="eager" referrerpolicy="no-referrer"></span><span class="match-title-team-name" id="titleTeam1">—</span></span><span class="match-title-vs">vs</span><span class="match-title-team"><span class="match-title-team-name" id="titleTeam2">—</span><span class="match-title-logo"><img id="titleTeam2Logo" alt="" loading="eager" referrerpolicy="no-referrer"></span></span></h1><div class="sub" id="tournament">—</div><div class="sub" id="time">—</div></div><div id="status" class="status-pill"><span class="status-dot"></span><span id="statusText">Loading</span></div></div><div class="scorebox"><div class="scoreline"><span class="team-wrap"><span class="team-logo"><img id="scoreTeam1Logo" alt="" loading="eager" referrerpolicy="no-referrer"></span><span class="team" id="scoreTeam1">—</span></span><span class="score" id="score">— : —</span><span class="team-wrap"><span class="team" id="scoreTeam2">—</span><span class="team-logo"><img id="scoreTeam2Logo" alt="" loading="eager" referrerpolicy="no-referrer"></span></span></div><div class="scoremeta" id="format">—</div></div><div class="info"><div><span>Game</span><strong id="game">—</strong></div><div><span>Tier</span><strong id="tier">—</strong></div><div><span>Match ID</span><strong id="matchId">—</strong></div></div></section>
+<section class="panel" id="vlrTimelinePanel" style="margin-top:16px">
+  <div class="vlr-panel-head"><div><h2>Match Round Explorer</h2><div class="sub" id="vlrTimelineSubtitle">Choose a map and round to inspect saved VLR log events</div></div><span class="status-pill" id="vlrTrackingBadge"><span class="status-dot"></span><span id="vlrTrackingStatus">Checking tracker</span></span></div>
+  <div id="vlrTimelineContent" class="vlr-empty">Loading map and round data…</div>
+</section>
 <section class="metrics"><div class="metric"><span class="label">Peak combined</span><div class="value" id="peak">—</div></div><div class="metric"><span class="label">Average combined</span><div class="value" id="average">—</div></div><div class="metric"><span class="label">Samples</span><div class="value" id="samples">—</div></div><div class="metric"><span class="label">Matched channels</span><div class="value" id="channels">—</div></div></section>
 <div class="grid"><section class="panel"><h2>Combined & platform viewership</h2><div class="chart-wrap"><canvas id="trend"></canvas></div></section><section class="panel"><h2>Peak by platform</h2><div class="platform-grid" id="platformPeaks"></div><h2 style="margin-top:20px">Latest</h2><div class="platform-grid" id="latest"></div></section></div>
 <section class="panel" style="margin-top:16px">
@@ -45,7 +198,7 @@ const fmt=n=>Number(n||0).toLocaleString('en-IN');
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const normalizeTeamName=s=>String(s??'').trim().toLowerCase().replace(/\s+/g,' ');
 const STREAMS_PER_PAGE=10;
-let allMatchedStreams=[],filteredMatchedStreams=[],streamPage=1,matchData=null,teamLogos={};
+let allMatchedStreams=[],filteredMatchedStreams=[],streamPage=1,matchData=null,teamLogos={},vlrTimelineTimer=null;
 
 function setLogo(id,url,name){
   const img=document.getElementById(id);
@@ -141,6 +294,148 @@ function wireStreamControls(){
   document.getElementById('streamNext')?.addEventListener('click',()=>{streamPage++;renderMatchedStreams()});
 }
 
+function formatDuration(seconds){
+  const n=Math.max(0,Number(seconds||0));return Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0');
+}
+function formatFetchTime(value){
+  if(!value)return '—';
+  const date=new Date(value);
+  return Number.isNaN(date.getTime())?String(value):date.toLocaleString();
+}
+function vlrStatus(status){
+  const text=String(status||'NOT_CONFIGURED').replaceAll('_',' ');
+  const badge=document.getElementById('vlrTrackingBadge');
+  document.getElementById('vlrTrackingStatus').textContent=text;
+  badge.className='status-pill '+(status==='TRACKING'?'live':status==='DEGRADED'?'':'completed');
+}
+
+let vlrTimelineData=null,selectedVlrMapId='',selectedVlrRound='',selectedVlrEventIndex=0,vlrEventFilter='all',vlrTimelineLoading=false;
+function mapKey(map,index){return String(map.gameId??map.mapNumber??map.map??index)}
+function roundNumber(round){const n=parseInt(round?.round,10);return Number.isFinite(n)?n:0}
+function secondsFromTimestamp(value){
+  const m=String(value??'').match(/(\d+):(\d{2})(?:\.(\d+))?/);
+  return m?Number(m[1])*60+Number(m[2])+Number('0.'+(m[3]||0)):null;
+}
+function eventClass(event){
+  const type=String(event?.type||'').toUpperCase();
+  if(type==='KILL')return 'kill';
+  if(type==='SPIKE_PLANTED')return 'plant';
+  if(type==='SPIKE_DEFUSED')return 'defuse';
+  if(type==='SPIKE_EXPLODED')return 'explode';
+  return 'other';
+}
+function eventLabel(event){
+  const type=String(event?.type||'').toUpperCase();
+  if(type==='KILL')return 'Kill';
+  if(type==='SPIKE_PLANTED')return 'Spike plant';
+  if(type==='SPIKE_DEFUSED')return 'Defuse';
+  if(type==='SPIKE_EXPLODED')return 'Spike exploded';
+  return String(event?.type||'Event').replaceAll('_',' ');
+}
+function renderVlrTimeline(data){
+  vlrTimelineData=data;
+  const content=document.getElementById('vlrTimelineContent');
+  const maps=Array.isArray(data?.maps)?data.maps:[];
+  if(!maps.length){
+    if(vlrTimelineTimer){clearInterval(vlrTimelineTimer);vlrTimelineTimer=null;}
+    vlrStatus('NOT_CONFIGURED');
+    content.innerHTML='<div class="vlr-empty">No saved VLR round JSON is available for this match yet. Configure the VLR match URL and map game IDs to load live or historic round data.</div>';
+    return;
+  }
+  const activeMaps=maps.filter(x=>x && x.enabled!==false);
+  const usableMaps=activeMaps.length?activeMaps:maps;
+  const shouldRefresh=usableMaps.some(x=>!['MAP_COMPLETED','STOPPED','MATCH_COMPLETED'].includes(String(x.trackingStatus||'').toUpperCase()));
+  if(shouldRefresh&&!vlrTimelineTimer)vlrTimelineTimer=setInterval(loadVlrTimeline,5000);
+  if(!shouldRefresh&&vlrTimelineTimer){clearInterval(vlrTimelineTimer);vlrTimelineTimer=null;}
+  const overallStatus=shouldRefresh?'TRACKING':(usableMaps.every(x=>String(x.trackingStatus||'').toUpperCase()==='MAP_COMPLETED')?'MAP_COMPLETED':(usableMaps[0].trackingStatus||data.trackingStatus));
+  vlrStatus(overallStatus);
+
+  const currentMap=usableMaps.find((m,i)=>mapKey(m,i)===selectedVlrMapId)||usableMaps.find(m=>Array.isArray(m.rounds)&&m.rounds.length)||usableMaps[0];
+  selectedVlrMapId=mapKey(currentMap,usableMaps.indexOf(currentMap));
+  const rounds=(Array.isArray(currentMap.rounds)?currentMap.rounds:[]).slice().sort((a,b)=>roundNumber(a)-roundNumber(b));
+  const currentRound=rounds.find(r=>String(r.round)===String(selectedVlrRound))||rounds[rounds.length-1]||null;
+  selectedVlrRound=currentRound?String(currentRound.round):'';
+  const roundOptions=rounds.map(r=>`<option value="${esc(r.round)}"${String(r.round)===selectedVlrRound?' selected':''}>Round ${esc(r.round)}${r.active?' · In progress':''}</option>`).join('');
+  const mapOptions=usableMaps.map((m,i)=>`<option value="${esc(mapKey(m,i))}"${mapKey(m,i)===selectedVlrMapId?' selected':''}>${esc(m.mapName||m.mapLabel||('Map '+(m.mapNumber||i+1)))} · Game ID ${esc(m.gameId||'—')}</option>`).join('');
+  const allEvents=(Array.isArray(currentRound?.events)?currentRound.events:[]).map((e,i)=>({...e,_index:i,_seconds:secondsFromTimestamp(e.timestamp)}));
+  const filteredEvents=allEvents.filter(e=>vlrEventFilter==='all'||(vlrEventFilter==='kills'&&String(e.type).toUpperCase()==='KILL')||(vlrEventFilter==='spike'&&String(e.type).toUpperCase().startsWith('SPIKE_'))||(vlrEventFilter==='clutch'&&/clutch|1v[1-5]|[345]k|ace/i.test(String(e.text||''))));
+  const duration=Math.max(1,Number(currentRound?.estimatedDurationSeconds||0),...allEvents.map(e=>e._seconds||0));
+  const durationLabel=formatDuration(duration);
+  const eventMarkers=filteredEvents.map((e,i)=>{
+    const sec=e._seconds;
+    const pct=sec==null?Math.min(98,Math.max(2,((i+1)/(filteredEvents.length+1))*100)):Math.min(98,Math.max(2,(sec/duration)*100));
+    const css=eventClass(e),position=i%2===0?'above':'below';
+    const label=eventLabel(e);
+    return `<button type="button" class="vlr-marker ${css} ${position}" style="left:${pct}%" data-vlr-event="${e._index}" aria-label="${esc((e.timestamp||'Time unavailable')+' '+(e.text||label))}" title="${esc((e.timestamp||'Time unavailable')+' · '+(e.text||label))}"><span class="vlr-marker-label">${esc(label)}${e.timestamp!=null?' · '+esc(e.timestamp):''}</span></button>`;
+  }).join('');
+  const selectedEvent=allEvents.find(e=>e._index===selectedVlrEventIndex)||filteredEvents[0]||allEvents[0]||null;
+  const fetchFirst=currentRound?.firstFetchedAt?formatFetchTime(currentRound.firstFetchedAt):'Not recorded';
+  const fetchLast=currentRound?.lastFetchedAt?formatFetchTime(currentRound.lastFetchedAt):'Not recorded';
+  const updated=currentRound?.lastUpdatedAt?formatFetchTime(currentRound.lastUpdatedAt):'Not recorded';
+  const killCount=allEvents.filter(e=>String(e.type).toUpperCase()==='KILL').length;
+  const plants=allEvents.filter(e=>String(e.type).toUpperCase()==='SPIKE_PLANTED').length;
+  const defuses=allEvents.filter(e=>String(e.type).toUpperCase()==='SPIKE_DEFUSED').length;
+  const explosions=allEvents.filter(e=>String(e.type).toUpperCase()==='SPIKE_EXPLODED').length;
+
+  let out=`<div class="vlr-explorer">
+    <div class="vlr-selectors">
+      <div class="vlr-field"><label for="vlrMapSelect">Map</label><select id="vlrMapSelect">${mapOptions}</select></div>
+      <div class="vlr-field"><label for="vlrRoundSelect">Round</label><select id="vlrRoundSelect"${rounds.length?'':' disabled'}>${roundOptions||'<option value="">No saved rounds</option>'}</select></div>
+    </div>`;
+  if(!currentRound){
+    out+=`<div class="vlr-selected"><div><h3>${esc(currentMap.mapName||currentMap.mapLabel||('Map '+(usableMaps.indexOf(currentMap)+1)))}</h3><div class="sub">Game ID ${esc(currentMap.gameId||'—')} · ${esc(String(currentMap.trackingStatus||'UNKNOWN').replaceAll('_',' '))}</div></div></div><div class="vlr-empty">No round data has been saved for this map yet. The tracker can continue polling while the map is waiting for its first round.</div></div>`;
+    content.innerHTML=out;
+    document.getElementById('vlrMapSelect').addEventListener('change',e=>{selectedVlrMapId=e.target.value;selectedVlrRound='';selectedVlrEventIndex=0;renderVlrTimeline(vlrTimelineData)});
+    return;
+  }
+  out+=`<div class="vlr-selected"><div><h3>${esc(currentMap.mapName||currentMap.mapLabel||('Map '+(usableMaps.indexOf(currentMap)+1)))} · Round ${esc(currentRound.round)}</h3><div class="sub">Game ID: ${esc(currentMap.gameId||'—')} · ${esc(currentRound.summary||'Round details unavailable')}</div></div><div class="vlr-meta"><span class="vlr-chip">${esc(String(currentMap.trackingStatus||'UNKNOWN').replaceAll('_',' '))}</span><span class="vlr-chip">${currentRound.active?'Round active':'Round saved'}</span></div></div>
+    <div class="vlr-round-stats">
+      <div class="vlr-stat"><span>Round result</span><strong>${esc(currentRound.summary||'From logs')}</strong></div>
+      <div class="vlr-stat"><span>Estimated duration</span><strong>${currentRound.estimatedDurationSeconds!=null?formatDuration(currentRound.estimatedDurationSeconds):'Unavailable'}</strong></div>
+      <div class="vlr-stat"><span>Events / kills</span><strong>${allEvents.length} / ${killCount}</strong></div>
+      <div class="vlr-stat"><span>Spike events</span><strong>${plants} plant · ${defuses} defuse · ${explosions} explosion</strong></div>
+    </div>
+    <div class="vlr-events-panel">
+      <div class="vlr-panel-head"><div><h2>Interactive round timeline</h2><div class="sub">Event markers use timestamps from the saved VLR logs. Select a marker to inspect it.</div></div><span class="vlr-chip">${esc(currentRound.timestampConfidence||'UNKNOWN')} timing confidence</span></div>
+      <div class="vlr-filter" aria-label="Filter timeline events">
+        <button type="button" data-vlr-filter="all" class="${vlrEventFilter==='all'?'active':''}">All events</button>
+        <button type="button" data-vlr-filter="kills" class="${vlrEventFilter==='kills'?'active':''}">Kills</button>
+        <button type="button" data-vlr-filter="spike" class="${vlrEventFilter==='spike'?'active':''}">Spike events</button>
+        <button type="button" data-vlr-filter="clutch" class="${vlrEventFilter==='clutch'?'active':''}">Clutch / multikill labels</button>
+      </div>
+      <div class="vlr-axis">
+        <div class="vlr-axis-line"></div>
+        ${Array.from({length:5},(_,i)=>`<span class="vlr-axis-tick" style="left:${i*25}%"></span>`).join('')}
+        <span class="vlr-axis-label start">ROUND START · 0:00</span><span class="vlr-axis-label end">ROUND END · ${esc(durationLabel)}</span>
+        ${eventMarkers||'<div class="vlr-empty" style="position:absolute;top:45%;left:0;right:0;text-align:center">No events match this filter.</div>'}
+      </div>
+      <div class="sub">Marker position is based on the event timestamp relative to the estimated round duration. Missing timestamps are placed evenly and are not represented as verified timing.</div>
+      <div id="vlrSelectedEventDetail" class="vlr-event-detail">${selectedEvent?`<h4>${esc(eventLabel(selectedEvent))} · ${esc(selectedEvent.timestamp||'Time unavailable')}</h4><p>${esc(selectedEvent.text||selectedEvent.type||'Event')}</p><div class="sub">${esc(String(selectedEvent.type||'EVENT').replaceAll('_',' '))}${selectedEvent.timestamp==null?' · No event timestamp available':''}</div>`:'<h4>No event selected</h4><p>No event details are available for this round.</p>'}</div>
+    </div>
+    <div class="vlr-events-panel"><div class="vlr-panel-head"><div><h2>Round capture history</h2><div class="sub">Collection timestamps are separate from in-round event timestamps.</div></div></div>
+      <div class="vlr-meta"><span class="vlr-chip">First fetched: ${esc(fetchFirst)}</span><span class="vlr-chip">Last fetched: ${esc(fetchLast)}</span><span class="vlr-chip">Last data change: ${esc(updated)}</span><span class="vlr-chip">Fetch count: ${Number(currentRound.fetchCount||0)}</span></div>
+      <div class="vlr-meta"><span class="vlr-chip">Timestamp method: ${esc(currentRound.timestampMethod||'UNANCHORED')}</span>${currentRound.timestampUncertaintyMs!=null?`<span class="vlr-chip">Polling uncertainty: ±${Math.round(Number(currentRound.timestampUncertaintyMs)/1000)}s</span>`:''}</div>
+    </div>
+  </div>`;
+  content.innerHTML=out;
+  document.getElementById('vlrMapSelect').addEventListener('change',e=>{selectedVlrMapId=e.target.value;selectedVlrRound='';selectedVlrEventIndex=0;renderVlrTimeline(vlrTimelineData)});
+  document.getElementById('vlrRoundSelect').addEventListener('change',e=>{selectedVlrRound=e.target.value;selectedVlrEventIndex=0;renderVlrTimeline(vlrTimelineData)});
+  content.querySelectorAll('[data-vlr-filter]').forEach(btn=>btn.addEventListener('click',()=>{vlrEventFilter=btn.dataset.vlrFilter;renderVlrTimeline(vlrTimelineData)}));
+  content.querySelectorAll('[data-vlr-event]').forEach(btn=>btn.addEventListener('click',()=>{
+    selectedVlrEventIndex=Number(btn.dataset.vlrEvent);
+    const event=allEvents.find(e=>e._index===selectedVlrEventIndex);
+    const detail=document.getElementById('vlrSelectedEventDetail');
+    if(detail&&event)detail.innerHTML=`<h4>${esc(eventLabel(event))} · ${esc(event.timestamp||'Time unavailable')}</h4><p>${esc(event.text||event.type||'Event')}</p><div class="sub">${esc(String(event.type||'EVENT').replaceAll('_',' '))}${event.timestamp==null?' · No event timestamp available':''}</div>`;
+  }));
+}
+async function loadVlrTimeline(){
+  if(!matchId||String(game).toUpperCase()!=='VALORANT'||vlrTimelineLoading)return;
+  vlrTimelineLoading=true;
+  try{const response=await fetch('/api/vlr/live/'+encodeURIComponent(matchId),{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);renderVlrTimeline(await response.json());}
+  catch(e){vlrStatus('DEGRADED');document.getElementById('vlrTimelineContent').innerHTML='<div class="vlr-empty">Unable to load the VLR timeline right now. Existing match and viewership data are unaffected.</div>';console.warn('VLR timeline unavailable',e);}
+  finally{vlrTimelineLoading=false;}
+}
+
 async function load(){
  if(!matchId){document.getElementById('titleTeam1').textContent='Match ID missing';return}
  wireStreamControls();
@@ -181,8 +476,10 @@ async function load(){
   await loadTeamLogos(m);
   const points=d.timeline||[],labels=points.map(x=>new Date(x.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
   new Chart(document.getElementById('trend'),{type:'line',data:{labels,datasets:[{label:'Combined',data:points.map(x=>x.combined),borderWidth:2,tension:.25,fill:true},{label:'YouTube',data:points.map(x=>x.youtube),borderWidth:1.5,tension:.25},{label:'Twitch',data:points.map(x=>x.twitch),borderWidth:1.5,tension:.25},{label:'Kick',data:points.map(x=>x.kick),borderWidth:1.5,tension:.25}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{ticks:{color:'#91a0b1',maxTicksLimit:12},grid:{color:'#202b36'}},y:{beginAtZero:true,ticks:{color:'#91a0b1'},grid:{color:'#202b36'}}},plugins:{legend:{labels:{color:'#dbe4ef'}}}}});
+  await loadVlrTimeline();
  }catch(e){document.getElementById('titleTeam1').textContent='Unable to load match';
   document.getElementById('titleTeam2').textContent='';document.getElementById('streams').innerHTML='<div class="empty">'+esc(e.message||'Match unavailable')+'</div>';console.error(e)}
 }
 load();
-</script></body></html>
+</script><script src="/guest-history-lock.js" defer></script>
+</body></html>

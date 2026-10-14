@@ -34,6 +34,7 @@ public class EsportsMatchSchemaRepair {
             jdbcTemplate.execute("ALTER TABLE esports_matches ADD COLUMN IF NOT EXISTS team2score INTEGER");
             jdbcTemplate.execute("ALTER TABLE esports_matches ADD COLUMN IF NOT EXISTS winner VARCHAR(300)");
             jdbcTemplate.execute("ALTER TABLE esports_matches ADD COLUMN IF NOT EXISTS end_time TIMESTAMP WITH TIME ZONE");
+            jdbcTemplate.execute("ALTER TABLE app_users ALTER COLUMN profile_image_url SET DATA TYPE TEXT");
             log.info("Esports match schema verified/repaired");
         } catch (Exception e) {
             // Hibernate ddl-auto=update remains the normal schema owner. This

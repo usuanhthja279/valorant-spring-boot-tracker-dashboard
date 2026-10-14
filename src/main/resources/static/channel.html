@@ -337,6 +337,120 @@
 
 <body>
 
+<style>
+#stAuthRoot{position:fixed;z-index:9999;top:14px;right:18px;font:14px/1.4 Inter,system-ui,sans-serif;color:#eef2f7}
+#stAuthRoot *{box-sizing:border-box}
+#stAuthRoot .st-auth-bar{display:flex;align-items:center;gap:8px;padding:7px 9px;background:#111821;border:1px solid #2b3948;border-radius:12px;box-shadow:0 8px 30px #0006}
+#stAuthRoot button,#stAuthRoot a.st-btn{font:inherit;text-decoration:none;cursor:pointer;border:1px solid #344456;border-radius:8px;padding:7px 10px;background:#182330;color:#eef2f7}
+#stAuthRoot button.st-primary,#stAuthRoot a.st-primary{background:#e8eef5;color:#101820;border-color:#e8eef5;font-weight:700}
+#stAuthRoot .st-muted{color:#aebaca;font-size:12px}
+#stAuthRoot .st-avatar{width:25px;height:25px;border-radius:50%;object-fit:cover;background:#263341}
+#stAuthRoot .st-modal{position:fixed;inset:0;background:#03070bd9;display:none;align-items:center;justify-content:center;padding:20px;z-index:10000}
+#stAuthRoot .st-modal.open{display:flex}
+#stAuthRoot .st-dialog{width:min(420px,100%);background:#101821;border:1px solid #304050;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0009}
+#stAuthRoot .st-dialog h2{margin:0 0 7px;font-size:22px}
+#stAuthRoot .st-dialog p{color:#aebaca;margin:0 0 16px}
+#stAuthRoot .st-form{display:grid;gap:10px}
+#stAuthRoot .st-form input{width:100%;padding:11px 12px;border:1px solid #344456;border-radius:8px;background:#0b1118;color:#f4f7fb;font:inherit}
+#stAuthRoot .st-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+#stAuthRoot .st-error{color:#ff9b9b;min-height:18px;font-size:13px}
+#stAuthRoot .st-close{float:right}
+@media(max-width:600px){#stAuthRoot{top:8px;right:8px}#stAuthRoot .st-auth-bar{gap:5px;padding:5px}#stAuthRoot button,#stAuthRoot a.st-btn{padding:6px 8px;font-size:12px}#stAuthRoot .st-user-label{display:none}}
+</style>
+<div id="stAuthRoot">
+  <div class="st-auth-bar" id="stAuthBar"><span class="st-muted">Checking account…</span></div>
+  <div class="st-modal" id="stAuthModal" role="dialog" aria-modal="true" aria-labelledby="stAuthTitle">
+    <section class="st-dialog">
+      <button type="button" class="st-close" id="stAuthClose" aria-label="Close">✕</button>
+      <h2 id="stAuthTitle">Create your account</h2>
+      <p id="stAuthDescription">Choose a username for your tracker account.</p>
+      <form class="st-form" id="stAuthForm"></form>
+      <div class="st-error" id="stAuthError" role="alert"></div>
+      <div class="st-actions" id="stAuthActions"></div>
+    </section>
+  </div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('stAuthRoot');
+  if (!root || root.dataset.initialized) return;
+  root.dataset.initialized = 'true';
+  const bar = document.getElementById('stAuthBar');
+  const modal = document.getElementById('stAuthModal');
+  const form = document.getElementById('stAuthForm');
+  const title = document.getElementById('stAuthTitle');
+  const description = document.getElementById('stAuthDescription');
+  const error = document.getElementById('stAuthError');
+  const actions = document.getElementById('stAuthActions');
+  let authState = null;
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const openModal = () => { modal.classList.add('open'); error.textContent=''; };
+  const closeModal = () => modal.classList.remove('open');
+  document.getElementById('stAuthClose').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if(e.target === modal && !(authState && authState.pendingUsername)) closeModal(); });
+  function button(label, action, primary=false) {
+    const b=document.createElement('button'); b.type='button'; b.textContent=label;
+    if(primary)b.className='st-primary'; b.addEventListener('click',action); return b;
+  }
+  function link(label, href, primary=false) {
+    const a=document.createElement('a'); a.className='st-btn'+(primary?' st-primary':''); a.textContent=label; a.href=href; return a;
+  }
+  function showUsernameForm() {
+    title.textContent='Choose your username';
+    description.textContent='One last step to create your tracker account. Use 3–30 letters, numbers, underscores, or hyphens.';
+    form.innerHTML='<label for="stOAuthUsername">Username</label><input id="stOAuthUsername" name="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_-]{3,30}" autocomplete="username" required placeholder="e.g. pro_gamer">';
+    actions.replaceChildren(button('Create account', () => form.requestSubmit(), true));
+    openModal();
+  }
+  function showRegisterForm() {
+    title.textContent='Create an account';
+    description.textContent='Register with an email and password.';
+    form.innerHTML='<input name="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_-]{3,30}" autocomplete="username" required placeholder="Username"><input name="name" maxlength="120" autocomplete="name" required placeholder="Full name"><input name="email" type="email" maxlength="320" autocomplete="email" required placeholder="Email"><input name="password" type="password" minlength="8" autocomplete="new-password" required placeholder="Password (8+ characters)">';
+    actions.replaceChildren(button('Create account', () => form.requestSubmit(), true), link('Back to login','/login'));
+    openModal();
+  }
+  form.addEventListener('submit', async e => {
+    e.preventDefault(); error.textContent='';
+    const values=Object.fromEntries(new FormData(form).entries());
+    const pending=Boolean(authState && authState.pendingUsername);
+    const endpoint=pending?'/api/auth/oauth/complete':'/api/auth/register';
+    try {
+      const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(pending?{username:values.username}:values)});
+      const data=await response.json().catch(()=>({error:'Unexpected server response'}));
+      if(!response.ok){error.textContent=data.error||'Unable to complete this request.';return;}
+      if(pending){authState={...data,authenticated:true,pendingUsername:false};closeModal();await loadAuth();window.location.reload();return;}
+      form.reset();error.textContent='Account created. Sign in to continue.';title.textContent='Account created';description.textContent='Your account is ready. Sign in with your username and password.';actions.replaceChildren(link('Sign in','/login',true));form.innerHTML='';
+    } catch(e2){error.textContent='Could not reach the server. Check that the tracker is running.';}
+  });
+  async function logout() {
+    try { const r=await fetch('/api/auth/logout',{method:'POST',credentials:'same-origin'}); if(!r.ok) throw new Error('Logout failed'); }
+    catch(e){error.textContent='Could not log out. Please try again.';openModal();return;}
+    window.location.reload();
+  }
+  async function loadAuth() {
+    try {
+      const response=await fetch('/api/auth/me',{credentials:'same-origin',cache:'no-store'});
+      authState=await response.json();
+    } catch(e) { authState={authenticated:false,unavailable:true}; }
+    bar.replaceChildren();
+    if(authState.pendingUsername){bar.append(document.createTextNode('Finish signup'));showUsernameForm();return;}
+    if(authState.authenticated){
+      if(authState.picture){const img=document.createElement('img');img.className='st-avatar';img.src=authState.picture;img.alt='';bar.append(img);}
+      const label=document.createElement('span');label.className='st-user-label';label.textContent=authState.username||authState.identifier||authState.name||'Account';bar.append(label);
+      bar.append(button('Log out',logout));return;
+    }
+    bar.append(link('Google','/oauth2/authorization/google',true));
+    bar.append(link('Login','/login'));
+    bar.append(button('Sign up',showRegisterForm));
+  }
+  window.stOpenSignup = showRegisterForm;
+  window.stOpenUsernameForm = showUsernameForm;
+  loadAuth();
+})();
+</script>
+
+
+
 <header>
 
   <div class="channel-heading">
@@ -1222,6 +1336,24 @@
       const status = channelPresenceByPlatform.get(String(platform).toLowerCase());
       return status ? status.live === true : false;
     };
+    // Public /api/channels/status is the source of truth for the live summary.
+    // Historical /api/channels/history is member-only, so guests must not depend on it
+    // to populate the current viewer cards.
+    for (const status of channelPresenceByPlatform.values()) {
+      const platform = String(status.platform || '');
+      const currentRecord = {
+        platform,
+        viewers: status.viewers,
+        timestamp: status.lastSeen,
+        url: status.url,
+        live: status.live === true
+      };
+      if (platform) latestByPlatform.set(platform, currentRecord);
+      if (status.url && (!latestChannelLink || new Date(status.lastSeen || 0) > new Date(latestChannelLink.timestamp || 0))) {
+        latestChannelLink = currentRecord;
+      }
+    }
+
     const youtube = latestByPlatform.get('YouTube');
 
     const twitch =
@@ -1843,6 +1975,20 @@
 
 
     try{
+      // Check auth before requesting member-only history endpoints. Live summary
+      // remains populated by the public /api/channels/status endpoint above.
+      const authResponse = await fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store' });
+      const account = authResponse.ok ? await authResponse.json() : { authenticated: false };
+      if (!account.authenticated || account.pendingUsername) {
+        currentRecords = [];
+        allRecords = [];
+        calculateCurrent();
+        document.getElementById('rangeDataStatus').textContent = 'Sign in to view historical channel data.';
+        document.getElementById('comparisonStatus').textContent = 'Sign in to view period comparisons.';
+        document.getElementById('comparisonRows').innerHTML = '<tr><td colspan="4">Historical comparison is available to members.</td></tr>';
+        document.getElementById('comparisonChartStatus').textContent = 'Sign in to view comparison trends.';
+        return;
+      }
 
       const bounds = selectedHistoryBounds();
       loadPeriodComparison(bounds);
@@ -1869,7 +2015,10 @@
       console.error(error);
 
       document.getElementById('rangeDataStatus').textContent =
-              'Unable to load channel analytics.';
+              (String(error && error.message || '').includes('401') || String(error && error.message || '').includes('authentication_required'))
+                ? 'Sign in to view historical channel data.'
+                : 'Unable to load channel analytics.';
+      calculateCurrent();
     }
   }
 
@@ -1930,5 +2079,6 @@
 
 </script>
 
+  <script src="/guest-history-lock.js" defer></script>
 </body>
 </html>

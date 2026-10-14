@@ -39,6 +39,134 @@ h1{margin:6px 0 5px;font-size:34px;line-height:1.1}.sub{color:#91a0b1}.updated{w
 </style>
 </head>
 <body>
+
+<style>
+#stAuthRoot{position:fixed;z-index:9999;top:14px;right:18px;font:14px/1.4 Inter,system-ui,sans-serif;color:#eef2f7}
+#stAuthRoot *{box-sizing:border-box}
+#stAuthRoot .st-auth-bar{display:flex;align-items:center;gap:0;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none}
+#stAuthRoot button,#stAuthRoot a.st-btn{font:inherit;text-decoration:none;cursor:pointer;border:1px solid #344456;border-radius:8px;padding:7px 10px;background:#182330;color:#eef2f7}
+#stAuthRoot button.st-primary,#stAuthRoot a.st-primary{background:#e8eef5;color:#101820;border-color:#e8eef5;font-weight:700}
+#stAuthRoot .st-muted{color:#aebaca;font-size:12px}
+#stAuthRoot .st-avatar{width:25px;height:25px;border-radius:50%;object-fit:cover;background:#263341}
+#stAuthRoot .st-modal{position:fixed;inset:0;background:#03070bd9;display:none;align-items:center;justify-content:center;padding:20px;z-index:10000;pointer-events:auto!important}#stAuthRoot .st-modal *{pointer-events:auto!important}#stAuthRoot .st-dialog{position:relative;z-index:1}
+#stAuthRoot .st-modal.open{display:flex}
+#stAuthRoot .st-dialog{width:min(420px,100%);background:#101821;border:1px solid #304050;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0009}
+#stAuthRoot .st-dialog h2{margin:0 0 7px;font-size:22px}
+#stAuthRoot .st-dialog p{color:#aebaca;margin:0 0 16px}
+#stAuthRoot .st-form{display:grid;gap:10px}
+#stAuthRoot .st-form input{width:100%;padding:11px 12px;border:1px solid #344456;border-radius:8px;background:#0b1118;color:#f4f7fb;font:inherit}
+#stAuthRoot .st-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+#stAuthRoot .st-error{color:#ff9b9b;min-height:18px;font-size:13px}
+#stAuthRoot .st-close{float:right}
+@media(max-width:600px){#stAuthRoot{top:8px;right:8px}#stAuthRoot .st-auth-bar{gap:5px;padding:5px}#stAuthRoot button,#stAuthRoot a.st-btn{padding:6px 8px;font-size:12px}#stAuthRoot .st-user-label{display:none}}
+</style>
+<div id="stAuthRoot">
+  <div class="st-auth-bar" id="stAuthBar" aria-label="Account controls"></div>
+  <div class="st-modal" id="stAuthModal" role="dialog" aria-modal="true" aria-labelledby="stAuthTitle">
+    <section class="st-dialog">
+      <button type="button" class="st-close" id="stAuthClose" aria-label="Close">✕</button>
+      <h2 id="stAuthTitle">Create your account</h2>
+      <p id="stAuthDescription">Choose a username for your tracker account.</p>
+      <form class="st-form" id="stAuthForm"></form>
+      <div class="st-error" id="stAuthError" role="alert"></div>
+      <div class="st-actions" id="stAuthActions"></div>
+    </section>
+  </div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('stAuthRoot');
+  if (!root || root.dataset.initialized) return;
+  root.dataset.initialized = 'true';
+  const bar = document.getElementById('stAuthBar');
+  const modal = document.getElementById('stAuthModal');
+  const form = document.getElementById('stAuthForm');
+  const title = document.getElementById('stAuthTitle');
+  const description = document.getElementById('stAuthDescription');
+  const error = document.getElementById('stAuthError');
+  const actions = document.getElementById('stAuthActions');
+  let authState = null;
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const openModal = () => { modal.classList.add('open'); error.textContent=''; };
+  const closeModal = () => modal.classList.remove('open');
+  document.getElementById('stAuthClose').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if(e.target === modal && !(authState && authState.pendingUsername)) closeModal(); });
+  function button(label, action, primary=false) {
+    const b=document.createElement('button'); b.type='button'; b.textContent=label;
+    if(primary)b.className='st-primary'; b.addEventListener('click',action); return b;
+  }
+  function link(label, href, primary=false) {
+    const a=document.createElement('a'); a.className='st-btn'+(primary?' st-primary':''); a.textContent=label; a.href=href; return a;
+  }
+  function showUsernameForm() {
+    title.textContent='Choose your username';
+    description.textContent='One last step to create your tracker account. Use 3–30 letters, numbers, underscores, or hyphens.';
+    form.innerHTML='<label for="stOAuthUsername">Username</label><input id="stOAuthUsername" name="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_-]{3,30}" autocomplete="username" required placeholder="e.g. pro_gamer">';
+    actions.replaceChildren(button('Create account', () => form.requestSubmit(), true));
+    openModal();
+  }
+  let registrationValues=null, registrationOtpStep=false;
+  function showRegisterForm() {
+    registrationValues=null; registrationOtpStep=false;
+    title.textContent='Create an account';
+    description.textContent='Register with an email and password. We will email you a verification code before creating your account.';
+    form.innerHTML='<input name="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_-]{3,30}" autocomplete="username" required placeholder="Username"><input name="name" maxlength="120" autocomplete="name" required placeholder="Full name"><input name="email" type="email" maxlength="320" autocomplete="email" required placeholder="Email"><input name="password" type="password" minlength="8" autocomplete="new-password" required placeholder="Password (8+ characters)">';
+    actions.replaceChildren(button('Send verification code', () => form.requestSubmit(), true), link('Back to login','/login'));
+    openModal();
+  }
+  function showRegistrationOtp() {
+    registrationOtpStep=true;
+    title.textContent='Verify your email';
+    description.textContent='Enter the 6-digit code sent to your email. Your account is created only after successful verification.';
+    form.innerHTML='<label for="stRegistrationOtp">Email verification code</label><input id="stRegistrationOtp" name="otp" inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="6" pattern="[0-9]{6}" required placeholder="6-digit code">';
+    actions.replaceChildren(button('Verify and create account', () => form.requestSubmit(), true), button('Back', () => { registrationOtpStep=false; showRegisterForm(); }));
+  }
+  form.addEventListener('submit', async e => {
+    e.preventDefault(); error.textContent='';
+    const values=Object.fromEntries(new FormData(form).entries());
+    const pending=Boolean(authState && authState.pendingUsername);
+    const endpoint=pending?'/api/auth/oauth/complete':(registrationOtpStep?'/api/auth/register':'/api/auth/register/request-otp');
+    try {
+      if(!pending && !registrationOtpStep) registrationValues=values;
+      const payload=pending?{username:values.username}:(!registrationOtpStep?registrationValues:{...registrationValues,otp:values.otp});
+      const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const data=await response.json().catch(()=>({error:'Unexpected server response'}));
+      if(!response.ok){error.textContent=data.error||'Unable to complete this request.';return;}
+      if(!pending && !registrationOtpStep){showRegistrationOtp();error.textContent='Verification code sent. Check your email.';return;}
+      if(pending){authState={...data,authenticated:true,pendingUsername:false};closeModal();await loadAuth();window.location.reload();return;}
+      form.reset();registrationValues=null;registrationOtpStep=false;error.textContent='Email verified. Account created. Sign in to continue.';title.textContent='Account created';description.textContent='Your email has been verified and your account is ready. Sign in with your username and password.';actions.replaceChildren(link('Sign in','/login',true));form.innerHTML='';
+    } catch(e2){error.textContent='Could not reach the server. Check that the tracker is running.';}
+  });
+  async function logout() {
+    try { const r=await fetch('/api/auth/logout',{method:'POST',credentials:'same-origin'}); if(!r.ok) throw new Error('Logout failed'); }
+    catch(e){error.textContent='Could not log out. Please try again.';openModal();return;}
+    window.location.reload();
+  }
+  async function loadAuth() {
+    try {
+      const response = await fetch('/api/auth/me', {credentials:'same-origin', cache:'no-store'});
+      authState = await response.json();
+    } catch(e) {
+      authState = {authenticated:false, unavailable:true};
+    }
+    // The shared guest-history-lock.js owns the top-right login/avatar/menu.
+    // This page script only manages signup and the first-time OAuth username dialog.
+    if (authState.pendingUsername) showUsernameForm();
+  }
+
+  window.stOpenSignup = showRegisterForm;
+  window.stOpenUsernameForm = showUsernameForm;
+  loadAuth();
+  // Allow locked historical cards to open the existing signup dialog after returning to the index.
+  if (new URLSearchParams(window.location.search).get('auth') === 'signup') {
+    window.setTimeout(() => showRegisterForm(), 0);
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, '', cleanUrl || '/');
+  }
+})();
+</script>
+
+
 <main>
 <header>
   <div>
@@ -171,10 +299,30 @@ function renderMatchBars(id,items,showRank=false){
     return `<div class="bar-row"><div class="bar-label"><span class="bar-name">${showRank?`<span class="match-rank">#${i+1}</span>`:""}${icon}${esc(name)}</span><span class="bar-value">${fmt(x.viewers)}</span></div><div class="bar-track"><div class="bar-fill" style="width:${width}%;--bar-color:${theme.color}"></div></div><div class="bar-meta">${esc(x.game||'')} · ${esc(x.tournament||'')}${date?' · '+date:''}</div></div>`
   }).join('')
 }
-async function loadGamesBars(){const range=document.getElementById('gamesRange').value;const d=await fetch(`/api/esports/overview/games?range=${encodeURIComponent(range)}&platform=Combined`).then(r=>r.ok?r.json():Promise.reject(new Error('Games API '+r.status)));renderOverviewBars('gamesBars',d.items||[],'game')}
-async function loadStreamsBars(){const range=document.getElementById('streamsRange').value;const d=await fetch(`/api/esports/overview/streams?range=${encodeURIComponent(range)}`).then(r=>r.ok?r.json():Promise.reject(new Error('Streams API '+r.status)));renderOverviewBars('streamsBars',d.items||[],'stream')}
-async function loadRecentMatches(){const platform=document.getElementById('recentPlatform').value;const d=await fetch(`/api/esports/overview/matches/recent?platform=${encodeURIComponent(platform)}`).then(r=>r.ok?r.json():Promise.reject(new Error('Recent matches API '+r.status)));renderMatchBars('recentMatches',d.items||[],false)}
-async function loadTopMatches(){const platform=document.getElementById('topPlatform').value;const period=document.getElementById('topPeriod').value;const d=await fetch(`/api/esports/overview/matches/top?platform=${encodeURIComponent(platform)}&period=${encodeURIComponent(period)}`).then(r=>r.ok?r.json():Promise.reject(new Error('Top matches API '+r.status)));renderMatchBars('topMatches',d.items||[],true)}
+let guestMode = true;
+const guestDemoGames = [
+  {game:'Counter-Strike 2',peak:7118444},{game:'VALORANT',peak:5155688},{game:'Dota 2',peak:2379671},{game:'League of Legends',peak:1400182},{game:'Fortnite',peak:986420}
+];
+const guestDemoStreams = [
+  {game:'Counter-Strike 2',platform:'YouTube',channel:'ESL Counter-Strike',peak:116076},{game:'Counter-Strike 2',platform:'Twitch',channel:'StRoGo',peak:110741},{game:'VALORANT',platform:'YouTube',channel:'VALORANT Champions Tour',peak:88452},{game:'Counter-Strike 2',platform:'Twitch',channel:'ESLCS',peak:71752},{game:'VALORANT',platform:'YouTube',channel:'VALORANT Esports',peak:61464}
+];
+const guestDemoMatches = [
+  {game:'Counter-Strike 2',team1:'Vitality',team2:'Aurora',viewers:423356,tournament:'ESL Pro League Season 24',startTime:'2026-10-10T12:00:00Z'},
+  {game:'Dota 2',team1:'PARI',team2:'Aurora',viewers:175937,tournament:'BLAST SLAM VIII',startTime:'2026-10-10T10:00:00Z'},
+  {game:'VALORANT',team1:'G2',team2:'VIT',viewers:323438,tournament:'Champions 2026',startTime:'2026-10-10T08:00:00Z'},
+  {game:'Dota 2',team1:'Yandex',team2:'TSpirit',viewers:23593,tournament:'BLAST SLAM VIII',startTime:'2026-10-09T16:00:00Z'},
+  {game:'VALORANT',team1:'NRG',team2:'LOUD',viewers:457114,tournament:'Champions 2026',startTime:'2026-10-09T14:00:00Z'}
+];
+function renderGuestDemo(){
+  renderOverviewBars('gamesBars',guestDemoGames,'game');
+  renderOverviewBars('streamsBars',guestDemoStreams,'stream');
+  renderMatchBars('recentMatches',guestDemoMatches.slice(0,5),false);
+  renderMatchBars('topMatches',[...guestDemoMatches].sort((a,b)=>b.viewers-a.viewers),true);
+}
+async function loadGamesBars(){if(guestMode){renderOverviewBars('gamesBars',guestDemoGames,'game');return}const range=document.getElementById('gamesRange').value;const d=await fetch(`/api/esports/overview/games?range=${encodeURIComponent(range)}&platform=Combined`).then(r=>r.ok?r.json():Promise.reject(new Error('Games API '+r.status)));renderOverviewBars('gamesBars',d.items||[],'game')}
+async function loadStreamsBars(){if(guestMode){renderOverviewBars('streamsBars',guestDemoStreams,'stream');return}const range=document.getElementById('streamsRange').value;const d=await fetch(`/api/esports/overview/streams?range=${encodeURIComponent(range)}`).then(r=>r.ok?r.json():Promise.reject(new Error('Streams API '+r.status)));renderOverviewBars('streamsBars',d.items||[],'stream')}
+async function loadRecentMatches(){if(guestMode){renderMatchBars('recentMatches',guestDemoMatches.slice(0,5),false);return}const platform=document.getElementById('recentPlatform').value;const d=await fetch(`/api/esports/overview/matches/recent?platform=${encodeURIComponent(platform)}`).then(r=>r.ok?r.json():Promise.reject(new Error('Recent matches API '+r.status)));renderMatchBars('recentMatches',d.items||[],false)}
+async function loadTopMatches(){if(guestMode){renderMatchBars('topMatches',[...guestDemoMatches].sort((a,b)=>b.viewers-a.viewers),true);return}const platform=document.getElementById('topPlatform').value;const period=document.getElementById('topPeriod').value;const d=await fetch(`/api/esports/overview/matches/top?platform=${encodeURIComponent(platform)}&period=${encodeURIComponent(period)}`).then(r=>r.ok?r.json():Promise.reject(new Error('Top matches API '+r.status)));renderMatchBars('topMatches',d.items||[],true)}
 let gamesCountdownTimer;
 
 function formatCountdown(target){
@@ -231,6 +379,8 @@ async function loadGamesCards(){
   clearInterval(gamesCountdownTimer);
   gamesCountdownTimer=setInterval(updateGamesCountdowns,1000);
 }
-async function reloadAll(){try{await Promise.all([loadGamesCards(),loadGamesBars(),loadStreamsBars(),loadRecentMatches(),loadTopMatches()])}catch(e){console.error(e);document.getElementById('updated').textContent='Tracker unavailable'}}
+async function reloadAll(){try{const me=await fetch('/api/auth/me',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok?r.json():{authenticated:false}).catch(()=>({authenticated:false}));guestMode=!(me&&me.authenticated&&!me.pendingUsername);await loadGamesCards();if(guestMode){renderGuestDemo();return}await Promise.all([loadGamesBars(),loadStreamsBars(),loadRecentMatches(),loadTopMatches()])}catch(e){console.error(e);document.getElementById('updated').textContent='Tracker unavailable';if(guestMode)renderGuestDemo()}}
 document.getElementById('gamesRange').addEventListener('change',loadGamesBars);document.getElementById('streamsRange').addEventListener('change',loadStreamsBars);document.getElementById('recentPlatform').addEventListener('change',loadRecentMatches);document.getElementById('topPlatform').addEventListener('change',loadTopMatches);document.getElementById('topPeriod').addEventListener('change',loadTopMatches);reloadAll();setInterval(loadGamesCards,60000);
 </script>
+
+<script src="/guest-history-lock.js" defer></script>
