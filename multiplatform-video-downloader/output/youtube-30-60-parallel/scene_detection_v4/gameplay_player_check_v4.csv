@@ -1,0 +1,110 @@
+﻿timestamp_seconds,filename,player_before,player_at_frame,player_after,auto_status,current_label,suggested_label,already_human_reviewed,human_final (Y/N)
+27,frame_000027_0000027000ms.jpg,?,?,?,unreadable,Y,check manually,,Y
+74,frame_000074_0000074000ms.jpg,?,?,timotino,unreadable,Y,check manually,,Y
+85,frame_000085_0000085000ms.jpg,?,timotino,timotino,unreadable,Y,check manually,,Y (Player before was nrg mada)
+88,frame_000088_0000088000ms.jpg,timotino,timotino,keiko,same_player,Y,N,Y,
+98,frame_000098_0000098000ms.jpg,?,skuba,skuba,unreadable,Y,check manually,,Y(Player before was 100t bang)
+100,frame_000100_0000100000ms.jpg,skuba,?,skuba,unreadable,Y,check manually,,Y(Player at is 100T Asuna)
+105,frame_000105_0000105000ms.jpg,?,?,?,unreadable,Y,check manually,,"N(Player before skuba, at timotino, after timotino"
+130,frame_000130_0000130000ms.jpg,?,?,?,unreadable,Y,check manually,,"N(Player before cryo, at, keiko, after keiko"
+170,frame_000170_0000170000ms.jpg,brawk,asuna,asuna,player_changed,Y,Y,,
+173,frame_000173_0000173000ms.jpg,asuna,ethan,ethan,player_changed,Y,Y,,
+181,frame_000181_0000181000ms.jpg,skuba,?,?,unreadable,Y,check manually,,Y
+183,frame_000183_0000183000ms.jpg,?,skuba,skuba,unreadable,Y,check manually,,Y
+198,frame_000198_0000198000ms.jpg,vora,timotino,timotino,player_changed,Y,Y,Y,
+204,frame_000204_0000204000ms.jpg,skuba,timotino,timotino,player_changed,Y,Y,,
+222,frame_000222_0000222000ms.jpg,timotino,?,?,unreadable,Y,check manually,,Y
+280,frame_000280_0000280000ms.jpg,?,ethan,ethan,unreadable,Y,check manually,,Y
+285,frame_000285_0000285000ms.jpg,mada,skuba,skuba,player_changed,Y,Y,,
+292,frame_000292_0000292000ms.jpg,?,mada,ethan,unreadable,Y,check manually,,Y
+301,frame_000301_0000301000ms.jpg,timotino,timotino,asuna,same_player,Y,N,,
+319,frame_000319_0000319000ms.jpg,?,ethan,ethan,unreadable,Y,check manually,,Y
+362,frame_000362_0000362000ms.jpg,mada,mada,mada,same_player,Y,N,,
+374,frame_000374_0000374000ms.jpg,?,ethan,?,unreadable,Y,check manually,,Y (before and after players are eliminiated)
+429,frame_000429_0000429000ms.jpg,vora,mada,mada,player_changed,Y,Y,Y,
+440,frame_000440_0000440000ms.jpg,skuba,ethan,mada,player_changed,Y,Y,,
+444,frame_000444_0000444000ms.jpg,mada,skuba,skuba,player_changed,Y,Y,,
+447,frame_000447_0000447000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+450,frame_000450_0000450000ms.jpg,timotino,timotino,timotino,same_player,Y,N,,
+453,frame_000453_0000453000ms.jpg,timotino,timotino,skuba,same_player,Y,N,,
+455,frame_000455_0000455000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+457,frame_000457_0000457000ms.jpg,skuba,brawk,brawk,player_changed,Y,Y,,
+459,frame_000459_0000459000ms.jpg,brawk,vora,vora,player_changed,Y,Y,,
+474,frame_000474_0000474000ms.jpg,asuna,asuna,asuna,same_player,Y,N,,
+481,frame_000481_0000481000ms.jpg,bang,keiko,keiko,player_changed,Y,Y,Y,
+504,frame_000504_0000504000ms.jpg,keiko,?,?,unreadable,Y,check manually,,Y
+506,frame_000506_0000506000ms.jpg,?,keiko,keiko,unreadable,Y,check manually,,Y
+552,frame_000552_0000552000ms.jpg,ethan,brawk,brawk,player_changed,Y,Y,,
+556,frame_000556_0000556000ms.jpg,timotino,timotino,timotino,same_player,Y,N,,
+558,frame_000558_0000558000ms.jpg,timotino,timotino,timotino,same_player,Y,N,,
+570,frame_000570_0000570000ms.jpg,mada,mada,mada,same_player,Y,N,,
+585,frame_000585_0000585000ms.jpg,skuba,brawk,brawk,player_changed,Y,Y,,
+587,frame_000587_0000587000ms.jpg,brawk,keiko,skuba,player_changed,Y,Y,,
+591,frame_000591_0000591000ms.jpg,skuba,cryo,cryo,player_changed,Y,Y,,
+593,frame_000593_0000593000ms.jpg,cryo,cryo,cryo,same_player,Y,N,,
+598,frame_000598_0000598000ms.jpg,skuba,skuba,vora,same_player,Y,N,,
+643,frame_000643_0000643000ms.jpg,ethan,keiko,keiko,player_changed,Y,Y,,
+647,frame_000647_0000647000ms.jpg,ethan,ethan,skuba,same_player,Y,N,,
+649,frame_000649_0000649000ms.jpg,skuba,skuba,timotino,same_player,Y,N,,
+654,frame_000654_0000654000ms.jpg,brawk,?,?,unreadable,Y,check manually,,Y
+657,frame_000657_0000657000ms.jpg,ethan,vora,vora,player_changed,Y,Y,Y,
+660,frame_000660_0000660000ms.jpg,vora,ethan,ethan,player_changed,Y,Y,Y,
+672,frame_000672_0000672000ms.jpg,keiko,ethan,ethan,player_changed,Y,Y,,
+680,frame_000680_0000680000ms.jpg,?,?,?,unreadable,Y,check manually,,"N (before, at, after is 100T Timotino_"
+694,frame_000694_0000694000ms.jpg,?,keiko,keiko,unreadable,Y,check manually,,Y
+723,frame_000723_0000723000ms.jpg,?,bang,bang,unreadable,Y,check manually,,Y (before is NRG Keiko eliminated)
+763,frame_000763_0000763000ms.jpg,ethan,vora,vora,player_changed,Y,Y,,
+765,frame_000765_0000765000ms.jpg,vora,vora,asuna,same_player,Y,N,,
+773,frame_000773_0000773000ms.jpg,asuna,timotino,timotino,player_changed,Y,Y,,
+791,frame_000791_0000791000ms.jpg,ethan,mada,mada,player_changed,Y,Y,,
+793,frame_000793_0000793000ms.jpg,mada,vora,vora,player_changed,Y,Y,,
+797,frame_000797_0000797000ms.jpg,brawk,mada,mada,player_changed,Y,Y,,
+800,frame_000800_0000800000ms.jpg,mada,skuba,skuba,player_changed,Y,Y,,
+803,frame_000803_0000803000ms.jpg,skuba,skuba,brawk,same_player,Y,N,,
+806,frame_000806_0000806000ms.jpg,brawk,timotino,timotino,player_changed,Y,Y,,
+810,frame_000810_0000810000ms.jpg,timotino,mada,mada,player_changed,Y,Y,Y,
+813,frame_000813_0000813000ms.jpg,mada,keiko,keiko,player_changed,Y,Y,,
+817,frame_000817_0000817000ms.jpg,keiko,skuba,skuba,player_changed,Y,Y,,
+820,frame_000820_0000820000ms.jpg,skuba,?,?,unreadable,Y,check manually,,Y
+825,frame_000825_0000825000ms.jpg,skuba,ethan,ethan,player_changed,Y,Y,,
+832,frame_000832_0000832000ms.jpg,mada,mada,?,same_player,Y,N,,
+835,frame_000835_0000835000ms.jpg,skuba,?,skuba,unreadable,Y,check manually,,Y (at is NRG Keiko eliminated)
+972,frame_000972_0000972000ms.jpg,asuna,asuna,mada,same_player,Y,N,,
+987,frame_000987_0000987000ms.jpg,?,cryo,cryo,unreadable,Y,check manually,,Y (before is NRG Mada eliminated)
+991,frame_000991_0000991000ms.jpg,cryo,asuna,asuna,player_changed,Y,Y,,
+994,frame_000994_0000994000ms.jpg,keiko,keiko,asuna,same_player,Y,N,,
+1043,frame_001043_0001043000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+1045,frame_001045_0001045000ms.jpg,skuba,keiko,mada,player_changed,Y,Y,,
+1047,frame_001047_0001047000ms.jpg,mada,mada,skuba,same_player,Y,N,,
+1067,frame_001067_0001067000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+1069,frame_001069_0001069000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+1083,frame_001083_0001083000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+1090,frame_001090_0001090000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+1094,frame_001094_0001094000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+1105,frame_001105_0001105000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+1107,frame_001107_0001107000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+1111,frame_001111_0001111000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+1125,frame_001125_0001125000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+1129,frame_001129_0001129000ms.jpg,skuba,skuba,skuba,same_player,Y,N,,
+1168,frame_001168_0001168000ms.jpg,ethan,mada,mada,player_changed,Y,Y,,
+1170,frame_001170_0001170000ms.jpg,mada,mada,mada,same_player,Y,N,,
+1174,frame_001174_0001174000ms.jpg,mada,brawk,brawk,player_changed,Y,Y,,
+1180,frame_001180_0001180000ms.jpg,brawk,?,?,unreadable,Y,check manually,,Y
+1183,frame_001183_0001183000ms.jpg,?,timotino,timotino,unreadable,Y,check manually,,Y
+1207,frame_001207_0001207000ms.jpg,timotino,vora,vora,player_changed,Y,Y,,
+1210,frame_001210_0001210000ms.jpg,brawk,mada,mada,player_changed,Y,Y,,
+1220,frame_001220_0001220000ms.jpg,?,skuba,skuba,unreadable,Y,check manually,Y,"N (before is NRG Keiko, at, after correct)"
+1230,frame_001230_0001230000ms.jpg,skuba,keiko,?,player_changed,Y,Y,,
+1235,frame_001235_0001235000ms.jpg,skuba,?,?,unreadable,Y,check manually,,Y
+1242,frame_001242_0001242000ms.jpg,cryo,?,skuba,unreadable,Y,check manually,,Y (at player got eliminated)
+1248,frame_001248_0001248000ms.jpg,asuna,?,mada,unreadable,Y,check manually,,Y (at player got eliminated)
+1302,frame_001302_0001302000ms.jpg,?,?,?,unreadable,Y,check manually,,"N (before is NRG Ethan, at, after camera not at specific player rather at group of players)"
+1304,frame_001304_0001304000ms.jpg,?,keiko,keiko,unreadable,Y,check manually,,"N (at is NRG ethan, after correct)"
+1306,frame_001306_0001306000ms.jpg,keiko,keiko,keiko,same_player,Y,N,,
+1308,frame_001308_0001308000ms.jpg,keiko,timotino,bang,player_changed,Y,Y,,
+1313,frame_001313_0001313000ms.jpg,asuna,brawk,mada,player_changed,Y,Y,,
+1321,frame_001321_0001321000ms.jpg,cryo,timotino,timotino,player_changed,Y,Y,,
+1336,frame_001336_0001336000ms.jpg,timotino,timotino,?,same_player,Y,N,Y,
+1339,frame_001339_0001339000ms.jpg,timotino,timotino,timotino,same_player,Y,N,,
+1351,frame_001351_0001351000ms.jpg,asuna,?,?,unreadable,Y,check manually,,"N (at, after is 100T Timotino)"
+1353,frame_001353_0001353000ms.jpg,?,timotino,?,unreadable,Y,check manually,,"N (before, at, after is 100T Timotino)"

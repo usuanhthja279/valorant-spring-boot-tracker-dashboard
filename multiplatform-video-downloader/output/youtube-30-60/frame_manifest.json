@@ -1,0 +1,132 @@
+{
+  "inputFile": "C:\\Users\\usuan\\Downloads\\valorant-spring-boot-tracker-dashboard\\multiplatform-video-downloader\\input\\jdQfyr5hpOU [2100-3600]s parallel.mp4",
+  "inputDurationSeconds": 1501.048,
+  "inputFps": 60.13823508442668,
+  "requestedStartSeconds": 0.0,
+  "requestedDurationSeconds": 10.0,
+  "actualEndSeconds": 10.0,
+  "intervalSeconds": 1.0,
+  "timestampNote": "requestedTimestampSeconds is the seek target. decodedTimestampSeconds is OpenCV's reported position after reading and can be approximate for some codecs.",
+  "frames": [
+    {
+      "index": 0,
+      "file": "frames\\frame_000000_0000000000ms.jpg",
+      "requestedTimestampSeconds": 0.0,
+      "requestedTimestamp": "00:00:00.000",
+      "decodedTimestampSeconds": 0.0,
+      "decodedTimestamp": "00:00:00.000",
+      "originalWidth": 1920,
+      "originalHeight": 1080,
+      "savedWidth": 960,
+      "savedHeight": 540
+    },
+    {
+      "index": 1,
+      "file": "frames\\frame_000001_0000001000ms.jpg",
+      "requestedTimestampSeconds": 1.0,
+      "requestedTimestamp": "00:00:01.000",
+      "decodedTimestampSeconds": 1.001,
+      "decodedTimestamp": "00:00:01.001",
+      "originalWidth": 1920,
+      "originalHeight": 1080,
+      "savedWidth": 960,
+      "savedHeight": 540
+    },
+    {
+      "index": 2,
+      "file": "frames\\frame_000002_0000002000ms.jpg",
+      "requestedTimestampSeconds": 2.0,
+      "requestedTimestamp": "00:00:02.000",
+      "decodedTimestampSeconds": 2.002,
+      "decodedTimestamp": "00:00:02.002",
+      "originalWidth": 1920,
+      "originalHeight": 1080,
+      "savedWidth": 960,
+      "savedHeight": 540
+    },
+    {
+      "index": 3,
+      "file": "frames\\frame_000003_0000003000ms.jpg",
+      "requestedTimestampSeconds": 3.0,
+      "requestedTimestamp": "00:00:03.000",
+      "decodedTimestampSeconds": 3.003,
+      "decodedTimestamp": "00:00:03.003",
+      "originalWidth": 1920,
+      "originalHeight": 1080,
+      "savedWidth": 960,
+      "savedHeight": 540
+    },
+    {
+      "index": 4,
+      "file": "frames\\frame_000004_0000004000ms.jpg",
+      "requestedTimestampSeconds": 4.0,
+      "requestedTimestamp": "00:00:04.000",
+      "decodedTimestampSeconds": 4.021,
+      "decodedTimestamp": "00:00:04.021",
+      "originalWidth": 1920,
+      "originalHeight": 1080,
+      "savedWidth": 960,
+      "savedHeight": 540
+    },
+    {
+      "index": 5,
+      "file": "frames\\frame_000005_0000005000ms.jpg",
+      "requestedTimestampSeconds": 5.0,
+      "requestedTimestamp": "00:00:05.000",
+      "decodedTimestampSeconds": 5.022,
+      "decodedTimestamp": "00:00:05.022",
+      "originalWidth": 1920,
+      "originalHeight": 1080,
+      "savedWidth": 960,
+      "savedHeight": 540
+    },
+    {
+      "index": 6,
+      "file": "frames\\frame_000006_0000006000ms.jpg",
+      "requestedTimestampSeconds": 6.0,
+      "requestedTimestamp": "00:00:06.000",
+      "decodedTimestampSeconds": 6.023,
+      "decodedTimestamp": "00:00:06.023",
+      "originalWidth": 1920,
+      "originalHeight": 1080,
+      "savedWidth": 960,
+      "savedHeight": 540
+    },
+    {
+      "index": 7,
+      "file": "frames\\frame_000007_0000007000ms.jpg",
+      "requestedTimestampSeconds": 7.0,
+      "requestedTimestamp": "00:00:07.000",
+      "decodedTimestampSeconds": 7.007,
+      "decodedTimestamp": "00:00:07.007",
+      "originalWidth": 1920,
+      "originalHeight": 1080,
+      "savedWidth": 960,
+      "savedHeight": 540
+    },
+    {
+      "index": 8,
+      "file": "frames\\frame_000008_0000008000ms.jpg",
+      "requestedTimestampSeconds": 8.0,
+      "requestedTimestamp": "00:00:08.000",
+      "decodedTimestampSeconds": 8.008,
+      "decodedTimestamp": "00:00:08.008",
+      "originalWidth": 1920,
+      "originalHeight": 1080,
+      "savedWidth": 960,
+      "savedHeight": 540
+    },
+    {
+      "index": 9,
+      "file": "frames\\frame_000009_0000009000ms.jpg",
+      "requestedTimestampSeconds": 9.0,
+      "requestedTimestamp": "00:00:09.000",
+      "decodedTimestampSeconds": 9.009,
+      "decodedTimestamp": "00:00:09.009",
+      "originalWidth": 1920,
+      "originalHeight": 1080,
+      "savedWidth": 960,
+      "savedHeight": 540
+    }
+  ]
+}

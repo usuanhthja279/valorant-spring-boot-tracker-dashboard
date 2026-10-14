@@ -30,6 +30,7 @@ public class DynamicGameScheduler {
 
     private final LiquipediaEsportsScheduleScraper scraper;
     private final EsportsMatchRecordRepository matchRepository;
+    private final VlrScheduledMatchDiscoveryService vlrDiscoveryService;
 
     /**
      * Games for which we want dynamic esports scheduling.
@@ -38,17 +39,7 @@ public class DynamicGameScheduler {
             "VALORANT",
             "COUNTER-STRIKE 2",
             "LEAGUE OF LEGENDS",
-            "DOTA 2",
-            "FORTNITE",
-            "RAINBOW SIX SIEGE",
-            "ROCKET LEAGUE",
-            "APEX LEGENDS",
-            "OVERWATCH 2",
-            "EA SPORTS FC",
-            "PUBG",
-            "CALL OF DUTY",
-            "MOBILE LEGENDS",
-            "FREE FIRE"
+            "DOTA 2"
     );
 
     /**
@@ -85,10 +76,12 @@ public class DynamicGameScheduler {
 
     public DynamicGameScheduler(
             LiquipediaEsportsScheduleScraper scraper,
-            EsportsMatchRecordRepository matchRepository) {
+            EsportsMatchRecordRepository matchRepository,
+            VlrScheduledMatchDiscoveryService vlrDiscoveryService) {
 
         this.scraper = scraper;
         this.matchRepository = matchRepository;
+        this.vlrDiscoveryService = vlrDiscoveryService;
     }
 
     /**
@@ -127,6 +120,12 @@ public class DynamicGameScheduler {
                 // Persist every returned state, including COMPLETED, so the
                 // database remains the catalog/history source of truth.
                 persistMatchCatalog(game, scraped);
+
+                // Discover today's VLR match/map IDs during the normal dynamic esports refresh.
+                // Once every eligible match has been mapped, the discovery service skips /matches.
+                if ("VALORANT".equalsIgnoreCase(game)) {
+                    vlrDiscoveryService.discoverToday(scraped);
+                }
 
                 List<LiquipediaEsportsScheduleScraper.EsportsMatch> discovered = scraped.stream()
                         .filter(match -> !match.finished())

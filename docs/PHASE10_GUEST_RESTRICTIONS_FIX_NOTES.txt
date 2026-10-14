@@ -1,0 +1,19 @@
+Phase 10 guest restrictions fix notes
+====================================
+
+Based on src (14).zip.
+
+Changes:
+1. SecurityConfig disables saved-request caching (NullRequestCache) so a 401 API request such as /api/analytics or /api/snapshots/range cannot become the post-login browser destination. Successful OAuth login is sent to /, where guest-history-lock.js restores the same-origin return page saved by the lock overlay.
+2. channel.html checks /api/auth/me before querying historical endpoints. Guests do not call protected history/comparison endpoints and instead see a friendly sign-in message.
+3. channel.html populates YouTube/Twitch/Kick/combined current viewer cards from the public /api/channels/status endpoint. Historical charts/statistics remain locked for guests.
+4. channel history errors no longer suppress public current data.
+
+Build/test:
+- Run gradlew.bat clean build from the project root.
+- Guest: channel status endpoint should return normally; historical history/comparison endpoints should return 401.
+- Guest channel page should show current viewers where the channel is live, and lock historical panels.
+- Login from a locked card should return to the originating channel URL, not an API endpoint.
+- Logged-in channel page should fetch history/comparison and render charts.
+
+The patch is source-updated but has not been compiled or browser-tested in this environment.

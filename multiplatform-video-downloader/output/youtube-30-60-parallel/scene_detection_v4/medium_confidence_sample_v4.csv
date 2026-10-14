@@ -1,0 +1,21 @@
+﻿frame_index,timestamp_seconds,filename,claude_state,human_agrees (Y/N),correct_state_if_N
+11,11,frame_000011_0000011000ms.jpg,between_round,N,Before game start
+68,68,frame_000068_0000068000ms.jpg,between_round,Y,Buy Phase
+129,129,frame_000129_0000129000ms.jpg,gameplay,Y,
+153,153,frame_000153_0000153000ms.jpg,player_camera,Y,
+197,197,frame_000197_0000197000ms.jpg,gameplay,Y,
+221,221,frame_000221_0000221000ms.jpg,gameplay,Y,
+240,240,frame_000240_0000240000ms.jpg,player_camera,Y,
+263,263,frame_000263_0000263000ms.jpg,replay,Y,
+322,322,frame_000322_0000322000ms.jpg,gameplay,Y,
+407,407,frame_000407_0000407000ms.jpg,other,N,Buy Phase
+616,616,frame_000616_0000616000ms.jpg,replay,Y,
+678,678,frame_000678_0000678000ms.jpg,gameplay,Y,
+724,724,frame_000724_0000724000ms.jpg,gameplay,Y,
+798,798,frame_000798_0000798000ms.jpg,gameplay,Y,
+888,888,frame_000888_0000888000ms.jpg,player_camera,Y,
+949,949,frame_000949_0000949000ms.jpg,between_round,Y,Buy Phase
+1106,1106,frame_001106_0001106000ms.jpg,gameplay,Y,
+1311,1311,frame_001311_0001311000ms.jpg,gameplay,Y,
+1383,1383,frame_001383_0001383000ms.jpg,replay,Y,
+1442,1442,frame_001442_0001442000ms.jpg,other,Y,Switch between Attack Defense 12 rounds completed

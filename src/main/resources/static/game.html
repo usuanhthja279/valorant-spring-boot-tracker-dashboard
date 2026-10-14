@@ -139,6 +139,120 @@ header,main{min-width:0;width:100%;max-width:100%}
 </style>
 </head>
 <body>
+
+<style>
+#stAuthRoot{position:fixed;z-index:9999;top:14px;right:18px;font:14px/1.4 Inter,system-ui,sans-serif;color:#eef2f7}
+#stAuthRoot *{box-sizing:border-box}
+#stAuthRoot .st-auth-bar{display:flex;align-items:center;gap:8px;padding:7px 9px;background:#111821;border:1px solid #2b3948;border-radius:12px;box-shadow:0 8px 30px #0006}
+#stAuthRoot button,#stAuthRoot a.st-btn{font:inherit;text-decoration:none;cursor:pointer;border:1px solid #344456;border-radius:8px;padding:7px 10px;background:#182330;color:#eef2f7}
+#stAuthRoot button.st-primary,#stAuthRoot a.st-primary{background:#e8eef5;color:#101820;border-color:#e8eef5;font-weight:700}
+#stAuthRoot .st-muted{color:#aebaca;font-size:12px}
+#stAuthRoot .st-avatar{width:25px;height:25px;border-radius:50%;object-fit:cover;background:#263341}
+#stAuthRoot .st-modal{position:fixed;inset:0;background:#03070bd9;display:none;align-items:center;justify-content:center;padding:20px;z-index:10000}
+#stAuthRoot .st-modal.open{display:flex}
+#stAuthRoot .st-dialog{width:min(420px,100%);background:#101821;border:1px solid #304050;border-radius:16px;padding:22px;box-shadow:0 20px 70px #0009}
+#stAuthRoot .st-dialog h2{margin:0 0 7px;font-size:22px}
+#stAuthRoot .st-dialog p{color:#aebaca;margin:0 0 16px}
+#stAuthRoot .st-form{display:grid;gap:10px}
+#stAuthRoot .st-form input{width:100%;padding:11px 12px;border:1px solid #344456;border-radius:8px;background:#0b1118;color:#f4f7fb;font:inherit}
+#stAuthRoot .st-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+#stAuthRoot .st-error{color:#ff9b9b;min-height:18px;font-size:13px}
+#stAuthRoot .st-close{float:right}
+@media(max-width:600px){#stAuthRoot{top:8px;right:8px}#stAuthRoot .st-auth-bar{gap:5px;padding:5px}#stAuthRoot button,#stAuthRoot a.st-btn{padding:6px 8px;font-size:12px}#stAuthRoot .st-user-label{display:none}}
+</style>
+<div id="stAuthRoot">
+  <div class="st-auth-bar" id="stAuthBar"><span class="st-muted">Checking account…</span></div>
+  <div class="st-modal" id="stAuthModal" role="dialog" aria-modal="true" aria-labelledby="stAuthTitle">
+    <section class="st-dialog">
+      <button type="button" class="st-close" id="stAuthClose" aria-label="Close">✕</button>
+      <h2 id="stAuthTitle">Create your account</h2>
+      <p id="stAuthDescription">Choose a username for your tracker account.</p>
+      <form class="st-form" id="stAuthForm"></form>
+      <div class="st-error" id="stAuthError" role="alert"></div>
+      <div class="st-actions" id="stAuthActions"></div>
+    </section>
+  </div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('stAuthRoot');
+  if (!root || root.dataset.initialized) return;
+  root.dataset.initialized = 'true';
+  const bar = document.getElementById('stAuthBar');
+  const modal = document.getElementById('stAuthModal');
+  const form = document.getElementById('stAuthForm');
+  const title = document.getElementById('stAuthTitle');
+  const description = document.getElementById('stAuthDescription');
+  const error = document.getElementById('stAuthError');
+  const actions = document.getElementById('stAuthActions');
+  let authState = null;
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const openModal = () => { modal.classList.add('open'); error.textContent=''; };
+  const closeModal = () => modal.classList.remove('open');
+  document.getElementById('stAuthClose').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if(e.target === modal && !(authState && authState.pendingUsername)) closeModal(); });
+  function button(label, action, primary=false) {
+    const b=document.createElement('button'); b.type='button'; b.textContent=label;
+    if(primary)b.className='st-primary'; b.addEventListener('click',action); return b;
+  }
+  function link(label, href, primary=false) {
+    const a=document.createElement('a'); a.className='st-btn'+(primary?' st-primary':''); a.textContent=label; a.href=href; return a;
+  }
+  function showUsernameForm() {
+    title.textContent='Choose your username';
+    description.textContent='One last step to create your tracker account. Use 3–30 letters, numbers, underscores, or hyphens.';
+    form.innerHTML='<label for="stOAuthUsername">Username</label><input id="stOAuthUsername" name="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_-]{3,30}" autocomplete="username" required placeholder="e.g. pro_gamer">';
+    actions.replaceChildren(button('Create account', () => form.requestSubmit(), true));
+    openModal();
+  }
+  function showRegisterForm() {
+    title.textContent='Create an account';
+    description.textContent='Register with an email and password.';
+    form.innerHTML='<input name="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_-]{3,30}" autocomplete="username" required placeholder="Username"><input name="name" maxlength="120" autocomplete="name" required placeholder="Full name"><input name="email" type="email" maxlength="320" autocomplete="email" required placeholder="Email"><input name="password" type="password" minlength="8" autocomplete="new-password" required placeholder="Password (8+ characters)">';
+    actions.replaceChildren(button('Create account', () => form.requestSubmit(), true), link('Back to login','/login'));
+    openModal();
+  }
+  form.addEventListener('submit', async e => {
+    e.preventDefault(); error.textContent='';
+    const values=Object.fromEntries(new FormData(form).entries());
+    const pending=Boolean(authState && authState.pendingUsername);
+    const endpoint=pending?'/api/auth/oauth/complete':'/api/auth/register';
+    try {
+      const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(pending?{username:values.username}:values)});
+      const data=await response.json().catch(()=>({error:'Unexpected server response'}));
+      if(!response.ok){error.textContent=data.error||'Unable to complete this request.';return;}
+      if(pending){authState={...data,authenticated:true,pendingUsername:false};closeModal();await loadAuth();window.location.reload();return;}
+      form.reset();error.textContent='Account created. Sign in to continue.';title.textContent='Account created';description.textContent='Your account is ready. Sign in with your username and password.';actions.replaceChildren(link('Sign in','/login',true));form.innerHTML='';
+    } catch(e2){error.textContent='Could not reach the server. Check that the tracker is running.';}
+  });
+  async function logout() {
+    try { const r=await fetch('/api/auth/logout',{method:'POST',credentials:'same-origin'}); if(!r.ok) throw new Error('Logout failed'); }
+    catch(e){error.textContent='Could not log out. Please try again.';openModal();return;}
+    window.location.reload();
+  }
+  async function loadAuth() {
+    try {
+      const response=await fetch('/api/auth/me',{credentials:'same-origin',cache:'no-store'});
+      authState=await response.json();
+    } catch(e) { authState={authenticated:false,unavailable:true}; }
+    bar.replaceChildren();
+    if(authState.pendingUsername){bar.append(document.createTextNode('Finish signup'));showUsernameForm();return;}
+    if(authState.authenticated){
+      if(authState.picture){const img=document.createElement('img');img.className='st-avatar';img.src=authState.picture;img.alt='';bar.append(img);}
+      const label=document.createElement('span');label.className='st-user-label';label.textContent=authState.username||authState.identifier||authState.name||'Account';bar.append(label);
+      bar.append(button('Log out',logout));return;
+    }
+    bar.append(link('Google','/oauth2/authorization/google',true));
+    bar.append(link('Login','/login'));
+    bar.append(button('Sign up',showRegisterForm));
+  }
+  window.stOpenSignup = showRegisterForm;
+  window.stOpenUsernameForm = showUsernameForm;
+  loadAuth();
+})();
+</script>
+
+
 <header>
 <div class="header-brand"><a href="/" style="color:#9aa7b8;text-decoration:none;font-size:12px">← All games</a><h1 id="gamePageTitle">Live Game Tracker</h1><div class="sub">YouTube · Twitch · Kick · minute-by-minute viewership</div></div>
 <form class="header-search" onsubmit="openChannelStats(event)">
@@ -636,99 +750,118 @@ function clearLiveSection(offline=false){
 }
 
 async function refresh(){
-  try{
-    // Summary cards use CURRENT streaming data only while the esports game is
-    // scheduled as active. Historical charts are always loaded independently.
-    const [gameState, latestData, chartData] = await Promise.all([
-      getGameLiveState(),
+  // Keep live/current data independent from historical endpoints. Guests are
+  // intentionally denied snapshots/history, so those requests must never
+  // prevent the public live summary cards from rendering.
+  let gameState;
+  try {
+    gameState = await getGameLiveState();
+  } catch (e) {
+    document.getElementById('status').textContent='Live status unavailable';
+    console.error('Unable to load live game status', e);
+    return;
+  }
+
+  const gameLive = !!gameState?.active;
+  if (!gameLive) {
+    clearLiveSection(true);
+    document.getElementById('status').textContent='Offline · historical data only';
+    const lastEl=document.getElementById('last');
+    if(lastEl) lastEl.textContent='Offline · live stream data hidden';
+  } else {
+    const displayProviderValue = viewers => viewers == null ? '—' : fmt(viewers);
+    document.getElementById('yt').textContent=displayProviderValue(gameState.youtubeViewers);
+    document.getElementById('tw').textContent=displayProviderValue(gameState.twitchViewers);
+    document.getElementById('kick').textContent=displayProviderValue(gameState.kickViewers);
+    document.getElementById('total').textContent=displayProviderValue(gameState.totalViewers);
+    document.getElementById('status').textContent='Live data available';
+    const lastEl=document.getElementById('last');
+    if(lastEl) lastEl.textContent='Current live data';
+  }
+
+  // Check auth only after painting live status. Historical endpoints remain
+  // protected on the server; guests simply see the lock UI without noisy 401s.
+  let account={authenticated:false};
+  try {
+    const authResponse=await fetch('/api/auth/me',{credentials:'same-origin',cache:'no-store'});
+    if(authResponse.ok) account=await authResponse.json();
+  } catch (_) { /* Treat auth lookup failure as guest for historical rendering. */ }
+  if(!account.authenticated || account.pendingUsername){
+    const rangeStatusEl=document.getElementById('rangeDataStatus');
+    if(rangeStatusEl) rangeStatusEl.textContent='Sign in to view historical data';
+    const snapshotInfoEl=document.getElementById('snapshotInfo');
+    if(snapshotInfoEl) snapshotInfoEl.textContent='Historical data locked';
+    return;
+  }
+
+  // Authenticated users can load snapshots and analytics independently from
+  // the live summary. A history failure should not clear already-rendered live data.
+  try {
+    const [latestData, chartData] = await Promise.all([
       getJson('/api/snapshots?game='+encodeURIComponent(selectedGame)),
       fetchSnapshotsForSelectedRange()
     ]);
-    const gameLive=!!gameState?.active;
-    if(!gameLive){
-      clearLiveSection(true);
-    }
     if(!latestData.length){
-      document.getElementById('status').textContent='Waiting for first collection';
+      document.getElementById('status').textContent=gameLive?'Live data available · waiting for history':'Waiting for first collection';
+      const rangeStatusEl=document.getElementById('rangeDataStatus');
+      if(rangeStatusEl) rangeStatusEl.textContent='No historical snapshots available';
       return;
     }
 
     latestData.sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
     const latest=latestData[latestData.length-1];
     if(gameLive){
-      const displayProviderValue = (viewers) => fmt(viewers);
-      document.getElementById('yt').textContent=displayProviderValue(gameState.youtubeViewers);
-      document.getElementById('tw').textContent=displayProviderValue(gameState.twitchViewers);
-      document.getElementById('kick').textContent=displayProviderValue(gameState.kickViewers);
-      document.getElementById('total').textContent=fmt(gameState.totalViewers);
-      document.getElementById('last').textContent='Latest: '+new Date(latest.timestamp).toLocaleString();
-    } else {
-      document.getElementById('last').textContent='Offline · live stream data hidden';
+      const lastEl=document.getElementById('last');
+      if(lastEl) lastEl.textContent='Latest snapshot: '+new Date(latest.timestamp).toLocaleString();
     }
-    const snapshotInfoEl = document.getElementById('snapshotInfo');
-    if(snapshotInfoEl) snapshotInfoEl.textContent = 'Latest snapshot: '+fmt(latestData.length ? latestData.length : 0);
+    const snapshotInfoEl=document.getElementById('snapshotInfo');
+    if(snapshotInfoEl) snapshotInfoEl.textContent='Latest snapshot: '+fmt(latestData.length);
 
-    const filtered = (chartData || []).slice().sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+    const filtered=(chartData||[]).slice().sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
     currentSnapshots=filtered;
     dashboardDataLoaded=true;
     renderPeakCards(filtered);
     renderLiveCardSparklines(filtered);
-    const rangeDataStatusEl = document.getElementById('rangeDataStatus');
-    if(rangeDataStatusEl && currentRange === 'all') rangeDataStatusEl.textContent = `All-time view: showing up to ${fmt(filtered.length)} of the newest 5,000 snapshots`;
-    else if(rangeDataStatusEl) rangeDataStatusEl.textContent = `${fmt(filtered.length)} snapshots in selected range`;
+    const rangeDataStatusEl=document.getElementById('rangeDataStatus');
+    if(rangeDataStatusEl && currentRange==='all') rangeDataStatusEl.textContent=`All-time view: showing up to ${fmt(filtered.length)} of the newest 5,000 snapshots`;
+    else if(rangeDataStatusEl) rangeDataStatusEl.textContent=`${fmt(filtered.length)} snapshots in selected range`;
     if(!filtered.length){
-      document.getElementById('status').textContent='No data for selected range';
-      const rangeStatusEl = document.getElementById('rangeDataStatus');
+      const rangeStatusEl=document.getElementById('rangeDataStatus');
       if(rangeStatusEl) rangeStatusEl.textContent='No data available for selected range';
-      if(combinedChart){ combinedChart.destroy(); combinedChart=null; }
-      if(platformChart){ platformChart.destroy(); platformChart=null; }
-      if(analyticsPanelVisible){
-        scheduleAnalyticsRefresh();
-        refreshRisingChannels();
-      }
+      if(combinedChart){combinedChart.destroy();combinedChart=null;}
+      if(platformChart){platformChart.destroy();platformChart=null;}
+      if(analyticsPanelVisible){scheduleAnalyticsRefresh();refreshRisingChannels();}
       return;
     }
 
     refreshProviderFreshness();
-
-    const maxPoints = 1440;
-    const points = filtered.length > maxPoints ? filtered.slice(-maxPoints) : filtered;
-    const rangeStatusEl = document.getElementById('rangeDataStatus');
-    if(rangeStatusEl){
-      rangeStatusEl.textContent = filtered.length > maxPoints
-        ? fmt(points.length)+' points displayed ('+fmt(filtered.length)+' retrieved)'
-        : fmt(points.length)+' records in selected range';
-    }
-
-    const rangeLabel=document.getElementById('rangeStatus')?.textContent||'selected range';document.querySelector('#combinedChart').closest('.panel').querySelector('h2').textContent='Combined viewer trend · '+rangeLabel;document.querySelector('#platformChart').closest('.panel').querySelector('h2').textContent='Platform trend · '+rangeLabel;
-    const labels = points.map(x=>new Date(x.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
-    const combined = points.map(x=>x.combinedViewers);
-    const yt = points.map(x=>x.youtubeAvailable === false ? null : x.youtubeViewers);
-    const tw = points.map(x=>x.twitchAvailable === false ? null : x.twitchViewers);
-    const kick = points.map(x=>x.kickAvailable === false ? null : x.kickViewers);
-    const opts={responsive:true,maintainAspectRatio:false,spanGaps:false,plugins:{legend:{labels:{color:'#aeb7c4'}}},
-      scales:{x:{ticks:{color:'#77818f'},grid:{color:'#202731'}},y:{ticks:{color:'#77818f'},grid:{color:'#202731'}}}};
-
+    const maxPoints=1440;
+    const points=filtered.length>maxPoints?filtered.slice(-maxPoints):filtered;
+    if(rangeDataStatusEl) rangeDataStatusEl.textContent=filtered.length>maxPoints
+      ? fmt(points.length)+' points displayed ('+fmt(filtered.length)+' retrieved)'
+      : fmt(points.length)+' records in selected range';
+    const rangeLabel=document.getElementById('rangeStatus')?.textContent||'selected range';
+    document.querySelector('#combinedChart').closest('.panel').querySelector('h2').textContent='Combined viewer trend · '+rangeLabel;
+    document.querySelector('#platformChart').closest('.panel').querySelector('h2').textContent='Platform trend · '+rangeLabel;
+    const labels=points.map(x=>new Date(x.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
+    const combined=points.map(x=>x.combinedViewers);
+    const yt=points.map(x=>x.youtubeAvailable===false?null:x.youtubeViewers);
+    const tw=points.map(x=>x.twitchAvailable===false?null:x.twitchViewers);
+    const kick=points.map(x=>x.kickAvailable===false?null:x.kickViewers);
+    const opts={responsive:true,maintainAspectRatio:false,spanGaps:false,plugins:{legend:{labels:{color:'#aeb7c4'}}},scales:{x:{ticks:{color:'#77818f'},grid:{color:'#202731'}},y:{ticks:{color:'#77818f'},grid:{color:'#202731'}}}};
     if(combinedChart) combinedChart.destroy();
-    combinedChart=new Chart(document.getElementById('combinedChart'),{
-      type:'line',data:{labels,datasets:[{label:'Combined',data:combined,borderColor:'#eef2f7',backgroundColor:'rgba(238,242,247,0.12)',fill:true,tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3,spanGaps:false}]},options:opts
-    });
+    combinedChart=new Chart(document.getElementById('combinedChart'),{type:'line',data:{labels,datasets:[{label:'Combined',data:combined,borderColor:'#eef2f7',backgroundColor:'rgba(238,242,247,0.12)',fill:true,tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3,spanGaps:false}]},options:opts});
     if(platformChart) platformChart.destroy();
-    platformChart=new Chart(document.getElementById('platformChart'),{
-      type:'line',data:{labels,datasets:[
-        {label:'YouTube',data:yt,borderColor:'#ff6464',backgroundColor:'transparent',tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3},
-        {label:'Twitch',data:tw,borderColor:'#b998ff',backgroundColor:'transparent',tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3},
-        {label:'Kick',data:kick,borderColor:'#52df9c',backgroundColor:'transparent',tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3}
-      ]},options:opts
-    });
-    if(analyticsPanelVisible){
-      scheduleAnalyticsRefresh();
-      refreshRisingChannels();
-    }
-  }catch(e){
-    document.getElementById('status').textContent='Tracker/API unavailable';
+    platformChart=new Chart(document.getElementById('platformChart'),{type:'line',data:{labels,datasets:[
+      {label:'YouTube',data:yt,borderColor:'#ff6464',backgroundColor:'transparent',tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3},
+      {label:'Twitch',data:tw,borderColor:'#b998ff',backgroundColor:'transparent',tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3},
+      {label:'Kick',data:kick,borderColor:'#52df9c',backgroundColor:'transparent',tension:.25,borderWidth:1.5,pointRadius:0,pointHoverRadius:3}
+    ]},options:opts});
+    if(analyticsPanelVisible){scheduleAnalyticsRefresh();refreshRisingChannels();}
+  } catch(e) {
+    // Historical failure must not erase live values shown above.
     document.getElementById('rangeDataStatus').textContent='Unable to load selected history';
-    console.error(e);
+    console.error('Unable to load historical snapshots',e);
   }
 }
 
@@ -1409,5 +1542,6 @@ setInterval(refreshProviderFreshness,30000);
 setInterval(()=>{ if(analyticsPanelVisible) refreshRisingChannels(); },60000);
 setInterval(()=>getJson('/api/streams?game='+encodeURIComponent(selectedGame)+'&platform=Overall').then(updateChannelOptions).catch(console.error),60000);
 </script>
+  <script src="/guest-history-lock.js" defer></script>
 </body>
 </html>

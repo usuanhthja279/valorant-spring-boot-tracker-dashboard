@@ -10,3 +10,7 @@ stream-api-analysis.json
 
 # Local configuration contains provider credentials.
 src/main/resources/application.yml
+
+# Downloader local environment and source videos.
+multiplatform-video-downloader/.venv/
+multiplatform-video-downloader/input/
